@@ -33,10 +33,11 @@ DEPFILES := $(OBJECTS:.o=.d)
 all: build
 build: $(INTERPRETER) $(COMPILER)
 
-$(BUILD_DIR):
-	mkdir -p "$@"
+$(BUILD_DIR)/.dir:
+	mkdir -p "$(BUILD_DIR)"
+	touch "$@"
 
-$(BUILD_DIR)/%.o: src/%.cpp | $(BUILD_DIR)
+$(BUILD_DIR)/%.o: src/%.cpp | $(BUILD_DIR)/.dir
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -Isrc -MMD -MP -c "$<" -o "$@"
 
 $(BUILD_DIR)/runtime.o: src/runtime.c src/runtime.h | $(BUILD_DIR)
