@@ -17,5 +17,5 @@ target_compile_options(gshai PRIVATE
 )
 
 enable_testing()
-add_test(NAME shay_hello_check
-         COMMAND gshai --check ${CMAKE_CURRENT_SOURCE_DIR}/examples/hello.shay)
+add_test(NAME gshai_bootstrap_suite
+         COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/tests/run.sh $<TARGET_FILE:gshai>)
