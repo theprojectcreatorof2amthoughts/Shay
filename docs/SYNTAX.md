@@ -1,6 +1,6 @@
 # Shay syntax notes
 
-This document records the accepted Shay vocabulary and the current bootstrap grammar. Shay is independent of Y_ and Y++.
+This document records the accepted Shay vocabulary and the current compiler grammar. Shay is independent of Y_ and Y++.
 
 ## Current statements
 
@@ -10,7 +10,7 @@ brew username = "Alex"
 insval-username
 ```
 
-The bootstrap accepts string, numeric, and boolean literals for `brew`. Zeccurs files (`.shaz`) are variable-free.
+The current parser accepts string, numeric (including negative), and boolean literals for `brew`. String escapes currently supported are `\\n`, `\\t`, `\\r`, `\\\\`, and `\\"`. Zeccurs files (`.shaz`) are variable-free.
 
 ## Imports
 
@@ -29,8 +29,12 @@ Imports are relative to the importing file. Circular imports are errors and dupl
 
 ## Comments
 
-A line whose first non-whitespace characters are `##` is a comment.
+A `##` comment runs to the end of the line.
 
-## Planned
+## Compiler pipeline
 
-Functions, control flow, collections, typed values, expressions, error handling, REPL behavior, and native code generation require their own grammar and implementation. Do not substitute C, C++, Y_, or Y++ keywords for Shay syntax.
+The compiler now tokenizes source into identifiers, numbers, strings, symbols, and line boundaries. The parser converts those tokens into a small statement AST before semantic checks and execution. Lexer and parser diagnostics include source line information.
+
+## Not yet part of the grammar
+
+Functions, control flow, collections, typed values, general expressions, error handling, REPL behavior, and native code generation are not implemented yet. Their syntax will be designed as Shay syntax rather than borrowing C, C++, Y_, or Y++ keywords.
