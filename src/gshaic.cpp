@@ -133,7 +133,7 @@ bool write_translation(const BuildContext &ctx, const fs::path &path) {
             break;
         }
         case shay::StatementKind::OutputText:
-            out << "  shay_runtime_write((" << cpp_string(statement.value + "\n") << ").c_str());\n";
+            out << "  shay_runtime_write(" << cpp_string(statement.value + "\n") << ");\n";
             break;
         case shay::StatementKind::OutputValue:
             out << "  shay_runtime_write((values[" << cpp_string(statement.name)
