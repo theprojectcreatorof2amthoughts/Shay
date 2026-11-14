@@ -19,7 +19,7 @@ $(DRIVER): src/frontend/main.cpp $(RUNTIME_OBJ) | $(BUILD)
 	$(CXX) $(CXXFLAGS) -Isrc/runtime $< $(RUNTIME_OBJ) -o $@
 
 test: $(DRIVER)
-	./tests/smoke.sh
+	sh tests/smoke.sh
 
 clean:
 	rm -rf $(BUILD) $(DRIVER)
