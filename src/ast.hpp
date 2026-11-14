@@ -4,12 +4,13 @@
 #include <string>
 #include <vector>
 namespace shay {
-enum class StatementKind { ImportLibrary, ImportTask, Declare, OutputText, OutputValue, DeclareFunction, OutputCall, Invalid };
+enum class StatementKind { ImportLibrary, ImportTask, Declare, OutputText, OutputValue, DeclareFunction, OutputCall, If, Invalid };
 struct Statement {
     StatementKind kind = StatementKind::Invalid;
     std::size_t line = 1;
-    std::string name, value;
+    std::string name, value, condition;
     std::vector<std::string> parameters, arguments;
+    std::vector<Statement> body;
     bool has_return = false;
 };
 struct ParseError { std::size_t line; std::string message; };

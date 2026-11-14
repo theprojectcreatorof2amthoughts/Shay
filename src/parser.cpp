@@ -32,8 +32,29 @@ Program Parser::parse(){
  Program program;
  while(!atEnd()){
   if(match(TokenKind::Newline))continue;
-  const auto line=peek().line;Statement statement;statement.line=line;bool valid=true;
-  if(match(TokenKind::Symbol,"$")){
+  const auto line=peek().line;Statement statement;statement.line=line;bool valid=true;bool skipCurrentLine=true;
+  if(match(TokenKind::Identifier,"ifit")){
+   statement.kind=StatementKind::If;
+   while(!atEnd()&&peek().kind!=TokenKind::Newline){statement.condition+=peek().text;++current_;}
+   if(statement.condition.empty()){error(program.errors,"ifit requires a condition");valid=false;}
+   if(peek().kind==TokenKind::Newline)++current_;
+   std::vector<Token> bodyTokens;bool foundExec=false;
+   while(!atEnd()){
+    if(peek().kind==TokenKind::Identifier&&peek().text=="exec"){
+     foundExec=true;++current_;
+     if(peek().kind!=TokenKind::Newline&&!atEnd()){error(program.errors,"unexpected token after 'exec'");valid=false;}
+     if(peek().kind==TokenKind::Newline)++current_;
+     skipCurrentLine=false;
+     break;
+    }
+    bodyTokens.push_back(peek());++current_;
+   }
+   bodyTokens.push_back({TokenKind::End,"",peek().line,peek().column});
+   if(!foundExec){error(program.errors,"expected 'exec' to close the ifit block");valid=false;}
+   Parser nested(bodyTokens);Program nestedProgram=nested.parse();
+   statement.body=std::move(nestedProgram.statements);
+   for(const auto&e:nestedProgram.errors)program.errors.push_back(e);
+  }else if(match(TokenKind::Symbol,"$")){
    if(match(TokenKind::Identifier,"shaiiport")||match(TokenKind::Identifier,"shazport")){
     const bool library=previous().text=="shaiiport";statement.kind=library?StatementKind::ImportLibrary:StatementKind::ImportTask;
     const std::string ext=library?".shaii":".shaz";
@@ -48,7 +69,7 @@ Program Parser::parse(){
     if(valid)statement.value=filename;
    }else if(match(TokenKind::Identifier,"declr")){
     statement.kind=StatementKind::DeclareFunction;
-    valid=consume(TokenKind::Identifier,"",program.errors,"expected a function name after '$declr'");
+    valid=consume(TokenKind::Identifier,"",program.errors,"expected a function name after '$declr");
     if(valid)statement.name=previous().text;
     if(valid)valid=consume(TokenKind::Symbol,"(",program.errors,"expected '(' after function name");
     std::unordered_set<std::string> names;
@@ -107,9 +128,9 @@ Program Parser::parse(){
     if(valid)valid=consume(TokenKind::Symbol,")",program.errors,"expected ')' after function arguments");
    }
   }else{error(program.errors,"unrecognized Shay statement");valid=false;}
-  if(!atEnd()&&peek().kind!=TokenKind::Newline){error(program.errors,"unexpected token after statement");valid=false;}
+  if(skipCurrentLine&&!atEnd()&&peek().kind!=TokenKind::Newline){error(program.errors,"unexpected token after statement");valid=false;}
   if(valid)program.statements.push_back(statement);
-  skipLine();
+  if(skipCurrentLine)skipLine();
  }
  return program;
 }
