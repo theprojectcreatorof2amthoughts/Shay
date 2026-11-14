@@ -26,6 +26,21 @@ insval-add(10, 20)
 
 Functions can be declared in `.shay` programs and `.shaii` libraries. A function currently has zero or more numeric parameters and an optional single `forw` expression. Expressions support numeric literals, parameter names, parentheses, unary minus, and the arithmetic operators `+`, `-`, `*`, and `/`. Use `insval-functionName(arguments)` to print a returned value. The compiler generates native function code; the interpreter evaluates the same arithmetic expression syntax. Nested function calls, local declarations, multiple statements in a function body, and non-numeric return values are not implemented yet.
 
+## Conditions
+
+Use `ifit` to begin a conditional block and `exec` to close it:
+
+```shay
+brew x = 20
+brew y = 10
+
+ifit x > y
+    instxt-"X is greater than Y!"
+exec
+```
+
+Conditions currently support numeric comparisons: `>`, `<`, `>=`, `<=`, `==`, and `!=`. The interpreter and compiler both execute the block only when the condition is true. Conditional bodies currently support output statements and function calls; nested conditionals and other statements inside conditional blocks are not implemented yet.
+
 ## Imports
 
 ```shay
@@ -62,4 +77,4 @@ The shared frontend tokenizes source into identifiers, numbers, strings, symbols
 
 ## Not yet part of the grammar
 
-Control flow, collections, typed values, general expressions outside numeric function returns, error handling, and REPL behavior are not implemented yet. Function bodies are currently limited to a single optional return expression.
+Loops, nested conditionals, collections, typed values, general expressions outside numeric function returns, error handling, and REPL behavior are not implemented yet. Function bodies are currently limited to a single optional return expression.
