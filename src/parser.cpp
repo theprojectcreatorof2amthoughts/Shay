@@ -128,7 +128,7 @@ Program Parser::parse(){
     if(valid)valid=consume(TokenKind::Symbol,")",program.errors,"expected ')' after function arguments");
    }
   }else{error(program.errors,"unrecognized Shay statement");valid=false;}
-  if(!atEnd()&&peek().kind!=TokenKind::Newline){error(program.errors,"unexpected token after statement");valid=false;}
+  if(skipCurrentLine&&!atEnd()&&peek().kind!=TokenKind::Newline){error(program.errors,"unexpected token after statement");valid=false;}
   if(valid)program.statements.push_back(statement);
   if(skipCurrentLine)skipLine();
  }
