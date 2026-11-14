@@ -11,7 +11,7 @@ The interpreter and compiler search in this order:
 1. Beside the importing file.
 2. A `siil/` directory in the current working directory.
 3. A `siil/` directory in each parent directory of the importer.
-4. The directory named by `SHAY_STDLIB`, when that environment variable is set.
+4. The directory named by `SHAY_STDLIB`, when that environment variable is set (checked before project `siil/` folders).
 
 The first matching file wins. Zeccur task imports remain relative to the importing file. Libraries are loaded once, and circular imports are diagnosed.
 
