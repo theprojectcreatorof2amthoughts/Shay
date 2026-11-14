@@ -1,6 +1,6 @@
 # Shay
 
-Shay (شاي, Arabic for tea) is an independent hybrid programming language with a C11 runtime and a C++20 compiler toolchain. It provides two separate command-line programs:
+Shay is an independent hybrid programming language with a C11 runtime and a C++20 compiler toolchain. It provides two separate command-line programs:
 
 - **`gshai`** — the Shay compiler. It creates native executables or relocatable `.sho` object files.
 - **`shaii`** — the Shay interpreter. It runs Shay source files and provides syntax-check mode.
@@ -15,6 +15,12 @@ Shay has its own original grammar and vocabulary, including `brew` for variable 
 | `.shaii` | Shay library |
 | `.shaz` | Zeccurs task file |
 | `.sho` | Compiled Shay object file (native relocatable object) |
+
+## Vocabulary
+| Vocabulary | Meaning |
+|---|---|
+| `Zeccur` | A non variable code file |
+| `Shay` | Arabic word for tea (شاي) |
 
 ## Imports
 
