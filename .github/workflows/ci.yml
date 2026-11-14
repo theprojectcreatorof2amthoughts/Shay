@@ -7,20 +7,13 @@ on:
     branches: [main]
 
 jobs:
-  build-and-smoke-test:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build with Make
-        run: make
-      - name: Check compiler version
-        run: ./build/gshai --version
-      - name: Validate example
-        run: ./build/gshai --check examples/hello.shay
-      - name: Run example
-        run: ./build/gshai examples/hello.shay
+      - name: Build and run regression suite with Make
+        run: make test
       - name: Build with CMake
-        run: |
-          cmake -S . -B build-cmake
-          cmake --build build-cmake --parallel
-          ctest --test-dir build-cmake --output-on-failure
+        run: cmake -S . -B build-cmake && cmake --build build-cmake --parallel
+      - name: Run CTest suite
+        run: ctest --test-dir build-cmake --output-on-failure
