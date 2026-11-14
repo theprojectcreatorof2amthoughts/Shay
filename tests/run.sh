@@ -16,6 +16,28 @@ printf '%s\n' "$out" | grep -q 'Hello, world from Shay!' || fail "text output"
 printf '%s\n' "$out" | grep -q 'Shay' || fail "variable output"
 pass "hello execution"
 
+cat > "$TMP/lexer-parser.shay" <<'EOF'
+brew greeting = "Line 1\\nLine 2"
+brew debt = -42
+instxt-"Escaped quote: \\"Shay\\""
+insval-greeting
+insval-debt
+EOF
+out=$("$GSHai" "$TMP/lexer-parser.shay")
+printf '%s\\n' "$out" | grep -q 'Escaped quote: "Shay"' || fail "escaped quote output"
+printf '%s\\n' "$out" | grep -q 'Line 1' || fail "escaped newline output"
+printf '%s\\n' "$out" | grep -q -- '-42' || fail "negative number literal"
+pass "lexer strings and signed numeric literals"
+
+cat > "$TMP/bad-syntax.shay" <<'EOF'
+brew value =
+instxt-"unfinished
+EOF
+if "$GSHai" --check "$TMP/bad-syntax.shay" >"$TMP/out" 2>"$TMP/err"; then fail "malformed syntax"; fi
+grep -q 'expected a string, number, or boolean literal' "$TMP/err" || fail "parser diagnostic"
+grep -q 'unterminated string literal' "$TMP/err" || fail "lexer diagnostic"
+pass "lexer and parser diagnostics"
+
 cat > "$TMP/task.shaz" <<'EOF'
 instxt-"Zeccurs task ran"
 EOF
