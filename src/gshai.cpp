@@ -62,7 +62,7 @@ void load_file(const fs::path&input,BuildContext&ctx){
  ctx.active.erase(key);ctx.loaded.insert(key);
 }
 std::string cpp_string(const std::string&value){
- std::ostringstream out;out<<'"';for(unsigned char c:value){switch(c){case '\\':out<<"\\\\";break;case '"':out<<"\\\"";break;case '\n':out<<"\\n";break;case '\r':out<<"\\r";break;case '\t':out<<"\\t";break;default:if(c<32||c>=127){const char octal[]="01234567";out<<"\\"<<octal[(c>>6)&7]<<octal[(c>>3)&7]<<octal[c&7];}else out<<static_cast<char>(c);}}out<<'"';return out.str();
+ std::ostringstream out;out<<'"';for(unsigned char c:value){switch(c){case '\\':out<<"\\\\";break;case '"':out<<"\\\"";break;case '\n':out<<"\n";break;case '\r':out<<"\\r";break;case '\t':out<<"\\t";break;default:if(c<32||c>=127){const char octal[]="01234567";out<<"\\"<<octal[(c>>6)&7]<<octal[(c>>3)&7]<<octal[c&7];}else out<<static_cast<char>(c);}}out<<'"';return out.str();
 }
 std::string cpp_condition(const std::string&condition){
  std::regex identifier(R"([A-Za-z_][A-Za-z0-9_]*)");std::string out;std::sregex_iterator it(condition.begin(),condition.end(),identifier),end;std::size_t last=0;
@@ -89,20 +89,20 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
     out<<" values["<<cpp_string(s.name)<<"] = "<<cpp_string(value)<<";\n";break;
    }
    case shay::StatementKind::If:{
-    out<<" if ("<<cpp_condition(s.condition)<<") {\\n";
+    out<<" if ("<<cpp_condition(s.condition)<<") {\n";
     for(const auto&nested:s.body){
-     if(nested.kind==shay::StatementKind::OutputText)out<<" shay_runtime_write("<<cpp_string(nested.value+"\\n")<<");\\n";
-     else if(nested.kind==shay::StatementKind::OutputValue)out<<" shay_runtime_write((values["<<cpp_string(nested.name)<<"] + \\"\\n\\").c_str());\\n";
-     else if(nested.kind==shay::StatementKind::OutputCall){out<<" { std::ostringstream shay_if_call; shay_if_call<<std::setprecision(15)<<shay_fn_"<<nested.name<<"(";for(std::size_t i=0;i<nested.arguments.size();++i){if(i)out<<", ";out<<nested.arguments[i];}out<<")<<\\"\\n\\"; shay_runtime_write(shay_if_call.str().c_str()); }\\n";}
+     if(nested.kind==shay::StatementKind::OutputText)out<<" shay_runtime_write("<<cpp_string(nested.value+"\n")<<");\n";
+     else if(nested.kind==shay::StatementKind::OutputValue)out<<" shay_runtime_write((values["<<cpp_string(nested.name)<<"] + \\"\n\\").c_str());\n";
+     else if(nested.kind==shay::StatementKind::OutputCall){out<<" { std::ostringstream shay_if_call; shay_if_call<<std::setprecision(15)<<shay_fn_"<<nested.name<<"(";for(std::size_t i=0;i<nested.arguments.size();++i){if(i)out<<", ";out<<nested.arguments[i];}out<<")<<\\"\n\\"; shay_runtime_write(shay_if_call.str().c_str()); }\n";}
     }
-    out<<" }\\n";break;
+    out<<" }\n";break;
    }
    case shay::StatementKind::OutputText:out<<" shay_runtime_write("<<cpp_string(s.value+"\n")<<");\n";break;
-   case shay::StatementKind::OutputValue:out<<" shay_runtime_write((values["<<cpp_string(s.name)<<"] + \"\\n\").c_str());\n";break;
+   case shay::StatementKind::OutputValue:out<<" shay_runtime_write((values["<<cpp_string(s.name)<<"] + \"\n\").c_str());\n";break;
    case shay::StatementKind::OutputCall:
     out<<" { std::ostringstream shay_call_output; shay_call_output<<std::setprecision(15)<<shay_fn_"<<s.name<<"(";
     for(std::size_t i=0;i<s.arguments.size();++i){if(i)out<<", ";out<<s.arguments[i];}
-    out<<")<<\"\\n\"; shay_runtime_write(shay_call_output.str().c_str()); }\n";break;
+    out<<")<<\"\n\"; shay_runtime_write(shay_call_output.str().c_str()); }\n";break;
    default:break;
   }
  }
