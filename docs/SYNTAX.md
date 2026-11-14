@@ -2,7 +2,7 @@
 
 This document records the accepted Shay vocabulary and the current grammar. Shay is an independent language with its own syntax.
 
-## Current statements
+## Output and variables
 
 ```shay
 instxt-"Hello, world!"
@@ -10,7 +10,21 @@ brew username = "Alex"
 insval-username
 ```
 
-The current parser accepts string, numeric (including negative), and boolean literals for `brew`. String escapes currently supported are `\\n`, `\\t`, `\\r`, `\\\\`, and `\\"`. Zeccurs files (`.shaz`) are variable-free.
+The parser accepts string, numeric (including negative), and boolean literals for `brew`. String escapes currently supported are `\\n`, `\\t`, `\\r`, `\\\\`, and `\\"`. Zeccurs files (`.shaz`) are variable-free.
+
+## Functions
+
+Declare functions with `$declr`, return a value with `forw`, and close the declaration with `finish`:
+
+```shay
+$declr add(x, y)
+    forw x + y
+finish
+
+insval-add(10, 20)
+```
+
+Functions can be declared in `.shay` programs and `.shaii` libraries. A function currently has zero or more numeric parameters and an optional single `forw` expression. Expressions support numeric literals, parameter names, parentheses, unary minus, and the arithmetic operators `+`, `-`, `*`, and `/`. Use `insval-functionName(arguments)` to print a returned value. The compiler generates native function code; the interpreter evaluates the same arithmetic expression syntax. Nested function calls, local declarations, multiple statements in a function body, and non-numeric return values are not implemented yet.
 
 ## Imports
 
@@ -48,4 +62,4 @@ The shared frontend tokenizes source into identifiers, numbers, strings, symbols
 
 ## Not yet part of the grammar
 
-Functions, control flow, collections, typed values, general expressions, error handling, and REPL behavior are not implemented yet. Their syntax will be designed as original Shay syntax.
+Control flow, collections, typed values, general expressions outside numeric function returns, error handling, and REPL behavior are not implemented yet. Function bodies are currently limited to a single optional return expression.
