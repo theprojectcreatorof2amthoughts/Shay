@@ -1,0 +1,19 @@
+name: Shay CI
+
+on:
+  push:
+    branches: [main, "feature/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and run regression suite with Make
+        run: make test
+      - name: Build with CMake
+        run: cmake -S . -B build-cmake && cmake --build build-cmake --parallel
+      - name: Run CTest suite
+        run: ctest --test-dir build-cmake --output-on-failure
