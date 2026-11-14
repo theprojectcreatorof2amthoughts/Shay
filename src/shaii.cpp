@@ -59,6 +59,17 @@ void execute_file(const fs::path&input,Context&ctx){
     if(ctx.functions.count(s.name))diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");
     else ctx.functions.emplace(s.name,s);
     break;
+   case shay::StatementKind::If:{
+    bool condition=false;std::string error;
+    if(!shay::evaluate_condition(s.condition,ctx.numbers,condition,error)){diagnose(ctx,input,s.line,"invalid ifit condition: "+error);break;}
+    if(condition)for(const auto&nested:s.body){
+     if(nested.kind==shay::StatementKind::OutputText){if(!ctx.check_only)shay_runtime_write((nested.value+"\\n").c_str());}
+     else if(nested.kind==shay::StatementKind::OutputValue){auto value=ctx.values.find(nested.name);if(value==ctx.values.end())diagnose(ctx,input,nested.line,"unknown variable '"+nested.name+"'");else if(!ctx.check_only)shay_runtime_write((value->second+"\\n").c_str());}
+     else if(nested.kind==shay::StatementKind::OutputCall){auto fn=ctx.functions.find(nested.name);if(fn==ctx.functions.end()){diagnose(ctx,input,nested.line,"unknown function '"+nested.name+"'");continue;}if(nested.arguments.size()!=fn->second.parameters.size()){diagnose(ctx,input,nested.line,"wrong argument count for function '"+nested.name+"'");continue;}auto scope=ctx.numbers;bool ok=true;for(std::size_t i=0;i<nested.arguments.size();++i){double v=0;std::string e;if(!evaluate(nested.arguments[i],ctx.numbers,v,e)){diagnose(ctx,input,nested.line,"invalid function argument: "+e);ok=false;break;}scope[fn->second.parameters[i]]=v;}if(ok&&fn->second.has_return){double v=0;std::string e;if(!evaluate(fn->second.value,scope,v,e))diagnose(ctx,input,fn->second.line,"invalid return expression: "+e);else if(!ctx.check_only){std::ostringstream out;out<<std::setprecision(15)<<v<<"\\n";shay_runtime_write(out.str().c_str());}}
+     }
+    }
+    break;
+   }
    case shay::StatementKind::OutputText:
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
     break;
