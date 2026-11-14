@@ -98,8 +98,8 @@ printf '%s\n' "$out" | grep -q 'Hello, world from Shay!' || fail "executable tex
 printf '%s\n' "$out" | grep -q 'Shay' || fail "executable variable output"
 pass "gshai -o creates and runs a standalone executable"
 
-CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/default-executable.shay" || fail "default executable output"
-test -x "$TMP/default-executable" || fail "default executable path"
+CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/compiled.shay" || fail "default executable output"
+test -x "$TMP/compiled" || fail "default executable path"
 pass "gshai -o derives executable filename"
 
 printf '\nAll Shay toolchain tests passed.\n'
