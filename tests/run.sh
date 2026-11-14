@@ -17,16 +17,16 @@ printf '%s\n' "$out" | grep -q 'Shay' || fail "variable output"
 pass "hello execution"
 
 cat > "$TMP/lexer-parser.shay" <<'EOF'
-brew greeting = "Line 1\\nLine 2"
+brew greeting = "Line 1\nLine 2"
 brew debt = -42
-instxt-"Escaped quote: \\"Shay\\""
+instxt-"Escaped quote: \"Shay\""
 insval-greeting
 insval-debt
 EOF
 out=$("$GSHai" "$TMP/lexer-parser.shay")
-printf '%s\\n' "$out" | grep -q 'Escaped quote: "Shay"' || fail "escaped quote output"
-printf '%s\\n' "$out" | grep -q 'Line 1' || fail "escaped newline output"
-printf '%s\\n' "$out" | grep -q -- '-42' || fail "negative number literal"
+printf '%s\n' "$out" | grep -q 'Escaped quote: "Shay"' || fail "escaped quote output"
+printf '%s\n' "$out" | grep -q 'Line 1' || fail "escaped newline output"
+printf '%s\n' "$out" | grep -q -- '-42' || fail "negative number literal"
 pass "lexer strings and signed numeric literals"
 
 cat > "$TMP/bad-syntax.shay" <<'EOF'
