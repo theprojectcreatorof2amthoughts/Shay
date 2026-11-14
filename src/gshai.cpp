@@ -120,10 +120,10 @@ std::string shell_quote(const std::string &value) {
 bool write_translation(const BuildContext &ctx, const fs::path &path, bool add_main) {
     std::ofstream out(path, std::ios::binary);
     if (!out) return false;
-    out << "#include <string>\n#include <unordered_map>\n"
-           "extern \"C\" void shay_runtime_write(const char*);\n"
-           "extern \"C\" int shay_program_entry() {\n"
-           "  std::unordered_map<std::string, std::string> values;\n";
+    out << "#include <cstdio>\\n#include <string>\\n#include <unordered_map>\\n"
+           "extern \\"C\\" void shay_runtime_write(const char* text) { if (text) { std::fputs(text, stdout); std::fflush(stdout); } }\\n"
+           "extern \\"C\\" int shay_program_entry() {\\n"
+           "  std::unordered_map<std::string, std::string> values;\\n";
     for (const auto &statement : ctx.statements) {
         switch (statement.kind) {
         case shay::StatementKind::Declare: {
