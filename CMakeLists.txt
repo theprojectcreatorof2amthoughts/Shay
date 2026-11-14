@@ -30,3 +30,5 @@ enable_testing()
 add_test(NAME shay_toolchain_suite
          COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/tests/run.sh
                  $<TARGET_FILE:shaii> $<TARGET_FILE:gshai>)
+set_tests_properties(shay_toolchain_suite PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
