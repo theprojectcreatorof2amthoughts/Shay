@@ -32,7 +32,7 @@ Program Parser::parse(){
  Program program;
  while(!atEnd()){
   if(match(TokenKind::Newline))continue;
-  const auto line=peek().line;Statement statement;statement.line=line;bool valid=true;
+  const auto line=peek().line;Statement statement;statement.line=line;bool valid=true;bool skipCurrentLine=true;
   if(match(TokenKind::Identifier,"ifit")){
    statement.kind=StatementKind::If;
    while(!atEnd()&&peek().kind!=TokenKind::Newline){statement.condition+=peek().text;++current_;}
@@ -44,6 +44,7 @@ Program Parser::parse(){
      foundExec=true;++current_;
      if(peek().kind!=TokenKind::Newline&&!atEnd()){error(program.errors,"unexpected token after 'exec'");valid=false;}
      if(peek().kind==TokenKind::Newline)++current_;
+     skipCurrentLine=false;
      break;
     }
     bodyTokens.push_back(peek());++current_;
@@ -129,7 +130,7 @@ Program Parser::parse(){
   }else{error(program.errors,"unrecognized Shay statement");valid=false;}
   if(!atEnd()&&peek().kind!=TokenKind::Newline){error(program.errors,"unexpected token after statement");valid=false;}
   if(valid)program.statements.push_back(statement);
-  skipLine();
+  if(skipCurrentLine)skipLine();
  }
  return program;
 }
