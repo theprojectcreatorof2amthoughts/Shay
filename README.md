@@ -1,9 +1,9 @@
 # Shay
 
-Shay (شاي, Arabic for tea) is an independent hybrid programming language implemented with a C11 runtime and a C++20 toolchain. It has two separate command-line programs:
+Shay (شاي, Arabic for tea) is an independent hybrid programming language with a C11 runtime and a C++20 compiler toolchain. It provides two separate command-line programs:
 
-- **`gshai`** — the Shay interpreter. It runs source files and provides syntax-check mode.
-- **`gshaic`** — the Shay compiler. It compiles source into native relocatable object files.
+- **`gshai`** — the Shay compiler. It creates native executables or relocatable `.sho` object files.
+- **`shaii`** — the Shay interpreter. It runs Shay source files and provides syntax-check mode.
 
 Shay has its own original grammar and vocabulary, including `brew` for variable declarations and `instxt-"..."` for text output.
 
@@ -39,7 +39,7 @@ brew username = "Alex"
 insval-username
 ```
 
-The bootstrap currently supports string output, literal variable declarations, variable output, import checks, duplicate-import protection, circular-import detection, and source-located diagnostics. This is the first implementation stage; the full language feature set is still being developed.
+The current implementation supports string output, literal variable declarations, variable output, imports, duplicate-import protection, circular-import detection, and source-located diagnostics. This is an early implementation stage; the full language feature set is still being developed.
 
 ## Build
 
@@ -49,60 +49,66 @@ Requirements: a C11 compiler, a C++20 compiler, GNU Make or CMake 3.20+.
 make
 ```
 
-This builds both command-line tools:
+This builds both tools:
 
 ```sh
 ./build/gshai --version
-./build/gshaic --version
+./build/shaii --version
 ```
 
-### Interpret Shay source
+## Interpret Shay source
 
 ```sh
-./build/gshai examples/hello.shay
-./build/gshai --check examples/hello.shay
+./build/shaii examples/hello.shay
+./build/shaii --check examples/hello.shay
 ```
 
-### Compile Shay source to an object file
+## Compile Shay source
 
-`-ob` asks the compiler to produce a native relocatable object file. The output extension is `.sho`, not `.o`:
+### Create a standalone executable with `-o`
 
 ```sh
-./build/gshaic -ob examples/hello.shay
+./build/gshai -o examples/hello.shay
+# Produces examples/hello (a runnable executable)
+./examples/hello
+```
+
+You can choose the executable path:
+
+```sh
+./build/gshai -o bin/my-program examples/hello.shay
+```
+
+### Create a native object file with `-ob`
+
+```sh
+./build/gshai -ob examples/hello.shay
 # Produces examples/hello.sho
 ```
 
-The object exports `shay_program_entry` and uses the Shay runtime. It can be linked with the runtime and a small host entry point:
-
-```cpp
-extern "C" int shay_program_entry();
-int main() { return shay_program_entry(); }
-```
-
-For example, compile the host entry point and link it with `examples/hello.sho` and the runtime library/object.
-
-### CMake
+You can also choose an explicit `.sho` output path:
 
 ```sh
-cmake -S . -B build-cmake
-cmake --build build-cmake
-ctest --test-dir build-cmake --output-on-failure
+./build/gshai -ob build/hello-object.sho examples/hello.shay
 ```
+
+The `.sho` file is a native relocatable object. It exports `shay_program_entry` and includes the minimal runtime write function used by the currently supported language subset, so it can be linked with a host entry point.
 
 ## Make targets
 
-- `make` — build both `gshai` and `gshaic`.
+- `make` — build compiler `gshai` and interpreter `shaii`.
 - `make run PROGRAM=examples/hello.shay` — interpret a source file.
 - `make check PROGRAM=examples/hello.shay` — syntax-check a source file.
 - `make compile PROGRAM=examples/hello.shay` — emit a `.sho` object.
+- `make executable PROGRAM=examples/hello.shay` — emit a standalone executable.
 - `make test` — run interpreter and compiler regression tests.
 
 ## Architecture
 
-- `src/gshai.cpp`: interpreter and source execution.
-- `src/gshaic.cpp`: separate compiler and `.sho` object generation.
+- `src/gshai.cpp`: compiler driver and native code generation.
+- `src/shaii.cpp`: interpreter and source execution.
 - `src/lexer.cpp`, `src/parser.cpp`: shared frontend.
-- `src/runtime.c` / `src/runtime.h`: C11 runtime primitives.
+- `src/runtime.c` / `src/runtime.h`: interpreter runtime primitives.
 - `examples/`: runnable Shay examples.
 
 ## Development roadmap
