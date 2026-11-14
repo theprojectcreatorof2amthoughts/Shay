@@ -120,10 +120,10 @@ std::string shell_quote(const std::string &value) {
 bool write_translation(const BuildContext &ctx, const fs::path &path, bool add_main) {
     std::ofstream out(path, std::ios::binary);
     if (!out) return false;
-    out << "#include <cstdio>\\n#include <string>\\n#include <unordered_map>\\n"
-           "extern \\"C\\" void shay_runtime_write(const char* text) { if (text) { std::fputs(text, stdout); std::fflush(stdout); } }\\n"
-           "extern \\"C\\" int shay_program_entry() {\\n"
-           "  std::unordered_map<std::string, std::string> values;\\n";
+    out << "#include <cstdio>\n#include <string>\n#include <unordered_map>\n"
+           "extern \"C\" void shay_runtime_write(const char* text) { if (text) { std::fputs(text, stdout); std::fflush(stdout); } }\n"
+           "extern \"C\" int shay_program_entry() {\n"
+           "  std::unordered_map<std::string, std::string> values;\n";
     for (const auto &statement : ctx.statements) {
         switch (statement.kind) {
         case shay::StatementKind::Declare: {
@@ -166,12 +166,12 @@ int main(int argc,char **argv) {
     const bool object_mode=mode=="-ob";
     fs::path output,input;
     if(argc==3) input=argv[2]; else { output=argv[2]; input=argv[3]; }
-    if(input.extension()!=".shay") { std::cerr<<"gshai: input must be a .shay file\\n"; return 2; }
+    if(input.extension()!=".shay") { std::cerr<<"gshai: input must be a .shay file\n"; return 2; }
     if(output.empty()) {
         output=input.parent_path()/input.stem();
         if(object_mode) output += ".sho";
     } else if(object_mode && output.extension()!=".sho") {
-        std::cerr<<"gshai: -ob output must use the .sho extension\\n"; return 2;
+        std::cerr<<"gshai: -ob output must use the .sho extension\n"; return 2;
     }
     BuildContext context; load_file(input,context);
     if(!context.diagnostics.empty()) { print_diagnostics(context); return 1; }
