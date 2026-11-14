@@ -10,6 +10,7 @@ COMPILER := $(BUILD_DIR)/gshai
 PROGRAM ?= examples/hello.shay
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
+SHAREDIR ?= $(PREFIX)/share/shay
 DESTDIR ?=
 
 CXXFLAGS ?= -std=c++20 -O2 -Wall -Wextra -Wpedantic
@@ -66,9 +67,15 @@ install: build
 	$(INSTALL) -d "$(DESTDIR)$(BINDIR)"
 	$(INSTALL) -m 0755 "$(COMPILER)" "$(DESTDIR)$(BINDIR)/gshai"
 	$(INSTALL) -m 0755 "$(INTERPRETER)" "$(DESTDIR)$(BINDIR)/shaii"
+	$(INSTALL) -d "$(DESTDIR)$(SHAREDIR)/siil"
+	$(INSTALL) -m 0644 siil/*.shaii "$(DESTDIR)$(SHAREDIR)/siil/"
+	$(INSTALL) -m 0644 siil/README.md "$(DESTDIR)$(SHAREDIR)/siil/README.md"
 
 uninstall:
 	rm -f "$(DESTDIR)$(BINDIR)/gshai" "$(DESTDIR)$(BINDIR)/shaii"
+	@for lib in siil/*.shaii; do rm -f "$(DESTDIR)$(SHAREDIR)/siil/${lib##*/}"; done
+	rm -f "$(DESTDIR)$(SHAREDIR)/siil/README.md"
+	-rmdir "$(DESTDIR)$(SHAREDIR)/siil" "$(DESTDIR)$(SHAREDIR)"
 
 debug:
 	$(MAKE) BUILD_DIR=build/debug CXXFLAGS="-std=c++20 -O0 -g3 -Wall -Wextra -Wpedantic" CFLAGS="-std=c11 -O0 -g3 -Wall -Wextra -Wpedantic" build
