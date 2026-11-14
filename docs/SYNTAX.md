@@ -33,7 +33,7 @@ A `##` comment runs to the end of the line.
 
 ## Compiler pipeline
 
-The compiler tokenizes source into identifiers, numbers, strings, symbols, and line boundaries. The parser converts those tokens into a small statement AST before semantic checks and execution. Lexer and parser diagnostics include source line information.
+The shared frontend tokenizes source into identifiers, numbers, strings, symbols, and line boundaries. The parser converts those tokens into a small statement AST. The `gshai` interpreter executes the parsed program; the separate `gshaic` compiler translates the supported program subset into a native relocatable `.sho` object file. Lexer and parser diagnostics include source line information.
 
 ## Not yet part of the grammar
 
