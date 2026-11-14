@@ -5,8 +5,8 @@ GSHAI="${2:-./build/gshai}"
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT HUP INT TERM
-pass() { printf 'PASS: %s\\n' "$1"; }
-fail() { printf 'FAIL: %s\\n' "$1" >&2; exit 1; }
+pass() { printf 'PASS: %s\n' "$1"; }
+fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
 
 "$SHAII" --version | grep -q 'shaii' || fail "interpreter version"
 pass "shaii interpreter version"
@@ -15,21 +15,21 @@ pass "gshai compiler version"
 "$SHAII" --check "$ROOT/examples/hello.shay" >/dev/null || fail "hello check"
 pass "interpreter syntax check"
 out=$("$SHAII" "$ROOT/examples/hello.shay")
-printf '%s\\n' "$out" | grep -q 'Hello, world from Shay!' || fail "interpreter text output"
-printf '%s\\n' "$out" | grep -q 'Shay' || fail "interpreter variable output"
+printf '%s\n' "$out" | grep -q 'Hello, world from Shay!' || fail "interpreter text output"
+printf '%s\n' "$out" | grep -q 'Shay' || fail "interpreter variable output"
 pass "interpreter execution"
 
 cat > "$TMP/lexer-parser.shay" <<'EOF'
-brew greeting = "Line 1\\nLine 2"
+brew greeting = "Line 1\nLine 2"
 brew debt = -42
-instxt-"Escaped quote: \\"Shay\\""
+instxt-"Escaped quote: \"Shay\""
 insval-greeting
 insval-debt
 EOF
 out=$("$SHAII" "$TMP/lexer-parser.shay")
-printf '%s\\n' "$out" | grep -q 'Escaped quote: "Shay"' || fail "escaped quote output"
-printf '%s\\n' "$out" | grep -q 'Line 1' || fail "escaped newline output"
-printf '%s\\n' "$out" | grep -q -- '-42' || fail "negative number literal"
+printf '%s\n' "$out" | grep -q 'Escaped quote: "Shay"' || fail "escaped quote output"
+printf '%s\n' "$out" | grep -q 'Line 1' || fail "escaped newline output"
+printf '%s\n' "$out" | grep -q -- '-42' || fail "negative number literal"
 pass "lexer strings and signed numeric literals"
 
 cat > "$TMP/bad-syntax.shay" <<'EOF'
@@ -51,7 +51,7 @@ cat > "$TMP/main.shay" <<'EOF'
 $shaiiport "lib.shaii"
 EOF
 out=$("$SHAII" "$TMP/main.shay")
-printf '%s\\n' "$out" | grep -q 'Zeccurs task ran' || fail "library to Zeccurs import"
+printf '%s\n' "$out" | grep -q 'Zeccurs task ran' || fail "library to Zeccurs import"
 pass "Shaii imports Zeccurs"
 
 cat > "$TMP/bad.shaz" <<'EOF'
@@ -88,18 +88,18 @@ int main() { return shay_program_entry(); }
 EOF
 "${CXX:-c++}" -std=c++20 "$TMP/harness.cpp" "$TMP/compiled.sho" -o "$TMP/object-app"
 out=$("$TMP/object-app")
-printf '%s\\n' "$out" | grep -q 'Hello, world from Shay!' || fail "object output"
+printf '%s\n' "$out" | grep -q 'Hello, world from Shay!' || fail "object output"
 pass "gshai emits linkable .sho objects"
 
 CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/standalone" "$TMP/compiled.shay" || fail "executable compilation"
 test -x "$TMP/standalone" || fail "missing executable"
 out=$("$TMP/standalone")
-printf '%s\\n' "$out" | grep -q 'Hello, world from Shay!' || fail "executable text output"
-printf '%s\\n' "$out" | grep -q 'Shay' || fail "executable variable output"
+printf '%s\n' "$out" | grep -q 'Hello, world from Shay!' || fail "executable text output"
+printf '%s\n' "$out" | grep -q 'Shay' || fail "executable variable output"
 pass "gshai -o creates and runs a standalone executable"
 
 CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/default-executable.shay" || fail "default executable output"
 test -x "$TMP/default-executable" || fail "default executable path"
 pass "gshai -o derives executable filename"
 
-printf '\\nAll Shay toolchain tests passed.\\n'
+printf '\nAll Shay toolchain tests passed.\n'
