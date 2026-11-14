@@ -79,7 +79,7 @@ clean:
 	rm -rf build
 
 help:
-	@printf '%s\\n' \
+	@printf '%s\n' \
 	  'Shay toolchain' \
 	  '  make                 Build compiler (gshai) and interpreter (shaii)' \
 	  '  make test            Run compiler/interpreter regression tests' \
