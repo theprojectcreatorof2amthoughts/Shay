@@ -15,8 +15,8 @@ The current parser accepts string, numeric (including negative), and boolean lit
 ## Imports
 
 ```shay
-$shaiiport "library.shaii"
-$shazport "task.shaz"
+$shaiiport [library.shaii]
+$shazport [task.shaz]
 ```
 
 | Importing file | `$shaiiport` | `$shazport` |

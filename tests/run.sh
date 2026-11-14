@@ -45,18 +45,18 @@ cat > "$TMP/task.shaz" <<'EOF'
 instxt-"Zeccurs task ran"
 EOF
 cat > "$TMP/lib.shaii" <<'EOF'
-$shazport "task.shaz"
+$shazport [task.shaz]
 EOF
 cat > "$TMP/main.shay" <<'EOF'
-$shaiiport "lib.shaii"
+$shaiiport [lib.shaii]
 EOF
 out=$("$SHAII" "$TMP/main.shay")
 printf '%s\n' "$out" | grep -q 'Zeccurs task ran' || fail "library to Zeccurs import"
 pass "Shaii imports Zeccurs"
 
 cat > "$TMP/siil-main.shay" <<'EOF'
-$shaiiport "math.shaii"
-$shaiiport "text.shaii"
+$shaiiport [math.shaii]
+$shaiiport [text.shaii]
 insval-math_pi
 instxt-"separator:"
 insval-text_space
@@ -79,17 +79,17 @@ grep -q 'variable-free' "$TMP/err" || fail "Zeccurs diagnostic"
 pass "Zeccurs rejects variable declarations"
 
 cat > "$TMP/a.shaz" <<'EOF'
-$shazport "b.shaz"
+$shazport [b.shaz]
 EOF
 cat > "$TMP/b.shaz" <<'EOF'
-$shazport "a.shaz"
+$shazport [a.shaz]
 EOF
 if "$SHAII" --check "$TMP/a.shaz" >"$TMP/out" 2>"$TMP/err"; then fail "circular import"; fi
 grep -q 'circular import' "$TMP/err" || fail "circular import diagnostic"
 pass "circular imports diagnosed"
 
 cat > "$TMP/no-library.shaii" <<'EOF'
-$shaiiport "other.shaii"
+$shaiiport [other.shaii]
 EOF
 if "$SHAII" --check "$TMP/no-library.shaii" >"$TMP/out" 2>"$TMP/err"; then fail "nested Shaii import"; fi
 grep -q 'cannot import other .shaii' "$TMP/err" || fail "Shaii import restriction diagnostic"

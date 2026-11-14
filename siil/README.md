@@ -3,7 +3,7 @@
 Siil is the standard-library directory for Shay. Import a library from any `.shay` or `.shaz` file with:
 
 ```shay
-$shaiiport "math.shaii"
+$shaiiport [math.shaii]
 ```
 
 The interpreter and compiler search in this order:
@@ -35,7 +35,7 @@ The first matching file wins. Zeccur task imports remain relative to the importi
 ## Example
 
 ```shay
-$shaiiport "math.shaii"
+$shaiiport [math.shaii]
 $shaiiport "text.shaii"
 
 insval-math_pi

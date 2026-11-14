@@ -25,8 +25,8 @@ Shay has its own original grammar and vocabulary, including `brew` for variable 
 ## Imports
 
 ```shay
-$shaiiport "math.shaii"
-$shazport "startup.shaz"
+$shaiiport [math.shaii]
+$shazport [startup.shaz]
 ```
 
 | Importing file | `$shaiiport` | `$shazport` |
@@ -44,8 +44,8 @@ The repository includes a standard-library directory named `siil/`. `$shaiiport`
 Bundled modules include math, units, ASCII codes, text fragments, symbols, geometry, physics, time, booleans, data delimiters, messages, and numeric constants. They currently expose prefixed `brew` constants; callable library functions are not part of the implemented grammar yet. See [`siil/README.md`](siil/README.md) for the complete list.
 
 ```shay
-$shaiiport "math.shaii"
-$shaiiport "text.shaii"
+$shaiiport [math.shaii]
+$shaiiport [text.shaii]
 insval-math_pi
 insval-text_space
 ```

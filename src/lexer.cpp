@@ -81,7 +81,7 @@ std::vector<Token> Lexer::scan() {
             tokens.push_back({TokenKind::Number, number, startLine, startColumn});
             continue;
         }
-        if (c == '$' || c == '-' || c == '=') {
+        if (c == '$' || c == '-' || c == '=' || c == '[' || c == ']' || c == '.') {
             tokens.push_back({TokenKind::Symbol, std::string(1, take()), startLine, startColumn});
             continue;
         }
