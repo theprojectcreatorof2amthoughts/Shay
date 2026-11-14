@@ -152,4 +152,36 @@ if "$SHAII" --check "$TMP/missing-finish.shay" >"$TMP/out" 2>"$TMP/err"; then fa
 grep -q "expected 'finish' to close the function" "$TMP/err" || fail "missing finish diagnostic"
 pass "function closing keyword is required"
 
+cat > "$TMP/conditionals.shay" <<'EOF'
+brew x = 20
+brew y = 10
+ifit x > y
+    instxt-"X is greater than Y"
+exec
+ifit x < y
+    instxt-"This must not appear"
+exec
+ifit x == 20
+    instxt-"Equality works"
+exec
+EOF
+out=$("$SHAII" "$TMP/conditionals.shay") || fail "interpreter ifit execution"
+printf '%s\\n' "$out" | grep -q 'X is greater than Y' || fail "interpreter ifit true branch"
+printf '%s\\n' "$out" | grep -q 'Equality works' || fail "interpreter ifit equality"
+if printf '%s\\n' "$out" | grep -q 'must not appear'; then fail "interpreter ifit false branch"; fi
+pass "interpreter evaluates ifit comparisons and exec blocks"
+CXX=c++ "$GSHAI" -o "$TMP/conditional-app" "$TMP/conditionals.shay" || fail "compile ifit program"
+out=$("$TMP/conditional-app") || fail "run compiled ifit program"
+printf '%s\\n' "$out" | grep -q 'X is greater than Y' || fail "compiled ifit true branch"
+printf '%s\\n' "$out" | grep -q 'Equality works' || fail "compiled ifit equality"
+if printf '%s\\n' "$out" | grep -q 'must not appear'; then fail "compiled ifit false branch"; fi
+pass "compiler generates native ifit conditionals"
+cat > "$TMP/missing-exec.shay" <<'EOF'
+ifit 2 > 1
+    instxt-"missing terminator"
+EOF
+if "$SHAII" --check "$TMP/missing-exec.shay" >"$TMP/out" 2>"$TMP/err"; then fail "ifit missing exec"; fi
+grep -q "expected 'exec' to close the ifit block" "$TMP/err" || fail "missing exec diagnostic"
+pass "ifit requires exec terminator"
+
 printf '\nAll Shay toolchain tests passed.\n'
