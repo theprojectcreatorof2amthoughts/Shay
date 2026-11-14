@@ -13,7 +13,7 @@ Shay has its own original grammar and vocabulary, including `brew` for variable 
 |---|---|
 | `.shay` | Shay program |
 | `.shaii` | Shay library |
-| `.shaz` | Zeccurs task file |
+| `.shaz` | Zeccur task file |
 | `.sho` | Compiled Shay object file (native relocatable object) |
 
 ## Vocabulary
