@@ -1,6 +1,7 @@
 #ifndef SHAY_IMPORTS_HPP
 #define SHAY_IMPORTS_HPP
 
+#include <cstdlib>
 #include <filesystem>
 #include <string>
 #include <system_error>
@@ -19,6 +20,11 @@ inline fs::path resolve_import(const fs::path &importer, const std::string &file
     if (fs::is_regular_file(local, ec)) return local;
 
     if (library) {
+        if (const char *configured = std::getenv("SHAY_STDLIB"); configured && *configured) {
+            ec.clear();
+            const fs::path candidate = fs::path(configured) / requested;
+            if (fs::is_regular_file(candidate, ec)) return candidate;
+        }
         std::vector<fs::path> roots;
         const fs::path cwd = fs::current_path(ec);
         if (!ec) roots.push_back(cwd);
