@@ -10,7 +10,7 @@ public:
  NumericExpression(const std::string&source,const std::unordered_map<std::string,double>&values):source_(source),values_(values){}
  bool evaluate(double&result,std::string&error){position_=0;error_.clear();result=expression();skip();if(error_.empty()&&position_!=source_.size())fail("unexpected token in expression");error=error_;return error_.empty();}
 private:
- const std::string&source_;const std::unordered_map<std::string,double>&values_;std::size_t position_=0;std::string error_;
+ std::string source_;const std::unordered_map<std::string,double>&values_;std::size_t position_=0;std::string error_;
  void skip(){while(position_<source_.size()&&std::isspace(static_cast<unsigned char>(source_[position_])))++position_;}
  bool take(char c){skip();if(position_<source_.size()&&source_[position_]==c){++position_;return true;}return false;}
  void fail(const std::string&m){if(error_.empty())error_=m;}
