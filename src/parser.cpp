@@ -53,7 +53,7 @@ Program Parser::parse() {
             if (valid) valid = consume(TokenKind::Symbol, "=", program.errors, "expected '=' after variable name");
             if (valid) {
                 if (match(TokenKind::String)) {
-                    statement.value = std::string("\\x01") + previous().text;
+                    statement.value = std::string(1, static_cast<char>(1)) + previous().text;
                 } else if (match(TokenKind::Number) || match(TokenKind::Identifier, "true") ||
                            match(TokenKind::Identifier, "false")) {
                     statement.value = previous().text;
