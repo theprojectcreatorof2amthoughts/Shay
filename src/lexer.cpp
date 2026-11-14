@@ -81,7 +81,19 @@ std::vector<Token> Lexer::scan() {
             tokens.push_back({TokenKind::Number, number, startLine, startColumn});
             continue;
         }
-        if (c == '$' || c == '-' || c == '=') {
+        if (c == '
+            tokens.push_back({TokenKind::Symbol, std::string(1, take()), startLine, startColumn});
+            continue;
+        }
+        take();
+        errors_.push_back({startLine, startColumn, std::string("unexpected character '") + c + "'"});
+        tokens.push_back({TokenKind::Invalid, std::string(1, c), startLine, startColumn});
+    }
+    tokens.push_back({TokenKind::End, "", line_, column_});
+    return tokens;
+}
+}
+ || c == '-' || c == '=' || c == '[' || c == ']' || c == '.') {
             tokens.push_back({TokenKind::Symbol, std::string(1, take()), startLine, startColumn});
             continue;
         }
