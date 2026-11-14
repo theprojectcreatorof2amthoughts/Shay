@@ -117,7 +117,7 @@ std::string shell_quote(const std::string &value) {
     }
     return out + "'";
 }
-bool write_translation(const BuildContext &ctx, const fs::path &path) {
+bool write_translation(const BuildContext &ctx, const fs::path &path, bool add_main) {
     std::ofstream out(path, std::ios::binary);
     if (!out) return false;
     out << "#include <string>\n#include <unordered_map>\n"
@@ -143,6 +143,7 @@ bool write_translation(const BuildContext &ctx, const fs::path &path) {
         }
     }
     out << "  return 0;\n}\n";
+    if (add_main) out << "int main() { return shay_program_entry(); }\n";
     return static_cast<bool>(out);
 }
 void print_diagnostics(const BuildContext &ctx) {
@@ -151,17 +152,17 @@ void print_diagnostics(const BuildContext &ctx) {
 }
 }
 int main(int argc,char **argv) {
-    if(argc==2 && std::string(argv[1])=="--version") { std::cout<<"gshai 0.3.0 (Shay compiler)\\n"; return 0; }
+    if(argc==2 && std::string(argv[1])=="--version") { std::cout<<"gshai 0.3.0 (Shay compiler)\n"; return 0; }
     if(argc==2 && (std::string(argv[1])=="--help" || std::string(argv[1])=="-h")) {
-        std::cout<<"Usage:\\n  gshai -ob [output.sho] program.shay   Compile a native object\\n"
-                    "  gshai -o  [output]     program.shay   Compile a runnable executable\\n"
-                    "  gshai --version\\n\\n"
-                    "-ob emits .sho object files; -o links a standalone executable.\\n";
+        std::cout<<"Usage:\n  gshai -ob [output.sho] program.shay   Compile a native object\n"
+                    "  gshai -o  [output]     program.shay   Compile a runnable executable\n"
+                    "  gshai --version\n\n"
+                    "-ob emits .sho object files; -o links a standalone executable.\n";
         return 0;
     }
-    if(argc<3 || argc>4) { std::cerr<<"gshai: expected -ob or -o and a .shay input (try --help)\\n"; return 2; }
+    if(argc<3 || argc>4) { std::cerr<<"gshai: expected -ob or -o and a .shay input (try --help)\n"; return 2; }
     const std::string mode=argv[1];
-    if(mode!="-ob" && mode!="-o") { std::cerr<<"gshai: unknown output mode: "<<mode<<'\\n'; return 2; }
+    if(mode!="-ob" && mode!="-o") { std::cerr<<"gshai: unknown output mode: "<<mode<<'\n'; return 2; }
     const bool object_mode=mode=="-ob";
     fs::path output,input;
     if(argc==3) input=argv[2]; else { output=argv[2]; input=argv[3]; }
@@ -176,14 +177,14 @@ int main(int argc,char **argv) {
     if(!context.diagnostics.empty()) { print_diagnostics(context); return 1; }
     const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();
     const fs::path temp=fs::temp_directory_path()/("shay-build-"+std::to_string(stamp)+".cpp");
-    if(!write_translation(context,temp,!object_mode)) { std::cerr<<"gshai: cannot write temporary translation unit\\n"; return 1; }
+    if(!write_translation(context,temp,!object_mode)) { std::cerr<<"gshai: cannot write temporary translation unit\n"; return 1; }
     const char *configured=std::getenv("CXX");
     const std::string cxx=configured && *configured?configured:"c++";
     const std::string command=shell_quote(cxx)+" -std=c++20 -O2 "+
         (object_mode?"-c ":"")+shell_quote(temp.string())+" -o "+shell_quote(output.string());
     const int status=std::system(command.c_str());
     std::error_code ignored; fs::remove(temp,ignored);
-    if(status!=0) { fs::remove(output,ignored); std::cerr<<"gshai: native compiler/linker failed\\n"; return 1; }
-    std::cout<<"gshai: wrote "<<(object_mode?"object file ":"executable ")<<output.string()<<'\\n';
+    if(status!=0) { fs::remove(output,ignored); std::cerr<<"gshai: native compiler/linker failed\n"; return 1; }
+    std::cout<<"gshai: wrote "<<(object_mode?"object file ":"executable ")<<output.string()<<'\n';
     return 0;
 }
