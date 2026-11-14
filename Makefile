@@ -1,15 +1,13 @@
 # Shay toolchain
-# gshai = interpreter; gshaic = native object compiler.
+# gshai = compiler; shaii = interpreter.
 
 CXX ?= c++
 CC ?= cc
 INSTALL ?= install
-
 BUILD_DIR ?= build
-INTERPRETER := $(BUILD_DIR)/gshai
-COMPILER := $(BUILD_DIR)/gshaic
+INTERPRETER := $(BUILD_DIR)/shaii
+COMPILER := $(BUILD_DIR)/gshai
 PROGRAM ?= examples/hello.shay
-
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 DESTDIR ?=
@@ -23,13 +21,11 @@ LDLIBS ?=
 FRONTEND_SOURCES := src/lexer.cpp src/parser.cpp
 FRONTEND_OBJECTS := $(patsubst src/%.cpp,$(BUILD_DIR)/%.o,$(FRONTEND_SOURCES))
 RUNTIME_OBJECT := $(BUILD_DIR)/runtime.o
-INTERPRETER_OBJECT := $(BUILD_DIR)/gshai.o
-COMPILER_OBJECT := $(BUILD_DIR)/gshaic.o
-OBJECTS := $(FRONTEND_OBJECTS) $(RUNTIME_OBJECT) $(INTERPRETER_OBJECT) $(COMPILER_OBJECT)
-DEPFILES := $(OBJECTS:.o=.d)
+INTERPRETER_OBJECT := $(BUILD_DIR)/shaii.o
+COMPILER_OBJECT := $(BUILD_DIR)/gshai.o
+DEPFILES := $(FRONTEND_OBJECTS:.o=.d) $(RUNTIME_OBJECT:.o=.d) $(INTERPRETER_OBJECT:.o=.d) $(COMPILER_OBJECT:.o=.d)
 
-.PHONY: all build test check run compile clean install uninstall debug release help
-
+.PHONY: all build test check run compile executable clean install uninstall debug release help
 all: build
 build: $(INTERPRETER) $(COMPILER)
 
@@ -40,7 +36,7 @@ $(BUILD_DIR)/.dir:
 $(BUILD_DIR)/%.o: src/%.cpp | $(BUILD_DIR)/.dir
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -Isrc -MMD -MP -c "$<" -o "$@"
 
-$(BUILD_DIR)/runtime.o: src/runtime.c src/runtime.h | $(BUILD_DIR)
+$(BUILD_DIR)/runtime.o: src/runtime.c src/runtime.h | $(BUILD_DIR)/.dir
 	$(CC) $(CPPFLAGS) $(CFLAGS) -Isrc -MMD -MP -c "$<" -o "$@"
 
 $(INTERPRETER): $(INTERPRETER_OBJECT) $(FRONTEND_OBJECTS) $(RUNTIME_OBJECT)
@@ -63,17 +59,19 @@ run: $(INTERPRETER)
 compile: $(COMPILER)
 	CXX="$(CXX)" ./$(COMPILER) -ob "$(PROGRAM)"
 
+executable: $(COMPILER)
+	CXX="$(CXX)" ./$(COMPILER) -o "$(PROGRAM)"
+
 install: build
 	$(INSTALL) -d "$(DESTDIR)$(BINDIR)"
-	$(INSTALL) -m 0755 "$(INTERPRETER)" "$(DESTDIR)$(BINDIR)/gshai"
-	$(INSTALL) -m 0755 "$(COMPILER)" "$(DESTDIR)$(BINDIR)/gshaic"
+	$(INSTALL) -m 0755 "$(COMPILER)" "$(DESTDIR)$(BINDIR)/gshai"
+	$(INSTALL) -m 0755 "$(INTERPRETER)" "$(DESTDIR)$(BINDIR)/shaii"
 
 uninstall:
-	rm -f "$(DESTDIR)$(BINDIR)/gshai" "$(DESTDIR)$(BINDIR)/gshaic"
+	rm -f "$(DESTDIR)$(BINDIR)/gshai" "$(DESTDIR)$(BINDIR)/shaii"
 
 debug:
 	$(MAKE) BUILD_DIR=build/debug CXXFLAGS="-std=c++20 -O0 -g3 -Wall -Wextra -Wpedantic" CFLAGS="-std=c11 -O0 -g3 -Wall -Wextra -Wpedantic" build
-
 release:
 	$(MAKE) BUILD_DIR=build/release CXXFLAGS="-std=c++20 -O3 -DNDEBUG -Wall -Wextra -Wpedantic" CFLAGS="-std=c11 -O3 -DNDEBUG -Wall -Wextra -Wpedantic" build
 
@@ -83,13 +81,11 @@ clean:
 help:
 	@printf '%s\\n' \
 	  'Shay toolchain' \
-	  '  make                 Build interpreter (gshai) and compiler (gshaic)' \
-	  '  make test            Build both tools and run regression tests' \
+	  '  make                 Build compiler (gshai) and interpreter (shaii)' \
+	  '  make test            Run compiler/interpreter regression tests' \
 	  '  make check PROGRAM=examples/hello.shay' \
 	  '  make run PROGRAM=examples/hello.shay' \
-	  '  make compile PROGRAM=examples/hello.shay  # emits examples/hello.sho' \
-	  '  make debug           Build debug versions' \
-	  '  make release         Build optimized versions' \
-	  '  make install         Install gshai and gshaic' \
-	  '  make uninstall       Remove installed tools' \
+	  '  make compile PROGRAM=examples/hello.shay  # emits .sho' \
+	  '  make executable PROGRAM=examples/hello.shay  # emits executable' \
+	  '  make install         Install gshai and shaii' \
 	  '  make clean           Remove build outputs'
