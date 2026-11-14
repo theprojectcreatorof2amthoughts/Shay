@@ -10,7 +10,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_library(shay_runtime STATIC src/runtime.c)
 target_include_directories(shay_runtime PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-add_executable(gshai src/gshai.cpp)
+add_executable(gshai src/gshai.cpp src/lexer.cpp src/parser.cpp)
 target_link_libraries(gshai PRIVATE shay_runtime)
 target_compile_options(gshai PRIVATE
     $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall;-Wextra;-Wpedantic>
