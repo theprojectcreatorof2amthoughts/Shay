@@ -41,7 +41,7 @@ Imports are relative to the importing file. Duplicate files are loaded once and 
 
 The repository includes a standard-library directory named `siil/`. `$shaiiport` checks beside the importing file first, then checks `SHAY_STDLIB` if set, followed by `siil/` in the current working directory and ancestor directories. Set `SHAY_STDLIB` to a library directory (for example, `/usr/local/share/shay/siil`) when using an installed copy. `make install` installs the bundled libraries under `/usr/local/share/shay/siil` by default.
 
-Bundled modules include math, units, ASCII codes, text fragments, symbols, geometry, physics, time, booleans, data delimiters, messages, and numeric constants. They currently expose prefixed `brew` constants; callable library functions are not part of the implemented grammar yet. See [`siil/README.md`](siil/README.md) for the complete list.
+Bundled modules include math, units, ASCII codes, text fragments, symbols, geometry, physics, time, booleans, data delimiters, messages, and numeric constants. Libraries can declare reusable functions with `$declr`, return numeric expressions with `forw`, and close declarations with `finish`. See [`siil/README.md`](siil/README.md) for the complete list.
 
 ```shay
 $shaiiport [math.shaii]
@@ -58,7 +58,7 @@ brew username = "Alex"
 insval-username
 ```
 
-The current implementation supports string output, literal variable declarations, variable output, imports, duplicate-import protection, circular-import detection, and source-located diagnostics. This is an early implementation stage; the full language feature set is still being developed.
+The current implementation supports string output, literal variable declarations, variable output, imported functions, numeric function returns and calls, imports, duplicate-import protection, circular-import detection, and source-located diagnostics. Function bodies currently contain at most one optional numeric `forw` expression.
 
 ## Build
 
@@ -136,7 +136,7 @@ The long-term goal is to grow Shay into a complete, practical, general-purpose p
 
 - Full lexer, parser, AST, and structured diagnostics.
 - Interactive REPL and persistent execution environment.
-- Functions, recursion, lexical scopes, closures, and control flow.
+- Expanded functions, recursion, lexical scopes, closures, and control flow.
 - Numeric, string, boolean, collection, and memory values.
 - Checked memory/buffer operations and expanded math/string/geometry built-ins.
 - Embedded and external library loading, plus Zeccurs task execution.
