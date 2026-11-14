@@ -52,12 +52,18 @@ Program Parser::parse() {
             if (valid) statement.name = previous().text;
             if (valid) valid = consume(TokenKind::Symbol, "=", program.errors, "expected '=' after variable name");
             if (valid) {
-                if (match(TokenKind::String) || match(TokenKind::Number) ||
-                    match(TokenKind::Identifier, "true") || match(TokenKind::Identifier, "false"))
-                    statement.value = previous().kind == TokenKind::Identifier
-                        ? previous().text : (previous().kind == TokenKind::String
-                            ? std::string("\x01") + previous().text : previous().text);
-                else {
+                if (match(TokenKind::String)) {
+                    statement.value = std::string("\\x01") + previous().text;
+                } else if (match(TokenKind::Number) || match(TokenKind::Identifier, "true") ||
+                           match(TokenKind::Identifier, "false")) {
+                    statement.value = previous().text;
+                } else if (match(TokenKind::Symbol, "-")) {
+                    if (match(TokenKind::Number)) statement.value = "-" + previous().text;
+                    else {
+                        error(program.errors, "expected digits after unary '-'");
+                        valid = false;
+                    }
+                } else {
                     error(program.errors, "expected a string, number, or boolean literal");
                     valid = false;
                 }
