@@ -1,6 +1,6 @@
 # Shay syntax notes
 
-This document records the accepted Shay vocabulary and the current compiler grammar. Shay is an independent language with its own syntax.
+This document records the accepted Shay vocabulary and the current grammar. Shay is an independent language with its own syntax.
 
 ## Current statements
 
@@ -27,14 +27,25 @@ $shazport "task.shaz"
 
 Imports are relative to the importing file. Circular imports are errors and duplicate imports load once.
 
+## Toolchain
+
+- `shaii` is the interpreter. It executes source files and supports `--check`.
+- `gshai` is the compiler.
+- `gshai -ob program.shay` emits `program.sho`, a native relocatable object.
+- `gshai -o program.shay` emits a standalone executable named `program`.
+- `gshai -o output-path program.shay` chooses the executable path.
+- `gshai -ob output.sho program.shay` chooses the object path.
+
+The compiler currently translates the supported Shay statement subset into native C++ code and invokes the host C++ compiler/linker. It embeds the small runtime write primitive into generated outputs. This is a native compilation workflow, but it is not yet a direct machine-code backend.
+
 ## Comments
 
 A `##` comment runs to the end of the line.
 
-## Compiler pipeline
+## Frontend
 
-The shared frontend tokenizes source into identifiers, numbers, strings, symbols, and line boundaries. The parser converts those tokens into a small statement AST. The `gshai` interpreter executes the parsed program; the separate `gshaic` compiler translates the supported program subset into a native relocatable `.sho` object file. Lexer and parser diagnostics include source line information.
+The shared frontend tokenizes source into identifiers, numbers, strings, symbols, and line boundaries. The parser converts those tokens into a statement AST. Lexer and parser diagnostics include source line information.
 
 ## Not yet part of the grammar
 
-Functions, control flow, collections, typed values, general expressions, error handling, REPL behavior, and native code generation are not implemented yet. Their syntax will be designed as original Shay syntax.
+Functions, control flow, collections, typed values, general expressions, error handling, and REPL behavior are not implemented yet. Their syntax will be designed as original Shay syntax.
