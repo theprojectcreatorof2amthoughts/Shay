@@ -119,4 +119,37 @@ CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/compiled.shay" || fail "default executable o
 test -x "$TMP/compiled" || fail "default executable path"
 pass "gshai -o derives executable filename"
 
+cat > "$TMP/functions.shaii" <<'EOF'
+$declr add(x, y)
+    forw x + y
+finish
+
+$declr square(value)
+    forw value * value
+finish
+EOF
+cat > "$TMP/function-main.shay" <<'EOF'
+$shaiiport [functions.shaii]
+insval-add(10, 20)
+insval-square(6)
+EOF
+"$SHAII" --check "$TMP/function-main.shay" >/dev/null || fail "function syntax check"
+out=$("$SHAII" "$TMP/function-main.shay")
+printf '%s\n' "$out" | grep -q '^30 || fail "interpreter function addition"
+printf '%s\n' "$out" | grep -q '^36 || fail "interpreter function multiplication"
+pass "interpreter declares, imports, and calls functions"
+CXX=c++ "$GSHAI" -o "$TMP/function-app" "$TMP/function-main.shay" || fail "compile function program"
+out=$("$TMP/function-app")
+printf '%s\n' "$out" | grep -q '^30 || fail "compiled function addition"
+printf '%s\n' "$out" | grep -q '^36 || fail "compiled function multiplication"
+pass "compiler generates callable native functions"
+
+cat > "$TMP/missing-finish.shay" <<'EOF'
+$declr broken(x)
+    forw x + 1
+EOF
+if "$SHAII" --check "$TMP/missing-finish.shay" >"$TMP/out" 2>"$TMP/err"; then fail "function missing finish"; fi
+grep -q "expected 'finish' to close the function" "$TMP/err" || fail "missing finish diagnostic"
+pass "function closing keyword is required"
+
 printf '\nAll Shay toolchain tests passed.\n'
