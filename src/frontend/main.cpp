@@ -1,9 +1,11 @@
 #include "shay_runtime.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <regex>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
