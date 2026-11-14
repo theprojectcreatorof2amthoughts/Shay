@@ -1,0 +1,13 @@
+## A small example of reusable Shay functions
+$declr add(x, y)
+    forw x + y
+finish
+
+$declr square(value)
+    forw value * value
+finish
+
+instxt-"10 + 20:"
+insval-add(10, 20)
+instxt-"6 squared:"
+insval-square(6)
