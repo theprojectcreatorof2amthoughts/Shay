@@ -18,8 +18,7 @@ $(TARGET): src/gshai.cpp $(BUILD)/runtime.o | $(BUILD)
 	$(CXX) $(CXXFLAGS) -Isrc $^ -o $@
 
 test: $(TARGET)
-	$(TARGET) --check examples/hello.shay
-	$(TARGET) examples/hello.shay
+	sh tests/run.sh ./$(TARGET)
 
 clean:
 	rm -rf $(BUILD)
