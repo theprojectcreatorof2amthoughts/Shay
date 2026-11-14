@@ -166,15 +166,15 @@ ifit x == 20
 exec
 EOF
 out=$("$SHAII" "$TMP/conditionals.shay") || fail "interpreter ifit execution"
-printf '%s\\n' "$out" | grep -q 'X is greater than Y' || fail "interpreter ifit true branch"
-printf '%s\\n' "$out" | grep -q 'Equality works' || fail "interpreter ifit equality"
-if printf '%s\\n' "$out" | grep -q 'must not appear'; then fail "interpreter ifit false branch"; fi
+printf '%s\n' "$out" | grep -q 'X is greater than Y' || fail "interpreter ifit true branch"
+printf '%s\n' "$out" | grep -q 'Equality works' || fail "interpreter ifit equality"
+if printf '%s\n' "$out" | grep -q 'must not appear'; then fail "interpreter ifit false branch"; fi
 pass "interpreter evaluates ifit comparisons and exec blocks"
 CXX=c++ "$GSHAI" -o "$TMP/conditional-app" "$TMP/conditionals.shay" || fail "compile ifit program"
 out=$("$TMP/conditional-app") || fail "run compiled ifit program"
-printf '%s\\n' "$out" | grep -q 'X is greater than Y' || fail "compiled ifit true branch"
-printf '%s\\n' "$out" | grep -q 'Equality works' || fail "compiled ifit equality"
-if printf '%s\\n' "$out" | grep -q 'must not appear'; then fail "compiled ifit false branch"; fi
+printf '%s\n' "$out" | grep -q 'X is greater than Y' || fail "compiled ifit true branch"
+printf '%s\n' "$out" | grep -q 'Equality works' || fail "compiled ifit equality"
+if printf '%s\n' "$out" | grep -q 'must not appear'; then fail "compiled ifit false branch"; fi
 pass "compiler generates native ifit conditionals"
 cat > "$TMP/missing-exec.shay" <<'EOF'
 ifit 2 > 1
