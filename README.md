@@ -37,6 +37,19 @@ $shazport "startup.shaz"
 
 Imports are relative to the importing file. Duplicate files are loaded once and circular imports are diagnosed. Zeccurs is task-oriented and variable-free.
 
+## Siil standard library
+
+The repository includes a standard-library directory named `siil/`. `$shaiiport` checks beside the importing file first, then searches `siil/` in the current working directory and ancestor directories. Set `SHAY_STDLIB` to an additional library directory (for example, `/usr/local/share/shay/siil`) when using an installed copy. `make install` installs the bundled libraries under `/usr/local/share/shay/siil` by default.
+
+Bundled modules include math, units, ASCII codes, text fragments, symbols, geometry, physics, time, booleans, data delimiters, messages, and numeric constants. They currently expose prefixed `brew` constants; callable library functions are not part of the implemented grammar yet. See [`siil/README.md`](siil/README.md) for the complete list.
+
+```shay
+$shaiiport "math.shaii"
+$shaiiport "text.shaii"
+insval-math_pi
+insval-text_space
+```
+
 ## Initial syntax
 
 ```shay
