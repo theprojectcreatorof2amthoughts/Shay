@@ -1,20 +1,23 @@
 #!/usr/bin/env sh
 set -eu
 GSHai="${1:-./build/gshai}"
+GSHAC="${2:-./build/gshaic}"
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT HUP INT TERM
 pass() { printf 'PASS: %s\n' "$1"; }
 fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
 
-"$GSHai" --version | grep -q 'gshai' || fail "version command"
-pass "version command"
+"$GSHai" --version | grep -q 'gshai' || fail "interpreter version command"
+pass "interpreter version command"
+"$GSHAC" --version | grep -q 'gshaic' || fail "compiler version command"
+pass "compiler version command"
 "$GSHai" --check "$ROOT/examples/hello.shay" >/dev/null || fail "hello check"
 pass "hello syntax check"
 out=$("$GSHai" "$ROOT/examples/hello.shay")
 printf '%s\n' "$out" | grep -q 'Hello, world from Shay!' || fail "text output"
 printf '%s\n' "$out" | grep -q 'Shay' || fail "variable output"
-pass "hello execution"
+pass "interpreter execution"
 
 cat > "$TMP/lexer-parser.shay" <<'EOF'
 brew greeting = "Line 1\nLine 2"
@@ -74,4 +77,20 @@ EOF
 if "$GSHai" --check "$TMP/no-library.shaii" >"$TMP/out" 2>"$TMP/err"; then fail "nested Shaii import"; fi
 grep -q 'cannot import other .shaii' "$TMP/err" || fail "Shaii import restriction diagnostic"
 pass "Shaii-to-Shaii imports rejected"
-printf '\nAll gshai bootstrap tests passed.\n'
+
+cp "$ROOT/examples/hello.shay" "$TMP/compiled.shay"
+CXX="${CXX:-c++}" "$GSHAC" -ob "$TMP/compiled.shay" || fail "object compilation"
+test -s "$TMP/compiled.sho" || fail "missing .sho output"
+nm -g "$TMP/compiled.sho" | grep -q 'shay_program_entry' || fail ".sho missing Shay entry symbol"
+cat > "$TMP/harness.cpp" <<'EOF'
+extern "C" int shay_program_entry();
+int main() { return shay_program_entry(); }
+EOF
+cc -std=c11 -c "$ROOT/src/runtime.c" -o "$TMP/runtime.o"
+"${CXX:-c++}" -std=c++20 "$TMP/harness.cpp" "$TMP/compiled.sho" "$TMP/runtime.o" -o "$TMP/compiled-app"
+out=$("$TMP/compiled-app")
+printf '%s\n' "$out" | grep -q 'Hello, world from Shay!' || fail "compiled object execution"
+printf '%s\n' "$out" | grep -q 'Shay' || fail "compiled object variable output"
+pass "gshaic emits linkable .sho object files"
+
+printf '\nAll Shay toolchain tests passed.\n'

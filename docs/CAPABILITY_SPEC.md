@@ -37,7 +37,7 @@ Imports resolve relative to the importing file. The loader must canonicalize pat
 ### Runtime and tooling
 
 - Persistent REPL with multiline input, diagnostics, and environment continuity.
-- Interpreter and native executable workflow with consistent semantics.
+- Separate command-line interpreter and compiler with consistent language semantics.\n- Native relocatable object generation using the `.sho` extension, with a documented entry symbol and runtime-linking contract.
 - Check-only mode, output path, optimization levels, warning controls, verbose/debug modes, and useful exit codes.
 - Multiple diagnostics per compilation, source excerpts/carets, import backtraces, and warning categories.
 - Standard library and Zeccurs task runner with deterministic dependency resolution.
