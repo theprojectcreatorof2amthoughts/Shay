@@ -80,9 +80,9 @@ static bool execute_file(const fs::path &input, Context &ctx, bool imported = fa
     ctx.active.insert(key);
     std::string raw;
     std::size_t line_no = 0;
-    const std::regex import_re(R"(^\$(shaiiport|shazport)\s+"([^"]+)"\s*$)");
+    const std::regex import_re(R"REGEX(^\$(shaiiport|shazport)\s+"([^"]+)"\s*$)REGEX");
     const std::regex brew_re(R"(^brew\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$)");
-    const std::regex text_re(R"(^instxt-"((?:\\.|[^"])*)"\s*$)");
+    const std::regex text_re(R"REGEX(^instxt-"((?:\\.|[^"])*)"\s*$)REGEX");
     const std::regex value_re(R"(^insval-([A-Za-z_][A-Za-z0-9_]*)\s*$)");
     const std::regex number_re(R"(^-?[0-9]+(?:\.[0-9]+)?$)");
 
