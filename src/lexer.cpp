@@ -36,7 +36,13 @@ std::vector<Token> Lexer::scan() {
    std::string number;bool dot=false;while(std::isdigit(static_cast<unsigned char>(peek()))||(!dot&&peek()=='.')){if(peek()=='.')dot=true;number.push_back(take());}
    tokens.push_back({TokenKind::Number,number,startLine,startColumn});continue;
   }
-  if(c=='$'||c=='-'||c=='='||c=='['||c==']'||c=='.'||c=='+'||c=='*'||c=='/'||c=='('||c==')'||c==','){
+  if(c=='>'||c=='<'||c=='='||c=='!'){
+   std::string op(1,take());if(peek()=='=')op.push_back(take());
+   if(op=="!"||op==">"||op=="<"||op=="="||op==">="||op=="<="||op=="=="||op=="!="){
+    tokens.push_back({TokenKind::Symbol,op,startLine,startColumn});continue;
+   }
+  }
+  if(c=='$'||c=='-'||c=='['||c==']'||c=='.'||c=='+'||c=='*'||c=='/'||c=='('||c==')'||c==','){
    tokens.push_back({TokenKind::Symbol,std::string(1,take()),startLine,startColumn});continue;
   }
   take();errors_.push_back({startLine,startColumn,std::string("unexpected character '")+c+"'"});tokens.push_back({TokenKind::Invalid,std::string(1,c),startLine,startColumn});
