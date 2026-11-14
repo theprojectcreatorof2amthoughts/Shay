@@ -34,7 +34,7 @@ inline bool evaluate_condition(const std::string&condition,const std::unordered_
  const std::string ops[]={">=","<=","==","!=",">","<"};
  for(const auto&op:ops){auto pos=condition.find(op);if(pos==std::string::npos)continue;
   double left=0,right=0;NumericExpression a(condition.substr(0,pos),values),b(condition.substr(pos+op.size()),values);
-  if(!a.evaluate(left,error))return false;if(!b.evaluate(right,error))return false;
+  if(!a.evaluate(left,error)){error="left operand '"+condition.substr(0,pos)+"': "+error;return false;}if(!b.evaluate(right,error)){error="right operand '"+condition.substr(pos+op.size())+"': "+error;return false;}
   if(op==">")result=left>right;else if(op=="<")result=left<right;else if(op==">=")result=left>=right;else if(op=="<=")result=left<=right;else if(op=="==")result=left==right;else result=left!=right;
   return true;
  }
