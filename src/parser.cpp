@@ -36,12 +36,52 @@ Program Parser::parse() {
         if (match(TokenKind::Symbol, "$")) {
             if (match(TokenKind::Identifier, "shaiiport")) {
                 statement.kind = StatementKind::ImportLibrary;
-                valid = consume(TokenKind::String, "", program.errors, "expected a quoted .shaii filename");
-                if (valid) statement.value = previous().text;
+                valid = consume(TokenKind::Symbol, "[", program.errors, "expected '[' before the .shaii filename");
+                if (valid) {
+                    std::string filename;
+                    while (!atEnd() && peek().kind != TokenKind::Newline &&
+                           !(peek().kind == TokenKind::Symbol && peek().text == "]")) {
+                        if (peek().kind == TokenKind::Identifier || peek().kind == TokenKind::Number ||
+                            (peek().kind == TokenKind::Symbol && (peek().text == "." || peek().text == "-" || peek().text == "_"))) {
+                            filename += peek().text;
+                            ++current_;
+                        } else {
+                            error(program.errors, "invalid character in .shaii filename");
+                            valid = false;
+                            break;
+                        }
+                    }
+                    if (valid && filename.empty()) {
+                        error(program.errors, "expected a .shaii filename inside '[' and ']'");
+                        valid = false;
+                    }
+                    if (valid) valid = consume(TokenKind::Symbol, "]", program.errors, "expected ']' after the .shaii filename");
+                    if (valid) statement.value = filename;
+                }
             } else if (match(TokenKind::Identifier, "shazport")) {
                 statement.kind = StatementKind::ImportTask;
-                valid = consume(TokenKind::String, "", program.errors, "expected a quoted .shaz filename");
-                if (valid) statement.value = previous().text;
+                valid = consume(TokenKind::Symbol, "[", program.errors, "expected '[' before the .shaz filename");
+                if (valid) {
+                    std::string filename;
+                    while (!atEnd() && peek().kind != TokenKind::Newline &&
+                           !(peek().kind == TokenKind::Symbol && peek().text == "]")) {
+                        if (peek().kind == TokenKind::Identifier || peek().kind == TokenKind::Number ||
+                            (peek().kind == TokenKind::Symbol && (peek().text == "." || peek().text == "-" || peek().text == "_"))) {
+                            filename += peek().text;
+                            ++current_;
+                        } else {
+                            error(program.errors, "invalid character in .shaz filename");
+                            valid = false;
+                            break;
+                        }
+                    }
+                    if (valid && filename.empty()) {
+                        error(program.errors, "expected a .shaz filename inside '[' and ']'");
+                        valid = false;
+                    }
+                    if (valid) valid = consume(TokenKind::Symbol, "]", program.errors, "expected ']' after the .shaz filename");
+                    if (valid) statement.value = filename;
+                }
             } else {
                 error(program.errors, "expected shaiiport or shazport after '$'");
                 valid = false;
