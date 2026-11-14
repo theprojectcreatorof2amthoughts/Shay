@@ -2,7 +2,7 @@
 
 Shay (شاي, Arabic for tea) is an independent hybrid programming language implemented with a C11 runtime and a C++20 compiler/toolchain. Its compiler and command-line driver are named **gshai**.
 
-Shay is its own language. It does not reuse Y_ or Y++ syntax. Its source vocabulary is being designed around original constructs such as `brew` for variable declarations and `instxt-"..."` for text output.
+Shay has its own original grammar and vocabulary, including `brew` for variable declarations and `instxt-"..."` for text output. Its syntax and language identity are designed independently.
 
 ## File formats
 
@@ -35,7 +35,7 @@ brew username = "Alex"
 insval-username
 ```
 
-The bootstrap currently supports string output, literal variable declarations, variable output, import checks, duplicate-import protection, circular-import detection, and source-located diagnostics. This is the first implementation stage, not yet feature-equivalent to gyy or gy++.
+The bootstrap currently supports string output, literal variable declarations, variable output, import checks, duplicate-import protection, circular-import detection, and source-located diagnostics. This is the first implementation stage; the full language feature set is still being developed.
 
 ## Build
 
@@ -57,9 +57,9 @@ cmake --build build-cmake
 - `src/runtime.c` / `src/runtime.h`: C11 runtime primitives.
 - `examples/`: runnable Shay examples.
 
-## Roadmap toward gyy / gy++ capability coverage
+## Development roadmap
 
-The target is to bring the useful compiler/runtime capabilities of both sibling projects into Shay while retaining Shay's own syntax and file formats:
+The long-term goal is to grow Shay into a complete, practical, general-purpose programming language while preserving its own syntax and file formats:
 
 - Full lexer, parser, AST, and structured diagnostics.
 - Interactive REPL and persistent execution environment.

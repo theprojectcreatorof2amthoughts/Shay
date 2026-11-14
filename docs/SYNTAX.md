@@ -1,6 +1,6 @@
 # Shay syntax notes
 
-This document records the accepted Shay vocabulary and the current compiler grammar. Shay is independent of Y_ and Y++.
+This document records the accepted Shay vocabulary and the current compiler grammar. Shay is an independent language with its own syntax.
 
 ## Current statements
 
@@ -33,8 +33,8 @@ A `##` comment runs to the end of the line.
 
 ## Compiler pipeline
 
-The compiler now tokenizes source into identifiers, numbers, strings, symbols, and line boundaries. The parser converts those tokens into a small statement AST before semantic checks and execution. Lexer and parser diagnostics include source line information.
+The compiler tokenizes source into identifiers, numbers, strings, symbols, and line boundaries. The parser converts those tokens into a small statement AST before semantic checks and execution. Lexer and parser diagnostics include source line information.
 
 ## Not yet part of the grammar
 
-Functions, control flow, collections, typed values, general expressions, error handling, REPL behavior, and native code generation are not implemented yet. Their syntax will be designed as Shay syntax rather than borrowing C, C++, Y_, or Y++ keywords.
+Functions, control flow, collections, typed values, general expressions, error handling, REPL behavior, and native code generation are not implemented yet. Their syntax will be designed as original Shay syntax.
