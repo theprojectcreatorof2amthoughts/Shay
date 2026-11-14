@@ -30,5 +30,15 @@ private:
   fail("expected a number, parameter, or parenthesized expression");return 0;
  }
 };
+inline bool evaluate_condition(const std::string&condition,const std::unordered_map<std::string,double>&values,bool&result,std::string&error){
+ const std::string ops[]={">=","<=","==","!=",">","<"};
+ for(const auto&op:ops){auto pos=condition.find(op);if(pos==std::string::npos)continue;
+  double left=0,right=0;NumericExpression a(condition.substr(0,pos),values),b(condition.substr(pos+op.size()),values);
+  if(!a.evaluate(left,error))return false;if(!b.evaluate(right,error))return false;
+  if(op==">")result=left>right;else if(op=="<")result=left<right;else if(op==">=")result=left>=right;else if(op=="<=")result=left<=right;else if(op=="==")result=left==right;else result=left!=right;
+  return true;
+ }
+ error="expected a comparison operator (>, <, >=, <=, ==, !=)";return false;
+}
 }
 #endif
