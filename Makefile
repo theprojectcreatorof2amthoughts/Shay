@@ -14,8 +14,8 @@ $(BUILD):
 $(BUILD)/runtime.o: src/runtime.c src/runtime.h | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(TARGET): src/gshai.cpp $(BUILD)/runtime.o | $(BUILD)
-	$(CXX) $(CXXFLAGS) -Isrc $^ -o $@
+$(TARGET): src/gshai.cpp src/lexer.cpp src/parser.cpp src/ast.hpp src/lexer.hpp src/parser.hpp $(BUILD)/runtime.o | $(BUILD)
+	$(CXX) $(CXXFLAGS) -Isrc src/gshai.cpp src/lexer.cpp src/parser.cpp $(BUILD)/runtime.o -o $@
 
 test: $(TARGET)
 	sh tests/run.sh ./$(TARGET)
