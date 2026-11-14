@@ -1,0 +1,26 @@
+name: Shay CI
+
+on:
+  push:
+    branches: [main, "feature/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build with Make
+        run: make
+      - name: Check compiler version
+        run: ./build/gshai --version
+      - name: Validate example
+        run: ./build/gshai --check examples/hello.shay
+      - name: Run example
+        run: ./build/gshai examples/hello.shay
+      - name: Build with CMake
+        run: |
+          cmake -S . -B build-cmake
+          cmake --build build-cmake --parallel
+          ctest --test-dir build-cmake --output-on-failure
