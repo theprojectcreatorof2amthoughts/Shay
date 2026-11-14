@@ -54,6 +54,23 @@ out=$("$SHAII" "$TMP/main.shay")
 printf '%s\n' "$out" | grep -q 'Zeccurs task ran' || fail "library to Zeccurs import"
 pass "Shaii imports Zeccurs"
 
+cat > "$TMP/siil-main.shay" <<'EOF'
+$shaiiport "math.shaii"
+$shaiiport "text.shaii"
+insval-math_pi
+instxt-"separator:"
+insval-text_space
+EOF
+out=$("$SHAII" "$TMP/siil-main.shay")
+printf '%s\n' "$out" | grep -q '3.14159' || fail "siil math library lookup"
+printf '%s\n' "$out" | grep -q 'separator:' || fail "siil text library lookup"
+pass "interpreter resolves standard libraries from siil/"
+
+CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/siil-compiled" "$TMP/siil-main.shay" || fail "compiler standard-library import"
+out=$("$TMP/siil-compiled")
+printf '%s\n' "$out" | grep -q '3.14159' || fail "compiled siil constant output"
+pass "compiler resolves standard libraries from siil/"
+
 cat > "$TMP/bad.shaz" <<'EOF'
 brew forbidden = 7
 EOF

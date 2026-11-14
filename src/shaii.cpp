@@ -1,4 +1,5 @@
 #include "ast.hpp"
+#include "imports.hpp"
 #include "lexer.hpp"
 #include "parser.hpp"
 #include "runtime.h"
@@ -56,7 +57,7 @@ void execute_file(const fs::path &input, Context &ctx) {
             if(target.extension()!=required) {
                 diagnose(ctx,input,statement.line,std::string("$")+(library?"shaiiport":"shazport")+" requires a "+required+" file"); break;
             }
-            execute_file(input.parent_path()/target,ctx); break;
+            execute_file(shay::resolve_import(input, statement.value, library),ctx); break;
         }
         case shay::StatementKind::Declare:
             if(extension==".shaz") { diagnose(ctx,input,statement.line,"Zeccurs files are variable-free; 'brew' is not allowed"); break; }

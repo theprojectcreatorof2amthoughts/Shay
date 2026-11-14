@@ -1,4 +1,5 @@
 #include "ast.hpp"
+#include "imports.hpp"
 #include "lexer.hpp"
 #include "parser.hpp"
 
@@ -70,7 +71,7 @@ void load_file(const fs::path &input, BuildContext &ctx) {
                          " requires a " + required + " file");
                 continue;
             }
-            load_file(input.parent_path() / target, ctx);
+            load_file(shay::resolve_import(input, statement.value, library), ctx);
             continue;
         }
         if (statement.kind == shay::StatementKind::Declare) {
