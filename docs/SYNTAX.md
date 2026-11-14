@@ -25,7 +25,7 @@ $shazport "task.shaz"
 | `.shaz` | Allowed | Allowed |
 | `.shaii` | Forbidden | Allowed |
 
-Imports are relative to the importing file. Circular imports are errors and duplicate imports load once.
+Imports first resolve beside the importing file. `$shaiiport` additionally searches the project `siil/` standard-library directory (current working directory, then importer ancestors) and the optional `SHAY_STDLIB` directory. `$shazport` remains importer-relative. Circular imports are errors and duplicate imports load once.
 
 ## Toolchain
 
