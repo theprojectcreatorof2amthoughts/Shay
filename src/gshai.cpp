@@ -93,15 +93,15 @@ std::string cpp_string(const std::string &value) {
     out << '"';
     for (unsigned char c : value) {
         switch (c) {
-        case '\\': out << "\\\"; break;
-        case '"': out << "\\""; break;
-        case '\n': out << "\n"; break;
+        case '\\': out << "\\\\"; break;
+        case '"': out << "\\\""; break;
+        case '\n': out << "\\n"; break;
         case '\r': out << "\\r"; break;
         case '\t': out << "\\t"; break;
         default:
             if (c < 32 || c >= 127) {
                 const char octal[] = "01234567";
-                out << "\";
+                out << "\\";
                 out << octal[(c >> 6) & 7] << octal[(c >> 3) & 7] << octal[c & 7];
             } else out << static_cast<char>(c);
         }
