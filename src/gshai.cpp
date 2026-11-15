@@ -110,7 +110,7 @@ std::string cpp_condition(const std::string&condition){
 }
 #ifndef _WIN32
 std::string shell_quote(const std::string&value){
- std::string out="'";for(char c:value){if(c=='\\'')out+="'\\\\''";else out+=c;}return out+"'";
+ std::string out="'";for(char c:value){if(c=='\'')out+="'\\''";else out+=c;}return out+"'";
 }
 #endif
 void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const BuildContext&ctx,const std::string&indent){
