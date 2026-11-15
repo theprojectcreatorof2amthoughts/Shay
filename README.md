@@ -26,6 +26,7 @@ Shay has its own original grammar and vocabulary, including `brew` for variable 
 
 ```shay
 $shaiiport [math.shaii]
+$shaiiport "local-library.shaii"
 $shazport [startup.shaz]
 ```
 
@@ -35,7 +36,7 @@ $shazport [startup.shaz]
 | `.shaz` | Yes | Yes |
 | `.shaii` | No | Yes |
 
-Imports are relative to the importing file. Duplicate files are loaded once and circular imports are diagnosed. Zeccurs is task-oriented and variable-free.
+For `.shaii` imports, square brackets select an implemented/library module and search the importing directory plus configured/standard `siil/` locations. Quotation marks select a `.shaii` file directly from the drive, resolved relative to the importing file (or by an absolute path). `.shaz` imports use square brackets. Duplicate files are loaded once and circular imports are diagnosed. Zeccurs is task-oriented and variable-free.
 
 ## Siil standard library
 

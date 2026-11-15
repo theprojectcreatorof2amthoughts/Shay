@@ -47,7 +47,7 @@ void execute_file(const fs::path&input,Context&ctx){
     const bool library=s.kind==shay::StatementKind::ImportLibrary;const std::string required=library?".shaii":".shaz";
     if(extension==".shaii"&&library){diagnose(ctx,input,s.line,".shaii files cannot import other .shaii libraries");break;}
     if(fs::path(s.value).extension()!=required){diagnose(ctx,input,s.line,std::string("$")+(library?"shaiiport":"shazport")+" requires a "+required+" file");break;}
-    execute_file(shay::resolve_import(input,s.value,library),ctx);break;
+    execute_file(shay::resolve_import(input,s.value,library&&s.search_library_paths),ctx);break;
    }
    case shay::StatementKind::Declare:{
     if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'brew' is not allowed");break;}
