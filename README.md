@@ -113,6 +113,25 @@ You can also choose an explicit `.sho` output path:
 
 The `.sho` file is a native relocatable object. It exports `shay_program_entry` and includes the minimal runtime write function used by the currently supported language subset, so it can be linked with a host entry point.
 
+## Shay-native compiler flags
+
+Compiler flags use Shay's own `--shay...` spelling and can appear before or after the output mode and source path:
+
+```sh
+./build/gshai --shaywall --shaywextra --shayo2 -o examples/hello examples/hello.shay
+```
+
+| Shay flag | Native compiler option | Meaning |
+|---|---|---|
+| `--shaywall` | `-Wall` | Enable common compiler warnings |
+| `--shaywextra` | `-Wextra` | Enable additional compiler warnings |
+| `--shayo0` | `-O0` | Disable optimization |
+| `--shayo1` | `-O1` | Basic optimization |
+| `--shayo2` | `-O2` | Standard optimization (default) |
+| `--shayo3` | `-O3` | Aggressive optimization |
+
+These flags configure the native C++ compiler used by `gshai`; they do not change Shay source syntax. The existing `-o` and `-ob` output modes remain supported.
+
 ## Make targets
 
 - `make` — build compiler `gshai` and interpreter `shaii`.
