@@ -58,14 +58,21 @@ Program Parser::parse(){
    if(match(TokenKind::Identifier,"shaiiport")||match(TokenKind::Identifier,"shazport")){
     const bool library=previous().text=="shaiiport";statement.kind=library?StatementKind::ImportLibrary:StatementKind::ImportTask;
     const std::string ext=library?".shaii":".shaz";
-    valid=consume(TokenKind::Symbol,"[",program.errors,"expected '[' before the "+ext+" filename");
     std::string filename;
-    while(valid&&!atEnd()&&peek().kind!=TokenKind::Newline&&!(peek().kind==TokenKind::Symbol&&peek().text=="]")){
-     if(peek().kind==TokenKind::Identifier||peek().kind==TokenKind::Number||(peek().kind==TokenKind::Symbol&&(peek().text=="."||peek().text=="-"||peek().text=="_"))){filename+=peek().text;++current_;}
-     else{error(program.errors,"invalid character in "+ext+" filename");valid=false;}
+    if(library&&match(TokenKind::String)){
+     filename=previous().text;
+     statement.search_library_paths=false;
+    }else{
+     valid=consume(TokenKind::Symbol,"[",program.errors,"expected '[' or a quoted on-disk "+ext+" filename");
+     statement.search_library_paths=true;
+     while(valid&&!atEnd()&&peek().kind!=TokenKind::Newline&&!(peek().kind==TokenKind::Symbol&&peek().text=="]")){
+      if(peek().kind==TokenKind::Identifier||peek().kind==TokenKind::Number||(peek().kind==TokenKind::Symbol&&(peek().text=="."||peek().text=="-"||peek().text=="_"))){filename+=peek().text;++current_;}
+      else{error(program.errors,"invalid character in "+ext+" filename");valid=false;}
+     }
+     if(valid&&filename.empty()){error(program.errors,"expected a "+ext+" filename inside '[' and ']'");valid=false;}
+     if(valid)valid=consume(TokenKind::Symbol,"]",program.errors,"expected ']' after the filename");
     }
-    if(valid&&filename.empty()){error(program.errors,"expected a "+ext+" filename inside '[' and ']'");valid=false;}
-    if(valid)valid=consume(TokenKind::Symbol,"]",program.errors,"expected ']' after the filename");
+    if(valid&&filename.empty()){error(program.errors,"expected a non-empty "+ext+" filename");valid=false;}
     if(valid)statement.value=filename;
    }else if(match(TokenKind::Identifier,"declr")){
     statement.kind=StatementKind::DeclareFunction;
