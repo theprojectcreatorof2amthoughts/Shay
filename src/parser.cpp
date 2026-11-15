@@ -160,6 +160,12 @@ Program Parser::parse(){
     }
     if(valid)valid=consume(TokenKind::Symbol,")",program.errors,"expected ')' after function arguments");
    }
+  }else if(peek().kind==TokenKind::Identifier&&current_+1<tokens_.size()&&tokens_[current_+1].kind==TokenKind::Symbol&&tokens_[current_+1].text=="="){
+   statement.kind=StatementKind::Assign;
+   statement.name=peek().text;++current_;
+   ++current_; // consume '='
+   statement.value=collect_expression(tokens_,current_,"",valid);
+   if(!valid||statement.value.empty()){error(program.errors,"expected a numeric expression after '='");valid=false;}
   }else{error(program.errors,"unrecognized Shay statement");valid=false;}
   if(skipCurrentLine&&!atEnd()&&peek().kind!=TokenKind::Newline){error(program.errors,"unexpected token after statement");valid=false;}
   if(valid)program.statements.push_back(statement);

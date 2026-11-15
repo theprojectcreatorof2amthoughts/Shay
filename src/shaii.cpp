@@ -56,6 +56,12 @@ void call_function(const shay::Statement&call,Context&ctx,const fs::path&file,Nu
 void execute_statements(const std::vector<shay::Statement>&statements,Context&ctx,const fs::path&file,NumberScope&scope){
  for(const auto&s:statements){
   switch(s.kind){
+   case shay::StatementKind::Assign:{
+    double value=0;std::string error;
+    if(!evaluate(s.value,scope,value,error))diagnose(ctx,file,s.line,"invalid assignment to '"+s.name+"': "+error);
+    else scope[s.name]=value;
+    break;
+   }
    case shay::StatementKind::OutputText:
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
     break;
@@ -112,6 +118,14 @@ void execute_file(const fs::path&input,Context&ctx){
     }else{ctx.values[s.name]=s.value;try{std::size_t used=0;double value=std::stod(s.value,&used);if(used==s.value.size())ctx.numbers[s.name]=value;else ctx.numbers.erase(s.name);}catch(...){ctx.numbers.erase(s.name);}}
     break;
    }
+   case shay::StatementKind::Assign:{
+    if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; assignments are not allowed");break;}
+    if(!ctx.numbers.count(s.name)){diagnose(ctx,input,s.line,"cannot assign to unknown or non-numeric variable '"+s.name+"'");break;}
+    double value=0;std::string error;
+    if(!evaluate(s.value,ctx.numbers,value,error))diagnose(ctx,input,s.line,"invalid assignment to '"+s.name+"': "+error);
+    else{ctx.numbers[s.name]=value;ctx.values[s.name]=number_text(value);}
+    break;
+   }
    case shay::StatementKind::DeclareFunction:
     if(ctx.functions.count(s.name))diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");
     else ctx.functions.emplace(s.name,s);
@@ -119,16 +133,19 @@ void execute_file(const fs::path&input,Context&ctx){
    case shay::StatementKind::If:{
     bool condition=false;std::string error;
     if(!shay::evaluate_condition(s.condition,ctx.numbers,condition,error)){diagnose(ctx,input,s.line,"invalid ifit condition: "+error);break;}
-    if(condition){auto scope=ctx.numbers;execute_statements(s.body,ctx,input,scope);}
+    if(condition)execute_statements(s.body,ctx,input,ctx.numbers);
     break;
    }
    case shay::StatementKind::OutputText:
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
     break;
    case shay::StatementKind::OutputValue:{
-    auto found=ctx.values.find(s.name);
-    if(found==ctx.values.end())diagnose(ctx,input,s.line,"unknown variable '"+s.name+"'");
-    else if(!ctx.check_only)shay_runtime_write((found->second+"\n").c_str());
+    auto number=ctx.numbers.find(s.name);
+    if(number!=ctx.numbers.end()){if(!ctx.check_only)shay_runtime_write((number_text(number->second)+"\n").c_str());}
+    else{auto found=ctx.values.find(s.name);
+     if(found==ctx.values.end())diagnose(ctx,input,s.line,"unknown variable '"+s.name+"'");
+     else if(!ctx.check_only)shay_runtime_write((found->second+"\n").c_str());
+    }
     break;
    }
    case shay::StatementKind::OutputCall:{
