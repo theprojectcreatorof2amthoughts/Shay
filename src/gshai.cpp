@@ -117,21 +117,21 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
     out<<" if ("<<cpp_condition(s.condition)<<") {\n";
     for(const auto&nested:s.body){
      if(nested.kind==shay::StatementKind::OutputText)out<<" shay_runtime_write("<<cpp_string(nested.value+"\n")<<");\n";
-      else if(nested.kind==shay::StatementKind::OutputValue)out<<" shay_runtime_write((values["<<cpp_string(nested.name)<<"] + \"\n\").c_str());\n";
+      else if(nested.kind==shay::StatementKind::OutputValue)out<<" shay_runtime_write((values["<<cpp_string(nested.name)<<"] + "<<cpp_string("\n")<<").c_str());\n";
       else if(nested.kind==shay::StatementKind::OutputCall){
        out<<" { std::ostringstream shay_if_call; shay_if_call<<std::setprecision(15)<<shay_fn_"<<nested.name<<"(";
        for(std::size_t i=0;i<nested.arguments.size();++i){if(i)out<<", ";out<<nested.arguments[i];}
-       out<<")<<\"\n\"; shay_runtime_write(shay_if_call.str().c_str()); }\n";
+       out<<")<<"<<cpp_string("\n")<<"; shay_runtime_write(shay_if_call.str().c_str()); }\n";
       }
     }
     out<<" }\n";break;
    }
    case shay::StatementKind::OutputText:out<<" shay_runtime_write("<<cpp_string(s.value+"\n")<<");\n";break;
-   case shay::StatementKind::OutputValue:out<<" shay_runtime_write((values["<<cpp_string(s.name)<<"] + \"\n\").c_str());\n";break;
+   case shay::StatementKind::OutputValue:out<<" shay_runtime_write((values["<<cpp_string(s.name)<<"] + "<<cpp_string("\n")<<").c_str());\n";break;
    case shay::StatementKind::OutputCall:
     out<<" { std::ostringstream shay_call_output; shay_call_output<<std::setprecision(15)<<shay_fn_"<<s.name<<"(";
     for(std::size_t i=0;i<s.arguments.size();++i){if(i)out<<", ";out<<s.arguments[i];}
-    out<<")<<\"\n\"; shay_runtime_write(shay_call_output.str().c_str()); }\n";break;
+    out<<")<<"<<cpp_string("\n")<<"; shay_runtime_write(shay_call_output.str().c_str()); }\n";break;
    default:break;
   }
  }
