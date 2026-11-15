@@ -66,7 +66,7 @@ Program Parser::parse(){
      statement.external_import=true;
      filename=previous().text;
      if(filename.empty()){error(program.errors,"expected an external .shaii filename inside quotes");valid=false;}
-     else if(fs::path(filename).extension()!=ext){error(program.errors,"quoted $shaiiport imports require a .shaii file");valid=false;}
+     else if(std::filesystem::path(filename).extension()!=ext){error(program.errors,"quoted $shaiiport imports require a .shaii file");valid=false;}
     }else{
      valid=consume(TokenKind::Symbol,"[",program.errors,"expected '[' before the "+ext+" filename");
      while(valid&&!atEnd()&&peek().kind!=TokenKind::Newline&&!(peek().kind==TokenKind::Symbol&&peek().text=="]")){
