@@ -26,6 +26,15 @@ struct BuildContext{
  std::vector<shay::Statement>statements;
 };
 void diagnose(BuildContext&ctx,const fs::path&file,std::size_t line,const std::string&message){ctx.diagnostics.push_back({file,line,message});}
+std::unordered_set<std::string> expression_names(const std::string&source){
+ std::unordered_set<std::string> names;const std::regex identifier(R"([A-Za-z_][A-Za-z0-9_]*)");
+ for(std::sregex_iterator it(source.begin(),source.end(),identifier),end;it!=end;++it)names.insert(it->str());
+ return names;
+}
+void validate_expression_names(BuildContext&ctx,const fs::path&file,std::size_t line,const std::string&source,const std::unordered_set<std::string>&locals,const std::string&label){
+ for(const auto&name:expression_names(source))if(!ctx.variables.count(name)&&!locals.count(name)&&name!="true"&&name!="false")
+  diagnose(ctx,file,line,label+" references unknown variable '"+name+"'");
+}
 void load_file(const fs::path&input,BuildContext&ctx){
  std::error_code ec;const fs::path canonical=fs::weakly_canonical(input,ec);const std::string key=(ec?input:canonical).string();
  if(ctx.active.count(key)){diagnose(ctx,input,1,"circular import detected");return;}if(ctx.loaded.count(key))return;
@@ -45,10 +54,25 @@ void load_file(const fs::path&input,BuildContext&ctx){
   }
   if(s.kind==shay::StatementKind::Declare){
    if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'brew' is not allowed");continue;}
-   ctx.variables.insert(s.name);
+   if(!ctx.variables.insert(s.name).second){diagnose(ctx,input,s.line,"variable '"+s.name+"' is already declared");continue;}
   }else if(s.kind==shay::StatementKind::DeclareFunction){
    if(ctx.functions.count(s.name)){diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");continue;}
+   std::unordered_set<std::string> parameters(s.parameters.begin(),s.parameters.end());
+   if(s.has_return)validate_expression_names(ctx,input,s.line,s.value,parameters,"function '"+s.name+"' return expression");
    ctx.functions.emplace(s.name,s);
+  }else if(s.kind==shay::StatementKind::If){
+   validate_expression_names(ctx,input,s.line,s.condition,{},"ifit condition");
+   for(const auto&nested:s.body){
+    if(nested.kind==shay::StatementKind::OutputValue&&!ctx.variables.count(nested.name))
+     diagnose(ctx,input,nested.line,"unknown variable '"+nested.name+"' inside ifit block");
+    else if(nested.kind==shay::StatementKind::OutputCall){
+     auto fn=ctx.functions.find(nested.name);
+     if(fn==ctx.functions.end())diagnose(ctx,input,nested.line,"unknown function '"+nested.name+"' inside ifit block");
+     else if(nested.arguments.size()!=fn->second.parameters.size())
+      diagnose(ctx,input,nested.line,"function '"+nested.name+"' expects "+std::to_string(fn->second.parameters.size())+" argument(s), got "+std::to_string(nested.arguments.size()));
+     for(const auto&arg:nested.arguments)validate_expression_names(ctx,input,nested.line,arg,{},"function argument");
+    }
+   }
   }else if(s.kind==shay::StatementKind::OutputValue&&!ctx.variables.count(s.name)){
    diagnose(ctx,input,s.line,"unknown variable '"+s.name+"'");
   }else if(s.kind==shay::StatementKind::OutputCall){
