@@ -63,13 +63,13 @@ insval-count
 EOF
 "$SHAII" --check "$TMP/reassignment.shay" >/dev/null || fail "reassignment syntax check"
 out=$("$SHAII" "$TMP/reassignment.shay") || fail "interpreter variable reassignment"
-[ "$(printf '%s\\n' "$out" | sed -n '1p')" = "30" ] || fail "interpreter reassignment arithmetic"
-[ "$(printf '%s\\n' "$out" | sed -n '2p')" = "22" ] || fail "interpreter reassignment inside ifit"
+[ "$(printf '%s\n' "$out" | sed -n '1p')" = "30" ] || fail "interpreter reassignment arithmetic"
+[ "$(printf '%s\n' "$out" | sed -n '2p')" = "22" ] || fail "interpreter reassignment inside ifit"
 pass "interpreter supports numeric variable reassignment"
 CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/reassignment-app" "$TMP/reassignment.shay" || fail "compile reassignment"
 out=$("$TMP/reassignment-app") || fail "run compiled reassignment"
-[ "$(printf '%s\\n' "$out" | sed -n '1p')" = "30" ] || fail "compiler reassignment arithmetic"
-[ "$(printf '%s\\n' "$out" | sed -n '2p')" = "22" ] || fail "compiler reassignment inside ifit"
+[ "$(printf '%s\n' "$out" | sed -n '1p')" = "30" ] || fail "compiler reassignment arithmetic"
+[ "$(printf '%s\n' "$out" | sed -n '2p')" = "22" ] || fail "compiler reassignment inside ifit"
 pass "compiler generates native variable reassignment"
 
 cat > "$TMP/bad-syntax.shay" <<'EOF'
