@@ -35,17 +35,17 @@ void validate_expression_names(BuildContext&ctx,const fs::path&file,std::size_t 
  for(const auto&name:expression_names(source))if(!ctx.variables.count(name)&&!locals.count(name)&&name!="true"&&name!="false")
   diagnose(ctx,file,line,label+" references unknown variable '"+name+"'");
 }
-void validate_body(BuildContext&ctx,const fs::path&file,const std::vector<shay::Statement>&body,const std::unordered_set<std::string>&locals){
+void validate_body(BuildContext&ctx,const fs::path&file,const std::vector<shay::Statement>&body,const std::unordered_set<std::string>&locals,const std::string&bodyLabel){
  for(const auto&s:body){
   if(s.kind==shay::StatementKind::If){
    validate_expression_names(ctx,file,s.line,s.condition,locals,"ifit condition");
-   validate_body(ctx,file,s.body,locals);
+   validate_body(ctx,file,s.body,locals,bodyLabel);
   }else if(s.kind==shay::StatementKind::OutputValue){
    if(!ctx.variables.count(s.name)&&!locals.count(s.name))
-    diagnose(ctx,file,s.line,"unknown variable '"+s.name+"' inside function body");
+    diagnose(ctx,file,s.line,"unknown variable '"+s.name+"' inside "+bodyLabel);
   }else if(s.kind==shay::StatementKind::OutputCall){
    auto fn=ctx.functions.find(s.name);
-   if(fn==ctx.functions.end())diagnose(ctx,file,s.line,"unknown function '"+s.name+"' inside function body");
+   if(fn==ctx.functions.end())diagnose(ctx,file,s.line,"unknown function '"+s.name+"' inside "+bodyLabel);
    else if(s.arguments.size()!=fn->second.parameters.size())
     diagnose(ctx,file,s.line,"function '"+s.name+"' expects "+std::to_string(fn->second.parameters.size())+" argument(s), got "+std::to_string(s.arguments.size()));
    for(const auto&arg:s.arguments)validate_expression_names(ctx,file,s.line,arg,locals,"function argument");
@@ -79,11 +79,11 @@ void load_file(const fs::path&input,BuildContext&ctx){
    if(ctx.functions.count(s.name)){diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");continue;}
    std::unordered_set<std::string> parameters(s.parameters.begin(),s.parameters.end());
    if(s.has_return)validate_expression_names(ctx,input,s.line,s.value,parameters,"function '"+s.name+"' return expression");
-   validate_body(ctx,input,s.body,parameters);
+   validate_body(ctx,input,s.body,parameters,"function body");
    ctx.functions.emplace(s.name,s);
   }else if(s.kind==shay::StatementKind::If){
    validate_expression_names(ctx,input,s.line,s.condition,{},"ifit condition");
-   validate_body(ctx,input,s.body,{});
+   validate_body(ctx,input,s.body,{},"ifit block");
   }else if(s.kind==shay::StatementKind::OutputValue&&!ctx.variables.count(s.name)){
    diagnose(ctx,input,s.line,"unknown variable '"+s.name+"'");
   }else if(s.kind==shay::StatementKind::OutputCall){
