@@ -233,10 +233,10 @@ int main(int argc,char**argv){
  arguments.push_back(temp.string());
  arguments.push_back("-o");
  arguments.push_back(output.string());
- std::vector<const char*> argv;argv.reserve(arguments.size()+1);
- for(const auto&argument:arguments)argv.push_back(argument.c_str());
- argv.push_back(nullptr);
- status=static_cast<int>(_spawnvp(_P_WAIT,cxx.c_str(),argv.data()));
+ std::vector<const char*> compiler_argv;compiler_argv.reserve(arguments.size()+1);
+ for(const auto&argument:arguments)compiler_argv.push_back(argument.c_str());
+ compiler_argv.push_back(nullptr);
+ status=static_cast<int>(_spawnvp(_P_WAIT,cxx.c_str(),compiler_argv.data()));
 #else
  std::string command=shell_quote(cxx)+" -std=c++20 -O"+optimization+" ";
  if(warn_all)command+="-Wall ";
