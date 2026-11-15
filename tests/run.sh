@@ -184,4 +184,23 @@ if "$SHAII" --check "$TMP/missing-exec.shay" >"$TMP/out" 2>"$TMP/err"; then fail
 grep -q "expected 'exec' to close the ifit block" "$TMP/err" || fail "missing exec diagnostic"
 pass "ifit requires exec terminator"
 
+cat > "$TMP/preflight-errors.shay" <<'EOF'
+brew first = 10
+brew first = 20
+insval-missing_value
+ifit missing_condition > 0
+    insval-missing_inside_block
+exec
+insval-missing_function(unknown_argument)
+EOF
+if "$GSHAI" -o "$TMP/must-not-exist" "$TMP/preflight-errors.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler preflight accepted invalid source"; fi
+grep -q "variable 'first' is already declared" "$TMP/err" || fail "duplicate variable preflight diagnostic"
+grep -q "unknown variable 'missing_value'" "$TMP/err" || fail "unknown top-level variable preflight diagnostic"
+grep -q "ifit condition references unknown variable 'missing_condition'" "$TMP/err" || fail "ifit condition preflight diagnostic"
+grep -q "unknown variable 'missing_inside_block' inside ifit block" "$TMP/err" || fail "ifit body preflight diagnostic"
+grep -q "unknown function 'missing_function'" "$TMP/err" || fail "unknown function preflight diagnostic"
+grep -q "function argument references unknown variable 'unknown_argument'" "$TMP/err" || fail "function argument preflight diagnostic"
+test ! -e "$TMP/must-not-exist" || fail "compiler emitted output despite preflight errors"
+pass "gshai preflight reports multiple semantic errors and blocks output"
+
 printf '\nAll Shay toolchain tests passed.\n'
