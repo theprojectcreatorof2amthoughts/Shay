@@ -133,16 +133,19 @@ void execute_file(const fs::path&input,Context&ctx){
    case shay::StatementKind::If:{
     bool condition=false;std::string error;
     if(!shay::evaluate_condition(s.condition,ctx.numbers,condition,error)){diagnose(ctx,input,s.line,"invalid ifit condition: "+error);break;}
-    if(condition){auto scope=ctx.numbers;execute_statements(s.body,ctx,input,scope);}
+    if(condition)execute_statements(s.body,ctx,input,ctx.numbers);
     break;
    }
    case shay::StatementKind::OutputText:
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
     break;
    case shay::StatementKind::OutputValue:{
-    auto found=ctx.values.find(s.name);
-    if(found==ctx.values.end())diagnose(ctx,input,s.line,"unknown variable '"+s.name+"'");
-    else if(!ctx.check_only)shay_runtime_write((found->second+"\n").c_str());
+    auto number=ctx.numbers.find(s.name);
+    if(number!=ctx.numbers.end()){if(!ctx.check_only)shay_runtime_write((number_text(number->second)+"\n").c_str());}
+    else{auto found=ctx.values.find(s.name);
+     if(found==ctx.values.end())diagnose(ctx,input,s.line,"unknown variable '"+s.name+"'");
+     else if(!ctx.check_only)shay_runtime_write((found->second+"\n").c_str());
+    }
     break;
    }
    case shay::StatementKind::OutputCall:{
