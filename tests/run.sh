@@ -250,7 +250,7 @@ if [ "$(printf '%s\n' "$out" | grep -c 'the first val is bigger than second val'
     fail "interpreter function condition scope"
 fi
 pass "interpreter executes ifit and instxt inside void functions"
-CXX="$CXX" "$GSHAI" -o "$TMP/function-body-app" "$TMP/function-body-main.shay" || fail "compile statement function body"
+CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/function-body-app" "$TMP/function-body-main.shay" || fail "compile statement function body"
 out=$("$TMP/function-body-app") || fail "run compiled statement function body"
 printf '%s\n' "$out" | grep -q 'the first val is bigger than second val' || fail "compiler function ifit body"
 if [ "$(printf '%s\n' "$out" | grep -c 'the first val is bigger than second val')" -ne 1 ]; then
