@@ -134,7 +134,7 @@ Program Parser::parse(){
      statement.is_expression=true;
      statement.value=collect_expression(tokens_,current_,"",valid);
      if(!valid||statement.value.empty()){
-      error(program.errors,"expected a numeric expression, string, or boolean literal");
+      error(program.errors,"expected a string, number, or boolean literal");
       valid=false;
      }
     }
