@@ -23,7 +23,7 @@ namespace {
 constexpr char StringMarker='\x01';
 struct Diagnostic{fs::path file;std::size_t line;std::string message;};
 struct BuildContext{
- std::unordered_set<std::string>loaded,active,variables;
+ std::unordered_set<std::string>loaded,active,variables,numeric_variables;
  std::unordered_map<std::string,shay::Statement>functions;
  std::vector<Diagnostic>diagnostics;
  std::vector<shay::Statement>statements;
@@ -53,7 +53,7 @@ void validate_body(BuildContext&ctx,const fs::path&file,const std::vector<shay::
     diagnose(ctx,file,s.line,"function '"+s.name+"' expects "+std::to_string(fn->second.parameters.size())+" argument(s), got "+std::to_string(s.arguments.size()));
    for(const auto&arg:s.arguments)validate_expression_names(ctx,file,s.line,arg,locals,"function argument");
   }else if(s.kind==shay::StatementKind::Assign){
-   if(!ctx.variables.count(s.name)&&!locals.count(s.name))diagnose(ctx,file,s.line,"cannot assign to unknown variable '"+s.name+"' inside "+bodyLabel);
+   if(!ctx.numeric_variables.count(s.name)&&!locals.count(s.name))diagnose(ctx,file,s.line,"cannot assign to unknown or non-numeric variable '"+s.name+"' inside "+bodyLabel);
    validate_expression_names(ctx,file,s.line,s.value,locals,"assignment to '"+s.name+"'");
   }else if(s.kind!=shay::StatementKind::OutputText){
    diagnose(ctx,file,s.line,"unsupported statement inside function body");
@@ -83,8 +83,9 @@ void load_file(const fs::path&input,BuildContext&ctx){
    if(ctx.variables.count(s.name)){diagnose(ctx,input,s.line,"variable '"+s.name+"' is already declared");continue;}
    if(s.is_expression)validate_expression_names(ctx,input,s.line,s.value,{},"initializer for '"+s.name+"'");
    ctx.variables.insert(s.name);
+   if(s.is_expression)ctx.numeric_variables.insert(s.name);
   }else if(s.kind==shay::StatementKind::Assign){
-   if(!ctx.variables.count(s.name))diagnose(ctx,file,s.line,"cannot assign to unknown variable '"+s.name+"'");
+   if(!ctx.numeric_variables.count(s.name))diagnose(ctx,file,s.line,"cannot assign to unknown or non-numeric variable '"+s.name+"'");
    validate_expression_names(ctx,file,s.line,s.value,{},"assignment to '"+s.name+"'");
   }else if(s.kind==shay::StatementKind::DeclareFunction){
    if(ctx.functions.count(s.name)){diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");continue;}
