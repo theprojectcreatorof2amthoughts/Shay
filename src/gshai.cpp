@@ -126,7 +126,7 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
  for(const auto&s:body){
   switch(s.kind){
    case shay::StatementKind::Assign:
-    out<<indent<<" { std::ostringstream shay_assignment; shay_assignment<<std::setprecision(15)<<("<<cpp_condition(s.value)<<"); values["<<cpp_string(s.name)<<"] = shay_assignment.str(); }\\n";break;
+    out<<indent<<" { std::ostringstream shay_assignment; shay_assignment<<std::setprecision(15)<<("<<cpp_condition(s.value)<<"); values["<<cpp_string(s.name)<<"] = shay_assignment.str(); }\n";break;
    case shay::StatementKind::OutputText:
     out<<indent<<"shay_runtime_write("<<cpp_string(s.value+"\n")<<");\n";break;
    case shay::StatementKind::OutputValue:
@@ -172,7 +172,7 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
  for(const auto&s:ctx.statements){
   switch(s.kind){
    case shay::StatementKind::Assign:
-    out<<" { std::ostringstream shay_assignment; shay_assignment<<std::setprecision(15)<<("<<cpp_condition(s.value)<<"); values["<<cpp_string(s.name)<<"] = shay_assignment.str(); }\\n";break;
+    out<<" { std::ostringstream shay_assignment; shay_assignment<<std::setprecision(15)<<("<<cpp_condition(s.value)<<"); values["<<cpp_string(s.name)<<"] = shay_assignment.str(); }\n";break;
    case shay::StatementKind::Declare:{
     if(s.is_expression){
      out<<" { std::ostringstream shay_initializer; shay_initializer<<std::setprecision(15)<<("<<cpp_condition(s.value)<<"); values["<<cpp_string(s.name)<<"] = shay_initializer.str(); }\n";
