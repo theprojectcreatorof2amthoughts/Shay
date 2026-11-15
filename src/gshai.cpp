@@ -80,6 +80,7 @@ void load_file(const fs::path&input,BuildContext&ctx){
    if(fn==ctx.functions.end())diagnose(ctx,input,s.line,"unknown function '"+s.name+"'");
    else if(!fn->second.has_return)diagnose(ctx,input,s.line,"function '"+s.name+"' does not return a value");
    else if(s.arguments.size()!=fn->second.parameters.size())diagnose(ctx,input,s.line,"function '"+s.name+"' expects "+std::to_string(fn->second.parameters.size())+" argument(s), got "+std::to_string(s.arguments.size()));
+   for(const auto&arg:s.arguments)validate_expression_names(ctx,input,s.line,arg,{},"function argument");
   }
   ctx.statements.push_back(s);
  }
