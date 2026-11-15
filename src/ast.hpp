@@ -13,6 +13,7 @@ struct Statement {
     std::vector<Statement> body;
     bool has_return = false;
     bool external_import = false;
+    bool is_expression = false;
 };
 struct ParseError { std::size_t line; std::string message; };
 struct Program { std::vector<Statement> statements; std::vector<ParseError> errors; };
