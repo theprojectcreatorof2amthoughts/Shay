@@ -71,6 +71,21 @@ out=$("$TMP/siil-compiled")
 printf '%s\n' "$out" | grep -q '3.14159' || fail "compiled siil constant output"
 pass "compiler resolves standard libraries from siil/"
 
+mkdir -p "$TMP/external"
+cat > "$TMP/external/custom.shaii" <<'EOF'
+instxt-"External library loaded"
+EOF
+cat > "$TMP/external-main.shay" <<'EOF'
+$shaiiport "external/custom.shaii"
+EOF
+out=$("$SHAII" "$TMP/external-main.shay") || fail "quoted external library import"
+printf '%s\\n' "$out" | grep -q 'External library loaded' || fail "interpreter external library output"
+pass "quoted shaiiport imports external files from disk"
+CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/external-app" "$TMP/external-main.shay" || fail "compiler quoted external library import"
+out=$("$TMP/external-app") || fail "run compiled external library program"
+printf '%s\\n' "$out" | grep -q 'External library loaded' || fail "compiler external library output"
+pass "compiler resolves quoted external library imports"
+
 cat > "$TMP/bad.shaz" <<'EOF'
 brew forbidden = 7
 EOF
