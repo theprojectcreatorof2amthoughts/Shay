@@ -229,4 +229,33 @@ grep -q "function argument references unknown variable 'unknown_argument'" "$TMP
 test ! -e "$TMP/must-not-exist" || fail "compiler emitted output despite preflight errors"
 pass "gshai preflight reports multiple semantic errors and blocks output"
 
+
+cat > "$TMP/function-body.shaii" <<'EOF'
+$declr useme(x, y)
+    ifit x > y
+        instxt-"the first val is bigger than second val"
+    exec
+finish
+EOF
+cat > "$TMP/function-body-main.shay" <<'EOF'
+$shaiiport "function-body.shaii"
+instxt-"function body test:"
+insval-useme(7, 6)
+insval-useme(6, 7)
+EOF
+"$SHAII" --check "$TMP/function-body-main.shay" >/dev/null || fail "statement function body syntax check"
+out=$("$SHAII" "$TMP/function-body-main.shay") || fail "interpreter statement function call"
+printf '%s\n' "$out" | grep -q 'the first val is bigger than second val' || fail "interpreter function ifit body"
+if [ "$(printf '%s\n' "$out" | grep -c 'the first val is bigger than second val')" -ne 1 ]; then
+    fail "interpreter function condition scope"
+fi
+pass "interpreter executes ifit and instxt inside void functions"
+CXX="$CXX" "$GSHAI" -o "$TMP/function-body-app" "$TMP/function-body-main.shay" || fail "compile statement function body"
+out=$("$TMP/function-body-app") || fail "run compiled statement function body"
+printf '%s\n' "$out" | grep -q 'the first val is bigger than second val' || fail "compiler function ifit body"
+if [ "$(printf '%s\n' "$out" | grep -c 'the first val is bigger than second val')" -ne 1 ]; then
+    fail "compiler function condition scope"
+fi
+pass "compiler generates ifit and instxt inside void functions"
+
 printf '\nAll Shay toolchain tests passed.\n'
