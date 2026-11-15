@@ -119,6 +119,17 @@ CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/compiled.shay" || fail "default executable o
 test -x "$TMP/compiled" || fail "default executable path"
 pass "gshai -o derives executable filename"
 
+CXX="${CXX:-c++}" "$GSHAI" --shaywall --shaywextra --shayo2 -o "$TMP/native-flags-app" "$TMP/compiled.shay" || fail "Shay-native warning and optimization flags"
+test -x "$TMP/native-flags-app" || fail "native flags did not produce executable"
+out=$("$TMP/native-flags-app")
+printf '%s\\n' "$out" | grep -q 'Hello, world from Shay!' || fail "native flags executable output"
+pass "gshai accepts --shaywall, --shaywextra, and --shayo2"
+
+CXX="${CXX:-c++}" "$GSHAI" --shayo0 -o "$TMP/no-opt-app" "$TMP/compiled.shay" || fail "Shay -O0 flag"
+test -x "$TMP/no-opt-app" || fail "Shay -O0 output"
+pass "gshai supports Shay optimization levels"
+
+
 cat > "$TMP/functions.shaii" <<'EOF'
 $declr add(x, y)
     forw x + y
