@@ -51,6 +51,27 @@ out=$("$TMP/arithmetic-app") || fail "run compiled arithmetic expressions"
 [ "$(printf '%s\n' "$out" | sed -n '2p')" = "52" ] || fail "compiler parenthesized arithmetic expression"
 pass "compiler generates matching arithmetic expression results"
 
+cat > "$TMP/reassignment.shay" <<'EOF'
+brew count = 10
+count = count + 5
+count = count * 2
+insval-count
+ifit count == 30
+    count = count - 8
+exec
+insval-count
+EOF
+"$SHAII" --check "$TMP/reassignment.shay" >/dev/null || fail "reassignment syntax check"
+out=$("$SHAII" "$TMP/reassignment.shay") || fail "interpreter variable reassignment"
+[ "$(printf '%s\\n' "$out" | sed -n '1p')" = "30" ] || fail "interpreter reassignment arithmetic"
+[ "$(printf '%s\\n' "$out" | sed -n '2p')" = "22" ] || fail "interpreter reassignment inside ifit"
+pass "interpreter supports numeric variable reassignment"
+CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/reassignment-app" "$TMP/reassignment.shay" || fail "compile reassignment"
+out=$("$TMP/reassignment-app") || fail "run compiled reassignment"
+[ "$(printf '%s\\n' "$out" | sed -n '1p')" = "30" ] || fail "compiler reassignment arithmetic"
+[ "$(printf '%s\\n' "$out" | sed -n '2p')" = "22" ] || fail "compiler reassignment inside ifit"
+pass "compiler generates native variable reassignment"
+
 cat > "$TMP/bad-syntax.shay" <<'EOF'
 brew value =
 instxt-"unfinished
