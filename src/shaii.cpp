@@ -56,6 +56,12 @@ void call_function(const shay::Statement&call,Context&ctx,const fs::path&file,Nu
 void execute_statements(const std::vector<shay::Statement>&statements,Context&ctx,const fs::path&file,NumberScope&scope){
  for(const auto&s:statements){
   switch(s.kind){
+   case shay::StatementKind::Assign:{
+    double value=0;std::string error;
+    if(!evaluate(s.value,scope,value,error))diagnose(ctx,file,s.line,"invalid assignment to '"+s.name+"': "+error);
+    else scope[s.name]=value;
+    break;
+   }
    case shay::StatementKind::OutputText:
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
     break;
@@ -110,6 +116,14 @@ void execute_file(const fs::path&input,Context&ctx){
      if(!evaluate(s.value,ctx.numbers,value,error)){diagnose(ctx,input,s.line,"invalid initializer for '"+s.name+"': "+error);break;}
      ctx.numbers[s.name]=value;ctx.values[s.name]=number_text(value);
     }else{ctx.values[s.name]=s.value;try{std::size_t used=0;double value=std::stod(s.value,&used);if(used==s.value.size())ctx.numbers[s.name]=value;else ctx.numbers.erase(s.name);}catch(...){ctx.numbers.erase(s.name);}}
+    break;
+   }
+   case shay::StatementKind::Assign:{
+    if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; assignments are not allowed");break;}
+    if(!ctx.numbers.count(s.name)){diagnose(ctx,input,s.line,"cannot assign to unknown or non-numeric variable '"+s.name+"'");break;}
+    double value=0;std::string error;
+    if(!evaluate(s.value,ctx.numbers,value,error))diagnose(ctx,input,s.line,"invalid assignment to '"+s.name+"': "+error);
+    else{ctx.numbers[s.name]=value;ctx.values[s.name]=number_text(value);}
     break;
    }
    case shay::StatementKind::DeclareFunction:
