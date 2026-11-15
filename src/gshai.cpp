@@ -140,20 +140,41 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
 void print_diagnostics(const BuildContext&ctx){for(const auto&d:ctx.diagnostics)std::cerr<<d.file.string()<<':'<<d.line<<": error: "<<d.message<<'\n';}
 }
 int main(int argc,char**argv){
- if(argc==2&&std::string(argv[1])=="--version"){std::cout<<"gshai 0.4.0 (Shay compiler)\n";return 0;}
- if(argc==2&&(std::string(argv[1])=="--help"||std::string(argv[1])=="-h")){std::cout<<"Usage:\n  gshai -ob [output.sho] program.shay   Compile a native object\n  gshai -o  [output]     program.shay   Compile a runnable executable\n  gshai --version\n\n-ob emits .sho object files; -o links a standalone executable.\n";return 0;}
- if(argc<3||argc>4){std::cerr<<"gshai: expected -ob or -o and a .shay input (try --help)\n";return 2;}
- const std::string mode=argv[1];if(mode!="-ob"&&mode!="-o"){std::cerr<<"gshai: unknown output mode: "<<mode<<'\n';return 2;}
- const bool object_mode=mode=="-ob";fs::path output,input;if(argc==3)input=argv[2];else{output=argv[2];input=argv[3];}
- if(input.extension()!=".shay"){std::cerr<<"gshai: input must be a .shay file\n";return 2;}
+ bool warn_all=false,warn_extra=false,optimize_o2=false;
+ std::vector<std::string> positional;
+ for(int i=1;i<argc;++i){
+  const std::string arg=argv[i];
+  if(arg=="--shaywall")warn_all=true;
+  else if(arg=="--shaywextra")warn_extra=true;
+  else if(arg=="--shayo2")optimize_o2=true;
+  else positional.push_back(arg);
+ }
+ if(positional.size()==1&&positional[0]=="--version"){std::cout<<"gshai 0.4.0 (Shay compiler)\\n";return 0;}
+ if(positional.size()==1&&(positional[0]=="--help"||positional[0]=="-h")){
+  std::cout<<"Usage:\\n  gshai [Shay flags] -ob [output.sho] program.shay   Compile a native object\\n  gshai [Shay flags] -o  [output]     program.shay   Compile a runnable executable\\n  gshai --version\\n\\n"
+           <<"-ob emits .sho object files; -o links a standalone executable.\\n"
+           <<"Shay-native compiler flags (may appear anywhere):\\n"
+           <<"  --shaywall    Enable all common native compiler warnings (-Wall)\\n"
+           <<"  --shaywextra  Enable additional native compiler warnings (-Wextra)\\n"
+           <<"  --shayo2      Enable level 2 native optimization (-O2)\\n";
+  return 0;
+ }
+ if(positional.size()<2||positional.size()>3){std::cerr<<"gshai: expected -ob or -o and a .shay input (try --help)\\n";return 2;}
+ const std::string mode=positional[0];if(mode!="-ob"&&mode!="-o"){std::cerr<<"gshai: unknown output mode: "<<mode<<'\\n';return 2;}
+ const bool object_mode=mode=="-ob";fs::path output,input;
+ if(positional.size()==2)input=positional[1];else{output=positional[1];input=positional[2];}
+ if(input.extension()!=".shay"){std::cerr<<"gshai: input must be a .shay file\\n";return 2;}
  if(output.empty()){output=input.parent_path()/input.stem();if(object_mode)output+=".sho";}
- else if(object_mode&&output.extension()!=".sho"){std::cerr<<"gshai: -ob output must use the .sho extension\n";return 2;}
+ else if(object_mode&&output.extension()!=".sho"){std::cerr<<"gshai: -ob output must use the .sho extension\\n";return 2;}
  BuildContext context;load_file(input,context);if(!context.diagnostics.empty()){print_diagnostics(context);return 1;}
  const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();const fs::path temp=fs::temp_directory_path()/("shay-build-"+std::to_string(stamp)+".cpp");
- if(!write_translation(context,temp,!object_mode)){std::cerr<<"gshai: cannot write temporary translation unit\n";return 1;}
+ if(!write_translation(context,temp,!object_mode)){std::cerr<<"gshai: cannot write temporary translation unit\\n";return 1;}
  const char*configured=std::getenv("CXX");const std::string cxx=configured&&*configured?configured:"c++";
- const std::string command=shell_quote(cxx)+" -std=c++20 -O2 "+(object_mode?"-c ":"")+shell_quote(temp.string())+" -o "+shell_quote(output.string());
+ std::string command=shell_quote(cxx)+" -std=c++20 "+(optimize_o2||!optimize_o2?"-O2 ":"");
+ if(warn_all)command+="-Wall ";
+ if(warn_extra)command+="-Wextra ";
+ command+=(object_mode?"-c ":"")+shell_quote(temp.string())+" -o "+shell_quote(output.string());
  const int status=std::system(command.c_str());std::error_code ignored;fs::remove(temp,ignored);
- if(status!=0){fs::remove(output,ignored);std::cerr<<"gshai: native compiler/linker failed\n";return 1;}
- std::cout<<"gshai: wrote "<<(object_mode?"object file ":"executable ")<<output.string()<<'\n';return 0;
+ if(status!=0){fs::remove(output,ignored);std::cerr<<"gshai: native compiler/linker failed\\n";return 1;}
+ std::cout<<"gshai: wrote "<<(object_mode?"object file ":"executable ")<<output.string()<<'\\n';return 0;
 }
