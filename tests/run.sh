@@ -71,6 +71,21 @@ out=$("$TMP/siil-compiled")
 printf '%s\n' "$out" | grep -q '3.14159' || fail "compiled siil constant output"
 pass "compiler resolves standard libraries from siil/"
 
+cat > "$TMP/disk-library.shaii" <<'EOF'
+brew disk_value = "Loaded from disk"
+EOF
+cat > "$TMP/quoted-import.shay" <<'EOF'
+$shaiiport "disk-library.shaii"
+insval-disk_value
+EOF
+out=$("$SHAII" "$TMP/quoted-import.shay") || fail "quoted on-disk Shaii import"
+printf '%s\n' "$out" | grep -q 'Loaded from disk' || fail "quoted on-disk library output"
+pass "quoted Shaii imports load files directly from disk"
+CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/quoted-import-app" "$TMP/quoted-import.shay" || fail "compiler quoted on-disk Shaii import"
+out=$("$TMP/quoted-import-app")
+printf '%s\n' "$out" | grep -q 'Loaded from disk' || fail "compiled quoted on-disk library output"
+pass "compiler supports quoted on-disk Shaii imports"
+
 cat > "$TMP/bad.shaz" <<'EOF'
 brew forbidden = 7
 EOF
