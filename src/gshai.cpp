@@ -105,7 +105,15 @@ std::string cpp_condition(const std::string&condition){
  for(;it!=end;++it){const auto&m=*it;out+=condition.substr(last,static_cast<std::size_t>(m.position())-last);const std::string name=m.str();out+="std::stod(values["+cpp_string(name)+"])";last=static_cast<std::size_t>(m.position()+m.length());}
  out+=condition.substr(last);return out;
 }
-std::string shell_quote(const std::string&value){std::string out="'";for(char c:value){if(c=='\'')out+="'\\''";else out+=c;}return out+"'";}
+std::string shell_quote(const std::string&value){
+#ifdef _WIN32
+ std::string out="\"";
+ for(char c:value){if(c=='\"')out+="\\\"";else out+=c;}
+ return out+"\"";
+#else
+ std::string out="'";for(char c:value){if(c=='\\'')out+="'\\\\''";else out+=c;}return out+"'";
+#endif
+}
 void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const BuildContext&ctx,const std::string&indent){
  for(const auto&s:body){
   switch(s.kind){
