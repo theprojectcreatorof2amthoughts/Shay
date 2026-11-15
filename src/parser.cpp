@@ -39,14 +39,18 @@ Program Parser::parse(){
    while(!atEnd()&&peek().kind!=TokenKind::Newline){statement.condition+=peek().text;++current_;}
    if(statement.condition.empty()){error(program.errors,"ifit requires a condition");valid=false;}
    if(peek().kind==TokenKind::Newline)++current_;
-   std::vector<Token> bodyTokens;bool foundExec=false;
+   std::vector<Token> bodyTokens;bool foundExec=false;int ifDepth=1;
    while(!atEnd()){
+    if(peek().kind==TokenKind::Identifier&&peek().text=="ifit"){++ifDepth;bodyTokens.push_back(peek());++current_;continue;}
     if(peek().kind==TokenKind::Identifier&&peek().text=="exec"){
-     foundExec=true;++current_;
-     if(peek().kind!=TokenKind::Newline&&!atEnd()){error(program.errors,"unexpected token after 'exec'");valid=false;}
-     if(peek().kind==TokenKind::Newline)++current_;
-     skipCurrentLine=false;
-     break;
+     --ifDepth;
+     if(ifDepth==0){
+      foundExec=true;++current_;
+      if(peek().kind!=TokenKind::Newline&&!atEnd()){error(program.errors,"unexpected token after 'exec'");valid=false;}
+      if(peek().kind==TokenKind::Newline)++current_;
+      skipCurrentLine=false;
+      break;
+     }
     }
     bodyTokens.push_back(peek());++current_;
    }
@@ -101,8 +105,21 @@ Program Parser::parse(){
      if(statement.value.empty()){error(program.errors,"'forw' requires a return expression");valid=false;}
      if(peek().kind==TokenKind::Newline)++current_;else if(!atEnd()){error(program.errors,"expected a newline after return expression");valid=false;}
      while(match(TokenKind::Newline)){}
+     if(valid)valid=consume(TokenKind::Identifier,"finish",program.errors,"expected 'finish' to close the function");
+    }else if(valid){
+     std::vector<Token> bodyTokens;bool foundFinish=false;int ifDepth=0;
+     while(!atEnd()){
+      if(peek().kind==TokenKind::Identifier&&peek().text=="ifit"){++ifDepth;bodyTokens.push_back(peek());++current_;continue;}
+      if(peek().kind==TokenKind::Identifier&&peek().text=="exec"&&ifDepth>0){--ifDepth;bodyTokens.push_back(peek());++current_;continue;}
+      if(peek().kind==TokenKind::Identifier&&peek().text=="finish"&&ifDepth==0){foundFinish=true;++current_;break;}
+      bodyTokens.push_back(peek());++current_;
+     }
+     if(!foundFinish){error(program.errors,"expected 'finish' to close the function");valid=false;}
+     bodyTokens.push_back({TokenKind::End,"",peek().line,peek().column});
+     Parser nested(bodyTokens);Program nestedProgram=nested.parse();
+     statement.body=std::move(nestedProgram.statements);
+     for(const auto&e:nestedProgram.errors)program.errors.push_back(e);
     }
-    if(valid)valid=consume(TokenKind::Identifier,"finish",program.errors,"expected 'finish' to close the function");
     if(valid&&peek().kind!=TokenKind::Newline&&!atEnd()){error(program.errors,"unexpected token after 'finish'");valid=false;}
    }else{error(program.errors,"expected shaiiport, shazport, or declr after '$'");valid=false;}
   }else if(match(TokenKind::Identifier,"brew")){

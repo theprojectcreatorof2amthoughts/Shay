@@ -42,7 +42,7 @@ Bracketed `$shaiiport [name.shaii]` imports an implemented library, searched bes
 
 The repository includes a standard-library directory named `siil/`. `$shaiiport` checks beside the importing file first, then checks `SHAY_STDLIB` if set, followed by `siil/` in the current working directory and ancestor directories. Set `SHAY_STDLIB` to a library directory (for example, `/usr/local/share/shay/siil`) when using an installed copy. `make install` installs the bundled libraries under `/usr/local/share/shay/siil` by default.
 
-Bundled modules include math, units, ASCII codes, text fragments, symbols, geometry, physics, time, booleans, data delimiters, messages, and numeric constants. Libraries can declare reusable functions with `$declr`, return numeric expressions with `forw`, and close declarations with `finish`. See [`siil/README.md`](siil/README.md) for the complete list.
+Bundled modules include math, units, ASCII codes, text fragments, symbols, geometry, physics, time, booleans, data delimiters, messages, and numeric constants. Libraries can declare reusable functions with `$declr`, return numeric expressions with `forw`, or execute statement bodies containing `ifit` blocks and output statements. `finish` closes both kinds of function. See [`siil/README.md`](siil/README.md) for the complete list.
 
 ```shay
 $shaiiport [math.shaii]
@@ -59,7 +59,7 @@ brew username = "Alex"
 insval-username
 ```
 
-The current implementation supports string output, literal variable declarations, variable output, imported functions, numeric function returns and calls, imports, duplicate-import protection, circular-import detection, and source-located diagnostics. Function bodies currently contain at most one optional numeric `forw` expression.
+The current implementation supports string output, literal variable declarations, variable output, imported functions, numeric-returning functions, void functions with statement bodies, `ifit` blocks inside functions, function calls, imports, duplicate-import protection, circular-import detection, and source-located diagnostics. A function may use `forw expression` for a numeric return, or contain statements followed by `finish` for a void function.
 
 ## Build
 
