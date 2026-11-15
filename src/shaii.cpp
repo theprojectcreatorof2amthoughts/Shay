@@ -60,10 +60,10 @@ void execute_statements(const std::vector<shay::Statement>&statements,Context&ct
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
     break;
    case shay::StatementKind::OutputValue:{
-    auto value=ctx.values.find(s.name);
-    if(value!=ctx.values.end()){if(!ctx.check_only)shay_runtime_write((value->second+"\n").c_str());break;}
     auto number=scope.find(s.name);
-    if(number!=scope.end()){if(!ctx.check_only)shay_runtime_write((number_text(number->second)+"\n").c_str());}
+    if(number!=scope.end()){if(!ctx.check_only)shay_runtime_write((number_text(number->second)+"\n").c_str());break;}
+    auto value=ctx.values.find(s.name);
+    if(value!=ctx.values.end()){if(!ctx.check_only)shay_runtime_write((value->second+"\n").c_str());}
     else diagnose(ctx,file,s.line,"unknown variable '"+s.name+"'");
     break;
    }
