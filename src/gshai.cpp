@@ -159,7 +159,10 @@ int main(int argc,char**argv){
            <<"Shay-native compiler flags (may appear anywhere):\n"
            <<"  --shaywall    Enable all common native compiler warnings (-Wall)\n"
            <<"  --shaywextra  Enable additional native compiler warnings (-Wextra)\n"
-           <<"  --shayo0      Disable optimization (-O0)\n"\n           <<"  --shayo1      Enable level 1 optimization (-O1)\n"\n           <<"  --shayo2      Enable level 2 optimization (-O2; default)\n"\n           <<"  --shayo3      Enable level 3 optimization (-O3)\n";
+           <<"  --shayo0      Disable optimization (-O0)\n"
+           <<"  --shayo1      Enable level 1 optimization (-O1)\n"
+           <<"  --shayo2      Enable level 2 optimization (-O2; default)\n"
+           <<"  --shayo3      Enable level 3 optimization (-O3)\n";
   return 0;
  }
  if(positional.size()<2||positional.size()>3){std::cerr<<"gshai: expected -ob or -o and a .shay input (try --help)\n";return 2;}
