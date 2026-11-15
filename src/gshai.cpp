@@ -140,13 +140,13 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
 void print_diagnostics(const BuildContext&ctx){for(const auto&d:ctx.diagnostics)std::cerr<<d.file.string()<<':'<<d.line<<": error: "<<d.message<<'\n';}
 }
 int main(int argc,char**argv){
- bool warn_all=false,warn_extra=false,optimize_o2=false;
+ bool warn_all=false,warn_extra=false;std::string optimization="2";
  std::vector<std::string> positional;
  for(int i=1;i<argc;++i){
   const std::string arg=argv[i];
   if(arg=="--shaywall")warn_all=true;
   else if(arg=="--shaywextra")warn_extra=true;
-  else if(arg=="--shayo2")optimize_o2=true;
+  else if(arg=="--shayo0")optimization="0";\n  else if(arg=="--shayo1")optimization="1";\n  else if(arg=="--shayo2")optimization="2";\n  else if(arg=="--shayo3")optimization="3";
   else positional.push_back(arg);
  }
  if(positional.size()==1&&positional[0]=="--version"){std::cout<<"gshai 0.4.0 (Shay compiler)\\n";return 0;}
@@ -156,7 +156,7 @@ int main(int argc,char**argv){
            <<"Shay-native compiler flags (may appear anywhere):\\n"
            <<"  --shaywall    Enable all common native compiler warnings (-Wall)\\n"
            <<"  --shaywextra  Enable additional native compiler warnings (-Wextra)\\n"
-           <<"  --shayo2      Enable level 2 native optimization (-O2)\\n";
+           <<"  --shayo0      Disable optimization (-O0)\\n"\n           <<"  --shayo1      Enable level 1 optimization (-O1)\\n"\n           <<"  --shayo2      Enable level 2 optimization (-O2; default)\\n"\n           <<"  --shayo3      Enable level 3 optimization (-O3)\\n";
   return 0;
  }
  if(positional.size()<2||positional.size()>3){std::cerr<<"gshai: expected -ob or -o and a .shay input (try --help)\\n";return 2;}
@@ -170,7 +170,7 @@ int main(int argc,char**argv){
  const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();const fs::path temp=fs::temp_directory_path()/("shay-build-"+std::to_string(stamp)+".cpp");
  if(!write_translation(context,temp,!object_mode)){std::cerr<<"gshai: cannot write temporary translation unit\\n";return 1;}
  const char*configured=std::getenv("CXX");const std::string cxx=configured&&*configured?configured:"c++";
- std::string command=shell_quote(cxx)+" -std=c++20 "+(optimize_o2||!optimize_o2?"-O2 ":"");
+ std::string command=shell_quote(cxx)+" -std=c++20 -O"+optimization+" ";
  if(warn_all)command+="-Wall ";
  if(warn_extra)command+="-Wextra ";
  command+=(object_mode?"-c ":"")+shell_quote(temp.string())+" -o "+shell_quote(output.string());
