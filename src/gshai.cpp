@@ -7,6 +7,9 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#ifdef _WIN32
+#include <process.h>
+#endif
 #include <iostream>
 #include <iterator>
 #include <regex>
@@ -225,11 +228,27 @@ int main(int argc,char**argv){
  const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();const fs::path temp=fs::temp_directory_path()/("shay-build-"+std::to_string(stamp)+".cpp");
  if(!write_translation(context,temp,!object_mode)){std::cerr<<"gshai: cannot write temporary translation unit\n";return 1;}
  const char*configured=std::getenv("CXX");const std::string cxx=configured&&*configured?configured:"c++";
+ int status=0;
+#ifdef _WIN32
+ std::vector<std::string> arguments={cxx,"-std=c++20","-O"+optimization};
+ if(warn_all)arguments.push_back("-Wall");
+ if(warn_extra)arguments.push_back("-Wextra");
+ if(object_mode)arguments.push_back("-c");
+ arguments.push_back(temp.string());
+ arguments.push_back("-o");
+ arguments.push_back(output.string());
+ std::vector<const char*> argv;argv.reserve(arguments.size()+1);
+ for(const auto&argument:arguments)argv.push_back(argument.c_str());
+ argv.push_back(nullptr);
+ status=static_cast<int>(_spawnvp(_P_WAIT,cxx.c_str(),argv.data()));
+#else
  std::string command=shell_quote(cxx)+" -std=c++20 -O"+optimization+" ";
  if(warn_all)command+="-Wall ";
  if(warn_extra)command+="-Wextra ";
  command+=(object_mode?"-c ":"")+shell_quote(temp.string())+" -o "+shell_quote(output.string());
- const int status=std::system(command.c_str());std::error_code ignored;fs::remove(temp,ignored);
+ status=std::system(command.c_str());
+#endif
+ std::error_code ignored;fs::remove(temp,ignored);
  if(status!=0){fs::remove(output,ignored);std::cerr<<"gshai: native compiler/linker failed\n";return 1;}
  std::cout<<"gshai: wrote "<<(object_mode?"object file ":"executable ")<<output.string()<<'\n';return 0;
 }
