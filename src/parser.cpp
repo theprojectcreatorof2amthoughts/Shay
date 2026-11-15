@@ -1,4 +1,5 @@
 #include "parser.hpp"
+#include <filesystem>
 #include <unordered_set>
 namespace shay {
 Parser::Parser(const std::vector<Token> &tokens):tokens_(tokens){}
@@ -58,14 +59,23 @@ Program Parser::parse(){
    if(match(TokenKind::Identifier,"shaiiport")||match(TokenKind::Identifier,"shazport")){
     const bool library=previous().text=="shaiiport";statement.kind=library?StatementKind::ImportLibrary:StatementKind::ImportTask;
     const std::string ext=library?".shaii":".shaz";
-    valid=consume(TokenKind::Symbol,"[",program.errors,"expected '[' before the "+ext+" filename");
     std::string filename;
-    while(valid&&!atEnd()&&peek().kind!=TokenKind::Newline&&!(peek().kind==TokenKind::Symbol&&peek().text=="]")){
-     if(peek().kind==TokenKind::Identifier||peek().kind==TokenKind::Number||(peek().kind==TokenKind::Symbol&&(peek().text=="."||peek().text=="-"||peek().text=="_"))){filename+=peek().text;++current_;}
-     else{error(program.errors,"invalid character in "+ext+" filename");valid=false;}
+    if(library&&match(TokenKind::String)){
+     // Quoted imports are explicit paths on disk; unlike bracket imports,
+     // they must not fall back to the siil standard-library search path.
+     statement.external_import=true;
+     filename=previous().text;
+     if(filename.empty()){error(program.errors,"expected an external .shaii filename inside quotes");valid=false;}
+     else if(std::filesystem::path(filename).extension()!=ext){error(program.errors,"quoted $shaiiport imports require a .shaii file");valid=false;}
+    }else{
+     valid=consume(TokenKind::Symbol,"[",program.errors,"expected '[' before the "+ext+" filename");
+     while(valid&&!atEnd()&&peek().kind!=TokenKind::Newline&&!(peek().kind==TokenKind::Symbol&&peek().text=="]")){
+      if(peek().kind==TokenKind::Identifier||peek().kind==TokenKind::Number||(peek().kind==TokenKind::Symbol&&(peek().text=="."||peek().text=="-"||peek().text=="_"))){filename+=peek().text;++current_;}
+      else{error(program.errors,"invalid character in "+ext+" filename");valid=false;}
+     }
+     if(valid&&filename.empty()){error(program.errors,"expected a "+ext+" filename inside '[' and ']'");valid=false;}
+     if(valid)valid=consume(TokenKind::Symbol,"]",program.errors,"expected ']' after the filename");
     }
-    if(valid&&filename.empty()){error(program.errors,"expected a "+ext+" filename inside '[' and ']'");valid=false;}
-    if(valid)valid=consume(TokenKind::Symbol,"]",program.errors,"expected ']' after the filename");
     if(valid)statement.value=filename;
    }else if(match(TokenKind::Identifier,"declr")){
     statement.kind=StatementKind::DeclareFunction;

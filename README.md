@@ -25,8 +25,9 @@ Shay has its own original grammar and vocabulary, including `brew` for variable 
 ## Imports
 
 ```shay
-$shaiiport [math.shaii]
-$shazport [startup.shaz]
+$shaiiport [math.shaii]          ## implemented library from siil/
+$shaiiport "external/custom.shaii" ## external file path on disk
+$shazport [startup.shaz]         ## Zeccur task
 ```
 
 | Importing file | `$shaiiport` | `$shazport` |
@@ -35,7 +36,7 @@ $shazport [startup.shaz]
 | `.shaz` | Yes | Yes |
 | `.shaii` | No | Yes |
 
-Imports are relative to the importing file. Duplicate files are loaded once and circular imports are diagnosed. Zeccurs is task-oriented and variable-free.
+Bracketed `$shaiiport [name.shaii]` imports an implemented library, searched beside the importer and then through `siil/`. Quoted `$shaiiport "path/to/file.shaii"` imports that external file relative to the importing file (or from an absolute path) and does not search `siil/`. `$shazport` continues to use bracket syntax for Zeccur tasks. Duplicate files are loaded once and circular imports are diagnosed. Zeccurs is task-oriented and variable-free.
 
 ## Siil standard library
 
