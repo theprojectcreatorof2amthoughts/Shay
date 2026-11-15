@@ -77,7 +77,9 @@ void load_file(const fs::path&input,BuildContext&ctx){
   }
   if(s.kind==shay::StatementKind::Declare){
    if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'brew' is not allowed");continue;}
-   if(!ctx.variables.insert(s.name).second){diagnose(ctx,input,s.line,"variable '"+s.name+"' is already declared");continue;}
+   if(ctx.variables.count(s.name)){diagnose(ctx,input,s.line,"variable '"+s.name+"' is already declared");continue;}
+   if(s.is_expression)validate_expression_names(ctx,input,s.line,s.value,{},"initializer for '"+s.name+"'");
+   ctx.variables.insert(s.name);
   }else if(s.kind==shay::StatementKind::DeclareFunction){
    if(ctx.functions.count(s.name)){diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");continue;}
    std::unordered_set<std::string> parameters(s.parameters.begin(),s.parameters.end());
@@ -161,8 +163,13 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
  for(const auto&s:ctx.statements){
   switch(s.kind){
    case shay::StatementKind::Declare:{
-    std::string value=s.value;if(!value.empty()&&value.front()==StringMarker)value.erase(value.begin());
-    out<<" values["<<cpp_string(s.name)<<"] = "<<cpp_string(value)<<";\n";break;
+    if(s.is_expression){
+     out<<" { std::ostringstream shay_initializer; shay_initializer<<std::setprecision(15)<<("<<cpp_condition(s.value)<<"); values["<<cpp_string(s.name)<<"] = shay_initializer.str(); }\n";
+    }else{
+     std::string value=s.value;if(!value.empty()&&value.front()==StringMarker)value.erase(value.begin());
+     out<<" values["<<cpp_string(s.name)<<"] = "<<cpp_string(value)<<";\n";
+    }
+    break;
    }
    case shay::StatementKind::If:
     out<<" if ("<<cpp_condition(s.condition)<<") {\n";
