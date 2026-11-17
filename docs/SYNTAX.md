@@ -10,7 +10,7 @@ brew username = "Alex"
 insval-username
 ```
 
-The parser accepts string, numeric (including negative), and boolean literals for `brew`. String escapes currently supported are `\\n`, `\\t`, `\\r`, `\\\\`, and `\\"`. Zeccurs files (`.shaz`) are variable-free.
+The parser accepts string and boolean literals, numeric literals, and arithmetic numeric expressions for `brew`. Numeric initializers can use previously declared numeric variables, parentheses, unary `+`/`-`, and `+`, `-`, `*`, `/` with normal arithmetic precedence. For example: `brew total = unit_price * quantity + 2`. A string or boolean variable cannot be used as a numeric operand. String escapes currently supported are `\\n`, `\\t`, `\\r`, `\\\\`, and `\\"`. Zeccurs files (`.shaz`) are variable-free.
 
 ## Functions
 

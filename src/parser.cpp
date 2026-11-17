@@ -129,9 +129,15 @@ Program Parser::parse(){
    if(valid)valid=consume(TokenKind::Symbol,"=",program.errors,"expected '=' after variable name");
    if(valid){
     if(match(TokenKind::String))statement.value=std::string(1,static_cast<char>(1))+previous().text;
-    else if(match(TokenKind::Number)||match(TokenKind::Identifier,"true")||match(TokenKind::Identifier,"false"))statement.value=previous().text;
-    else if(match(TokenKind::Symbol,"-")){if(match(TokenKind::Number))statement.value="-"+previous().text;else{error(program.errors,"expected digits after unary '-'");valid=false;}}
-    else{error(program.errors,"expected a string, number, or boolean literal");valid=false;}
+    else if(match(TokenKind::Number))statement.value=previous().text;
+    else if(peek().kind==TokenKind::Identifier&&(peek().text=="true"||peek().text=="false")&&
+            (tokens_[current_+1].kind==TokenKind::Newline||tokens_[current_+1].kind==TokenKind::End)){
+     statement.value=peek().text;++current_;
+    }else {
+     statement.expression_value=true;
+     statement.value=collect_expression(tokens_,current_,"",valid);
+     if(statement.value.empty()){error(program.errors,"expected a literal or numeric expression after '='");valid=false;}
+    }
    }
   }else if(match(TokenKind::Identifier,"instxt")){
    statement.kind=StatementKind::OutputText;valid=consume(TokenKind::Symbol,"-",program.errors,"expected '-' after 'instxt'");

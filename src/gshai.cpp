@@ -23,7 +23,7 @@ namespace {
 constexpr char StringMarker='\x01';
 struct Diagnostic{fs::path file;std::size_t line;std::string message;};
 struct BuildContext{
- std::unordered_set<std::string>loaded,active,variables;
+ std::unordered_set<std::string>loaded,active,variables,numeric_variables;
  std::unordered_map<std::string,shay::Statement>functions;
  std::vector<Diagnostic>diagnostics;
  std::vector<shay::Statement>statements;
@@ -77,7 +77,20 @@ void load_file(const fs::path&input,BuildContext&ctx){
   }
   if(s.kind==shay::StatementKind::Declare){
    if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'brew' is not allowed");continue;}
-   if(!ctx.variables.insert(s.name).second){diagnose(ctx,input,s.line,"variable '"+s.name+"' is already declared");continue;}
+   if(ctx.variables.count(s.name)){diagnose(ctx,input,s.line,"variable '"+s.name+"' is already declared");continue;}
+   if(s.expression_value){
+    validate_expression_names(ctx,input,s.line,s.value,{},"numeric initializer");
+    for(const auto&name:expression_names(s.value)){
+     if(name=="true"||name=="false")
+      diagnose(ctx,input,s.line,"numeric initializer cannot use boolean literal '"+name+"'");
+     else if(ctx.variables.count(name)&&!ctx.numeric_variables.count(name))
+      diagnose(ctx,input,s.line,"numeric initializer references non-numeric variable '"+name+"'");
+    }
+    ctx.numeric_variables.insert(s.name);
+   }else if(s.value.empty()||s.value.front()!=StringMarker){
+    if(s.value!="true"&&s.value!="false")ctx.numeric_variables.insert(s.name);
+   }
+   ctx.variables.insert(s.name);
   }else if(s.kind==shay::StatementKind::DeclareFunction){
    if(ctx.functions.count(s.name)){diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");continue;}
    std::unordered_set<std::string> parameters(s.parameters.begin(),s.parameters.end());
@@ -102,6 +115,11 @@ void load_file(const fs::path&input,BuildContext&ctx){
 }
 std::string cpp_string(const std::string&value){
  std::ostringstream out;out<<'"';for(unsigned char c:value){switch(c){case '\\':out<<"\\\\";break;case '"':out<<"\\\"";break;case '\n':out<<"\\n";break;case '\r':out<<"\\r";break;case '\t':out<<"\\t";break;default:if(c<32||c>=127){const char octal[]="01234567";out<<"\\"<<octal[(c>>6)&7]<<octal[(c>>3)&7]<<octal[c&7];}else out<<static_cast<char>(c);}}out<<'"';return out.str();
+}
+std::string cpp_numeric_expression(const std::string&expression){
+ std::regex identifier(R"([A-Za-z_][A-Za-z0-9_]*)");std::string out;std::sregex_iterator it(expression.begin(),expression.end(),identifier),end;std::size_t last=0;
+ for(;it!=end;++it){const auto&m=*it;out+=expression.substr(last,static_cast<std::size_t>(m.position())-last);out+="std::stod(values["+cpp_string(m.str())+"])";last=static_cast<std::size_t>(m.position()+m.length());}
+ out+=expression.substr(last);return out;
 }
 std::string cpp_condition(const std::string&condition){
  std::regex identifier(R"([A-Za-z_][A-Za-z0-9_]*)");std::string out;std::sregex_iterator it(condition.begin(),condition.end(),identifier),end;std::size_t last=0;
@@ -161,8 +179,13 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
  for(const auto&s:ctx.statements){
   switch(s.kind){
    case shay::StatementKind::Declare:{
-    std::string value=s.value;if(!value.empty()&&value.front()==StringMarker)value.erase(value.begin());
-    out<<" values["<<cpp_string(s.name)<<"] = "<<cpp_string(value)<<";\n";break;
+    if(s.expression_value){
+     out<<" { std::ostringstream shay_numeric_value; shay_numeric_value<<std::setprecision(15)<<("<<cpp_numeric_expression(s.value)<<"); values["<<cpp_string(s.name)<<"]=shay_numeric_value.str(); }\n";
+    }else{
+     std::string value=s.value;if(!value.empty()&&value.front()==StringMarker)value.erase(value.begin());
+     out<<" values["<<cpp_string(s.name)<<"] = "<<cpp_string(value)<<";\n";
+    }
+    break;
    }
    case shay::StatementKind::If:
     out<<" if ("<<cpp_condition(s.condition)<<") {\n";

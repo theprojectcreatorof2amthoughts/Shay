@@ -104,7 +104,11 @@ void execute_file(const fs::path&input,Context&ctx){
    }
    case shay::StatementKind::Declare:{
     if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'brew' is not allowed");break;}
-    if(!s.value.empty()&&s.value.front()==StringMarker){ctx.values[s.name]=s.value.substr(1);ctx.numbers.erase(s.name);}
+    if(s.expression_value){
+     double value=0;std::string error;
+     if(!evaluate(s.value,ctx.numbers,value,error)){diagnose(ctx,input,s.line,"invalid numeric initializer for '"+s.name+"': "+error);break;}
+     ctx.numbers[s.name]=value;ctx.values[s.name]=number_text(value);
+    }else if(!s.value.empty()&&s.value.front()==StringMarker){ctx.values[s.name]=s.value.substr(1);ctx.numbers.erase(s.name);}
     else{ctx.values[s.name]=s.value;try{std::size_t used=0;double value=std::stod(s.value,&used);if(used==s.value.size())ctx.numbers[s.name]=value;else ctx.numbers.erase(s.name);}catch(...){ctx.numbers.erase(s.name);}}
     break;
    }
