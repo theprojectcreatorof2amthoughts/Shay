@@ -258,4 +258,41 @@ if [ "$(printf '%s\n' "$out" | grep -c 'the first val is bigger than second val'
 fi
 pass "compiler generates ifit and instxt inside void functions"
 
+cat > "$TMP/numeric-initializers.shay" <<'EOF'
+brew base = 5
+brew multiplier = 3
+brew total = base * multiplier + 2
+brew offset = -(total - 20)
+insval-total
+insval-offset
+ifit total > 10
+    instxt-"numeric initializer condition works"
+exec
+EOF
+"$SHAII" --check "$TMP/numeric-initializers.shay" >/dev/null || fail "numeric initializer syntax check"
+out=$("$SHAII" "$TMP/numeric-initializers.shay") || fail "interpreter numeric initializers"
+printf '%s\n' "$out" | grep -q '^17
+ || fail "interpreter numeric expression precedence"
+printf '%s\n' "$out" | grep -q '^3
+ || fail "interpreter unary numeric expression"
+printf '%s\n' "$out" | grep -q 'numeric initializer condition works' || fail "interpreter numeric initializer condition"
+pass "interpreter evaluates arithmetic brew initializers with precedence and unary operators"
+CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/numeric-initializer-app" "$TMP/numeric-initializers.shay" || fail "compile numeric initializers"
+out=$("$TMP/numeric-initializer-app") || fail "run compiled numeric initializers"
+printf '%s\n' "$out" | grep -q '^17
+ || fail "compiler numeric expression precedence"
+printf '%s\n' "$out" | grep -q '^3
+ || fail "compiler unary numeric expression"
+printf '%s\n' "$out" | grep -q 'numeric initializer condition works' || fail "compiler numeric initializer condition"
+pass "compiler evaluates arithmetic brew initializers consistently with interpreter"
+
+cat > "$TMP/non-numeric-initializer.shay" <<'EOF'
+brew label = "hello"
+brew invalid = label + 1
+EOF
+if "$GSHAI" -o "$TMP/non-numeric-app" "$TMP/non-numeric-initializer.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted non-numeric initializer operand"; fi
+grep -q "numeric initializer references non-numeric variable 'label'" "$TMP/err" || fail "non-numeric initializer diagnostic"
+test ! -e "$TMP/non-numeric-app" || fail "compiler emitted invalid numeric initializer output"
+pass "compiler rejects non-numeric variables in arithmetic initializers"
+
 printf '\nAll Shay toolchain tests passed.\n'
