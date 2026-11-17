@@ -258,4 +258,40 @@ if [ "$(printf '%s\n' "$out" | grep -c 'the first val is bigger than second val'
 fi
 pass "compiler generates ifit and instxt inside void functions"
 
+
+cat > "$TMP/logical-conditions.shay" <<'EOF'
+brew x = 20
+brew y = 10
+brew z = 5
+ifit x > y andit y > z
+    instxt-"AND works"
+exec
+ifit x < y orit y == 10
+    instxt-"OR works"
+exec
+ifit notit x < y
+    instxt-"NOT works"
+exec
+ifit (x > y andit y > z) orit z > 100
+    instxt-"Grouped logic works"
+exec
+ifit x < y andit y > z
+    instxt-"This must not appear"
+exec
+EOF
+"$SHAII" --check "$TMP/logical-conditions.shay" >/dev/null || fail "logical condition syntax check"
+out=$("$SHAII" "$TMP/logical-conditions.shay") || fail "interpreter logical conditions"
+for expected in "AND works" "OR works" "NOT works" "Grouped logic works"; do
+    printf '%s\\n' "$out" | grep -q "$expected" || fail "interpreter $expected"
+done
+if printf '%s\\n' "$out" | grep -q 'must not appear'; then fail "interpreter logical false branch"; fi
+pass "interpreter supports andit, orit, notit, and grouped conditions"
+CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/logical-conditions-app" "$TMP/logical-conditions.shay" || fail "compile logical conditions"
+out=$("$TMP/logical-conditions-app") || fail "run compiled logical conditions"
+for expected in "AND works" "OR works" "NOT works" "Grouped logic works"; do
+    printf '%s\\n' "$out" | grep -q "$expected" || fail "compiler $expected"
+done
+if printf '%s\\n' "$out" | grep -q 'must not appear'; then fail "compiler logical false branch"; fi
+pass "compiler generates native logical conditions"
+
 printf '\nAll Shay toolchain tests passed.\n'
