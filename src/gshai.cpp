@@ -80,9 +80,12 @@ void load_file(const fs::path&input,BuildContext&ctx){
    if(ctx.variables.count(s.name)){diagnose(ctx,input,s.line,"variable '"+s.name+"' is already declared");continue;}
    if(s.expression_value){
     validate_expression_names(ctx,input,s.line,s.value,{},"numeric initializer");
-    for(const auto&name:expression_names(s.value))
-     if(ctx.variables.count(name)&&!ctx.numeric_variables.count(name))
+    for(const auto&name:expression_names(s.value)){
+     if(name=="true"||name=="false")
+      diagnose(ctx,input,s.line,"numeric initializer cannot use boolean literal '"+name+"'");
+     else if(ctx.variables.count(name)&&!ctx.numeric_variables.count(name))
       diagnose(ctx,input,s.line,"numeric initializer references non-numeric variable '"+name+"'");
+    }
     ctx.numeric_variables.insert(s.name);
    }else if(s.value.empty()||s.value.front()!=StringMarker){
     if(s.value!="true"&&s.value!="false")ctx.numeric_variables.insert(s.name);
