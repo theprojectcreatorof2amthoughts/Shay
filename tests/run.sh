@@ -79,11 +79,11 @@ cat > "$TMP/external-main.shay" <<'EOF'
 $shaiiport "external/custom.shaii"
 EOF
 out=$("$SHAII" "$TMP/external-main.shay") || fail "quoted external library import"
-printf '%s\\n' "$out" | grep -q 'External library loaded' || fail "interpreter external library output"
+printf '%s\n' "$out" | grep -q 'External library loaded' || fail "interpreter external library output"
 pass "quoted shaiiport imports external files from disk"
 CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/external-app" "$TMP/external-main.shay" || fail "compiler quoted external library import"
 out=$("$TMP/external-app") || fail "run compiled external library program"
-printf '%s\\n' "$out" | grep -q 'External library loaded' || fail "compiler external library output"
+printf '%s\n' "$out" | grep -q 'External library loaded' || fail "compiler external library output"
 pass "compiler resolves quoted external library imports"
 
 cat > "$TMP/bad.shaz" <<'EOF'
@@ -137,7 +137,7 @@ pass "gshai -o derives executable filename"
 CXX="${CXX:-c++}" "$GSHAI" --shaywall --shaywextra --shayo2 -o "$TMP/native-flags-app" "$TMP/compiled.shay" || fail "Shay-native warning and optimization flags"
 test -x "$TMP/native-flags-app" || fail "native flags did not produce executable"
 out=$("$TMP/native-flags-app")
-printf '%s\\n' "$out" | grep -q 'Hello, world from Shay!' || fail "native flags executable output"
+printf '%s\n' "$out" | grep -q 'Hello, world from Shay!' || fail "native flags executable output"
 pass "gshai accepts --shaywall, --shaywextra, and --shayo2"
 
 CXX="${CXX:-c++}" "$GSHAI" --shayo0 -o "$TMP/no-opt-app" "$TMP/compiled.shay" || fail "Shay -O0 flag"
@@ -282,16 +282,16 @@ EOF
 "$SHAII" --check "$TMP/logical-conditions.shay" >/dev/null || fail "logical condition syntax check"
 out=$("$SHAII" "$TMP/logical-conditions.shay") || fail "interpreter logical conditions"
 for expected in "AND works" "OR works" "NOT works" "Grouped logic works"; do
-    printf '%s\\n' "$out" | grep -q "$expected" || fail "interpreter $expected"
+    printf '%s\n' "$out" | grep -q "$expected" || fail "interpreter $expected"
 done
-if printf '%s\\n' "$out" | grep -q 'must not appear'; then fail "interpreter logical false branch"; fi
+if printf '%s\n' "$out" | grep -q 'must not appear'; then fail "interpreter logical false branch"; fi
 pass "interpreter supports andit, orit, notit, and grouped conditions"
 CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/logical-conditions-app" "$TMP/logical-conditions.shay" || fail "compile logical conditions"
 out=$("$TMP/logical-conditions-app") || fail "run compiled logical conditions"
 for expected in "AND works" "OR works" "NOT works" "Grouped logic works"; do
-    printf '%s\\n' "$out" | grep -q "$expected" || fail "compiler $expected"
+    printf '%s\n' "$out" | grep -q "$expected" || fail "compiler $expected"
 done
-if printf '%s\\n' "$out" | grep -q 'must not appear'; then fail "compiler logical false branch"; fi
+if printf '%s\n' "$out" | grep -q 'must not appear'; then fail "compiler logical false branch"; fi
 pass "compiler generates native logical conditions"
 
 printf '\nAll Shay toolchain tests passed.\n'
