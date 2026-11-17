@@ -35,7 +35,7 @@ std::unordered_set<std::string> expression_names(const std::string&source){
  return names;
 }
 void validate_expression_names(BuildContext&ctx,const fs::path&file,std::size_t line,const std::string&source,const std::unordered_set<std::string>&locals,const std::string&label){
- for(const auto&name:expression_names(source))if(!ctx.variables.count(name)&&!locals.count(name)&&name!="true"&&name!="false")
+ for(const auto&name:expression_names(source))if(!ctx.variables.count(name)&&!locals.count(name)&&name!="true"&&name!="false"&&name!="andit"&&name!="orit"&&name!="notit")
   diagnose(ctx,file,line,label+" references unknown variable '"+name+"'");
 }
 void validate_body(BuildContext&ctx,const fs::path&file,const std::vector<shay::Statement>&body,const std::unordered_set<std::string>&locals,const std::string&bodyLabel){
@@ -105,7 +105,15 @@ std::string cpp_string(const std::string&value){
 }
 std::string cpp_condition(const std::string&condition){
  std::regex identifier(R"([A-Za-z_][A-Za-z0-9_]*)");std::string out;std::sregex_iterator it(condition.begin(),condition.end(),identifier),end;std::size_t last=0;
- for(;it!=end;++it){const auto&m=*it;out+=condition.substr(last,static_cast<std::size_t>(m.position())-last);const std::string name=m.str();out+="std::stod(values["+cpp_string(name)+"])";last=static_cast<std::size_t>(m.position()+m.length());}
+ for(;it!=end;++it){
+  const auto&m=*it;out+=condition.substr(last,static_cast<std::size_t>(m.position())-last);
+  const std::string name=m.str();
+  if(name=="andit")out+="&&";
+  else if(name=="orit")out+="||";
+  else if(name=="notit")out+="!";
+  else out+="std::stod(values["+cpp_string(name)+"])";
+  last=static_cast<std::size_t>(m.position()+m.length());
+ }
  out+=condition.substr(last);return out;
 }
 #ifndef _WIN32
