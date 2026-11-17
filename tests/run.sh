@@ -37,7 +37,7 @@ brew value =
 instxt-"unfinished
 EOF
 if "$SHAII" --check "$TMP/bad-syntax.shay" >"$TMP/out" 2>"$TMP/err"; then fail "malformed syntax"; fi
-grep -q 'expected a string, number, or boolean literal' "$TMP/err" || fail "parser diagnostic"
+grep -q 'expected a literal or numeric expression after' "$TMP/err" || fail "parser diagnostic"
 grep -q 'unterminated string literal' "$TMP/err" || fail "lexer diagnostic"
 pass "lexer and parser diagnostics"
 
