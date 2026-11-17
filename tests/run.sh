@@ -293,6 +293,13 @@ grep -q "numeric initializer references non-numeric variable 'label'" "$TMP/err"
 test ! -e "$TMP/non-numeric-app" || fail "compiler emitted invalid numeric initializer output"
 pass "compiler rejects non-numeric variables in arithmetic initializers"
 
+cat > "$TMP/boolean-initializer.shay" <<'EOF'
+brew invalid = true + 1
+EOF
+if "$GSHAI" -o "$TMP/boolean-app" "$TMP/boolean-initializer.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted boolean arithmetic operand"; fi
+grep -q "numeric initializer cannot use boolean literal 'true'" "$TMP/err" || fail "boolean arithmetic diagnostic"
+pass "compiler rejects boolean literals in numeric initializers"
+
 printf '\nAll Shay toolchain tests passed.\n'
  || fail "interpreter numeric expression precedence"
 printf '%s\n' "$out" | grep -q '^3
