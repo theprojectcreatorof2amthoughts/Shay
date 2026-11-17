@@ -26,20 +26,34 @@ insval-add(10, 20)
 
 Functions can be declared in `.shay` programs and `.shaii` libraries. A function currently has zero or more numeric parameters and an optional single `forw` expression. Expressions support numeric literals, parameter names, parentheses, unary minus, and the arithmetic operators `+`, `-`, `*`, and `/`. Use `insval-functionName(arguments)` to print a returned value. The compiler generates native function code; the interpreter evaluates the same arithmetic expression syntax. Nested function calls, local declarations, multiple statements in a function body, and non-numeric return values are not implemented yet.
 
-## Conditions
+## Conditions and logical operators
 
-Use `ifit` to begin a conditional block and `exec` to close it:
+Use `ifit` to begin a conditional block and `exec` to close it. Numeric comparisons support `>`, `<`, `>=`, `<=`, `==`, and `!=`. Combine comparisons with Shay's logical operators:
+
+- `andit` — both conditions must be true.
+- `orit` — at least one condition must be true.
+- `notit` — reverses the following condition.
 
 ```shay
-brew x = 20
-brew y = 10
+brew age = 20
+brew score = 85
 
-ifit x > y
-    instxt-"X is greater than Y!"
+ifit age >= 18 andit score > 70
+    instxt-"Eligible"
+exec
+
+ifit notit age < 18 orit score == 100
+    instxt-"Special case"
+exec
+
+ifit (age >= 18 andit score > 70) orit score == 100
+    instxt-"Grouped condition"
 exec
 ```
 
-Conditions currently support numeric comparisons: `>`, `<`, `>=`, `<=`, `==`, and `!=`. The interpreter and compiler both execute the block only when the condition is true. Conditional bodies currently support output statements and function calls; nested conditionals and other statements inside conditional blocks are not implemented yet.
+Logical precedence is `notit`, then `andit`, then `orit`. Parentheses can group conditions. The interpreter and native compiler share these condition semantics.
+
+Conditional bodies currently support output statements, function calls, and nested conditionals; other statements are not implemented yet.
 
 ## Imports
 
@@ -77,4 +91,4 @@ The shared frontend tokenizes source into identifiers, numbers, strings, symbols
 
 ## Not yet part of the grammar
 
-Loops, nested conditionals, collections, typed values, general expressions outside numeric function returns, error handling, and REPL behavior are not implemented yet. Function bodies are currently limited to a single optional return expression.
+Loops, nested lexical scopes, collections, typed values, general expressions outside numeric function returns, error handling, and REPL behavior are not implemented yet. Function bodies are currently limited to an optional return expression or supported statement bodies.
