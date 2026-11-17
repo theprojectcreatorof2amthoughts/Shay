@@ -111,7 +111,7 @@ void load_file(const fs::path&input,BuildContext&ctx){
  ctx.active.erase(key);ctx.loaded.insert(key);
 }
 std::string cpp_string(const std::string&value){
- std::ostringstream out;out<<'"';for(unsigned char c:value){switch(c){case '\\':out<<"\\\\";break;case '"':out<<"\\\"";break;case '\n':out<<"\\n";break;case '\r':out<<"\\r";break;case '\t':out<<"\\t";break;default:if(c<32||c>=127){const char octal[]="01234567";out<<"\\"<<octal[(c>>6)&7]<<octal[(c>>3)&7]<<octal[c&7];}else out<<static_cast<char>(c);}}out<<'"';return out.str();
+ std::ostringstream out;out<<'"';for(unsigned char c:value){switch(c){case '\\':out<<"\\\\";break;case '"':out<<"\\\"";break;case '\n':out<<"\n";break;case '\r':out<<"\\r";break;case '\t':out<<"\\t";break;default:if(c<32||c>=127){const char octal[]="01234567";out<<"\\"<<octal[(c>>6)&7]<<octal[(c>>3)&7]<<octal[c&7];}else out<<static_cast<char>(c);}}out<<'"';return out.str();
 }
 std::string cpp_numeric_expression(const std::string&expression){
  std::regex identifier(R"([A-Za-z_][A-Za-z0-9_]*)");std::string out;std::sregex_iterator it(expression.begin(),expression.end(),identifier),end;std::size_t last=0;
@@ -177,10 +177,10 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
   switch(s.kind){
    case shay::StatementKind::Declare:{
     if(s.expression_value){
-     out<<" { std::ostringstream shay_numeric_value; shay_numeric_value<<std::setprecision(15)<<("<<cpp_numeric_expression(s.value)<<"); values["<<cpp_string(s.name)<<"]=shay_numeric_value.str(); }\\n";
+     out<<" { std::ostringstream shay_numeric_value; shay_numeric_value<<std::setprecision(15)<<("<<cpp_numeric_expression(s.value)<<"); values["<<cpp_string(s.name)<<"]=shay_numeric_value.str(); }\n";
     }else{
      std::string value=s.value;if(!value.empty()&&value.front()==StringMarker)value.erase(value.begin());
-     out<<" values["<<cpp_string(s.name)<<"] = "<<cpp_string(value)<<";\\n";
+     out<<" values["<<cpp_string(s.name)<<"] = "<<cpp_string(value)<<";\n";
     }
     break;
    }
