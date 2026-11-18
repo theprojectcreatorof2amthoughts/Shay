@@ -161,6 +161,11 @@ Program Parser::parse(){
     else if(match(TokenKind::Symbol,"-")){if(match(TokenKind::Number))statement.value="-"+previous().text;else{error(program.errors,"expected digits after unary '-'");valid=false;}}
     else{error(program.errors,"expected a string, number, or boolean literal");valid=false;}
    }
+  }else if(match(TokenKind::Identifier,"inpvarforw")){
+   statement.kind=StatementKind::InputVariable;
+   valid=consume(TokenKind::Symbol,"-",program.errors,"expected '-' after 'inpvarforw'");
+   if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected a variable name after 'inpvarforw-'");
+   if(valid)statement.name=previous().text;
   }else if(match(TokenKind::Identifier,"forw")){
    statement.kind=StatementKind::ReturnValue;
    statement.value=collect_expression(tokens_,current_,"",valid);
