@@ -77,8 +77,8 @@ void validate_body(BuildContext&ctx,const fs::path&file,const std::vector<shay::
    else if(s.arguments.size()!=fn->second.parameters.size())
     diagnose(ctx,file,s.line,"function '"+s.name+"' expects "+std::to_string(fn->second.parameters.size())+" argument(s), got "+std::to_string(s.arguments.size()));
    for(const auto&arg:s.arguments)validate_expression_names(ctx,file,s.line,arg,locals,"function argument");
-  }else if(s.kind==shay::StatementKind::LogText&&(!ctx.log_file_name_set||!ctx.log_file_extension_set)){
-   diagnose(ctx,file,s.line,"'logit/>' requires both '$logindxfl' and '$logindxnm' to be declared before use");
+  }else if(s.kind==shay::StatementKind::LogText&&(!ctx.log_file_name_set&&!ctx.log_file_extension_set)){
+   diagnose(ctx,file,s.line,"'logit/>' requires '$logindxfl' or '$logindxnm' to be configured before use");
   }else if(s.kind!=shay::StatementKind::OutputText&&s.kind!=shay::StatementKind::OutputTextExit&&s.kind!=shay::StatementKind::LogText){
    diagnose(ctx,file,s.line,"unsupported statement inside function body");
   }
