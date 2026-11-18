@@ -311,4 +311,54 @@ done
 if printf '%s\n' "$out" | grep -Eq 'must not appear|Wrong else branch|Wrong nested else branch'; then fail "compiler logical false branch"; fi
 pass "compiler generates native logical conditions"
 
+
+cat > "$TMP/error-conditions.shaii" <<'EOF'
+$declr useme(x, y)
+    forw x / y
+finish
+EOF
+cat > "$TMP/error-conditions.shay" <<'EOF'
+$shaiiport [error-conditions.shaii]
+insval-useme(10, 0)
+ifit !#useme
+    instxt-"The useme call failed"
+elseit
+    instxt-"The useme call succeeded"
+exec
+instxt-"Execution continued"
+EOF
+out=$("$SHAII" "$TMP/error-conditions.shay") || fail "interpreter operation-specific error condition"
+printf '%s\n' "$out" | grep -q 'The useme call failed' || fail "interpreter !# failure branch"
+printf '%s\n' "$out" | grep -q 'Execution continued' || fail "interpreter continues after handled failure"
+if printf '%s\n' "$out" | grep -q 'The useme call succeeded'; then fail "interpreter !# selected success branch"; fi
+pass "interpreter tracks a specific function call with !#"
+
+CXX="\${CXX:-c++}" "$GSHAI" -o "$TMP/error-conditions-app" "$TMP/error-conditions.shay" || fail "compile operation-specific error condition"
+out=$("$TMP/error-conditions-app") || fail "compiled operation-specific error condition"
+printf '%s\n' "$out" | grep -q 'The useme call failed' || fail "compiler !# failure branch"
+printf '%s\n' "$out" | grep -q 'Execution continued' || fail "compiler continues after handled failure"
+if printf '%s\n' "$out" | grep -q 'The useme call succeeded'; then fail "compiler !# selected success branch"; fi
+pass "compiler tracks a specific function call with !#"
+
+cat > "$TMP/error-exit.shay" <<'EOF'
+$shaiiport [error-conditions.shaii]
+insval-useme(10, 0)
+ifit !#useme
+    instxtexit-"Error!"
+exec
+instxt-"This must not appear"
+EOF
+if "$SHAII" "$TMP/error-exit.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpreter instxtexit exit status"; fi
+grep -q '^Error!
+ "$TMP/out" || fail "interpreter instxtexit message"
+if grep -q 'This must not appear' "$TMP/out"; then fail "interpreter continued after instxtexit"; fi
+pass "interpreter instxtexit prints and terminates"
+
+CXX="\${CXX:-c++}" "$GSHAI" -o "$TMP/error-exit-app" "$TMP/error-exit.shay" || fail "compile instxtexit program"
+if "$TMP/error-exit-app" >"$TMP/out" 2>"$TMP/err"; then fail "compiler instxtexit exit status"; fi
+grep -q '^Error!
+ "$TMP/out" || fail "compiler instxtexit message"
+if grep -q 'This must not appear' "$TMP/out"; then fail "compiler continued after instxtexit"; fi
+pass "compiler instxtexit prints and terminates"
+
 printf '\nAll Shay toolchain tests passed.\n'
