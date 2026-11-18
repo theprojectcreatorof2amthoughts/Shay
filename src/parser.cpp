@@ -175,8 +175,8 @@ Program Parser::parse(){
    if(valid)valid=consume(TokenKind::String,"",program.errors,"expected quoted text after 'instxt/>'");
    if(valid)statement.value=previous().text;
   }else if(match(TokenKind::Identifier,"instxtexit")){
-   statement.kind=StatementKind::OutputTextExit;valid=consume(TokenKind::Symbol,"-",program.errors,"expected '-' after 'instxtexit'");
-   if(valid)valid=consume(TokenKind::String,"",program.errors,"expected quoted text after 'instxtexit-'");
+   statement.kind=StatementKind::OutputTextExit;valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'instxtexit'");
+   if(valid)valid=consume(TokenKind::String,"",program.errors,"expected quoted text after 'instxtexit/>'");
    if(valid)statement.value=previous().text;
   }else if(match(TokenKind::Identifier,"insval")){
    statement.kind=StatementKind::OutputValue;valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'insval'");
