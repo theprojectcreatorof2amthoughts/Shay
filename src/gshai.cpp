@@ -32,6 +32,8 @@ struct BuildContext{
  std::vector<shay::Statement>statements;
  std::string log_file_name="shay";
  std::string log_file_extension=".log";
+ bool log_file_name_set=false;
+ bool log_file_extension_set=false;
 };
 void diagnose(BuildContext&ctx,const fs::path&file,std::size_t line,const std::string&message){ctx.diagnostics.push_back({file,line,message});}
 std::unordered_set<std::string> expression_names(const std::string&source){
@@ -75,6 +77,8 @@ void validate_body(BuildContext&ctx,const fs::path&file,const std::vector<shay::
    else if(s.arguments.size()!=fn->second.parameters.size())
     diagnose(ctx,file,s.line,"function '"+s.name+"' expects "+std::to_string(fn->second.parameters.size())+" argument(s), got "+std::to_string(s.arguments.size()));
    for(const auto&arg:s.arguments)validate_expression_names(ctx,file,s.line,arg,locals,"function argument");
+  }else if(s.kind==shay::StatementKind::LogText&&(!ctx.log_file_name_set||!ctx.log_file_extension_set)){
+   diagnose(ctx,file,s.line,"'logit/>' requires both '$logindxfl' and '$logindxnm' to be declared before use");
   }else if(s.kind!=shay::StatementKind::OutputText&&s.kind!=shay::StatementKind::OutputTextExit&&s.kind!=shay::StatementKind::LogText){
    diagnose(ctx,file,s.line,"unsupported statement inside function body");
   }
@@ -98,8 +102,8 @@ void load_file(const fs::path&input,BuildContext&ctx){
    if(fs::path(s.value).extension()!=required){diagnose(ctx,input,s.line,std::string("$")+(library?"shaiiport":"shazport")+" requires a "+required+" file");continue;}
    load_file(shay::resolve_import(input,s.value,library&&!s.external_import),ctx);continue;
   }
-  if(s.kind==shay::StatementKind::LogFileExtension){ctx.log_file_extension=s.value;continue;}
-  if(s.kind==shay::StatementKind::LogFileName){ctx.log_file_name=s.value;continue;}
+  if(s.kind==shay::StatementKind::LogFileExtension){ctx.log_file_extension=s.value;ctx.log_file_extension_set=true;continue;}
+  if(s.kind==shay::StatementKind::LogFileName){ctx.log_file_name=s.value;ctx.log_file_name_set=true;continue;}
   if(s.kind==shay::StatementKind::Declare){
    if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'brew' is not allowed");continue;}
    if(!ctx.variables.insert(s.name).second){diagnose(ctx,input,s.line,"variable '"+s.name+"' is already declared");continue;}
@@ -130,6 +134,8 @@ void load_file(const fs::path&input,BuildContext&ctx){
   }else if(s.kind==shay::StatementKind::ReturnValue){
    diagnose(ctx,input,s.line,"'forw' is only valid inside a function");
   }
+  if(s.kind==shay::StatementKind::LogText&&(!ctx.log_file_name_set||!ctx.log_file_extension_set))
+   diagnose(ctx,input,s.line,"'logit/>' requires both '$logindxfl' and '$logindxnm' to be declared before use");
   ctx.statements.push_back(s);
  }
  ctx.active.erase(key);ctx.loaded.insert(key);
