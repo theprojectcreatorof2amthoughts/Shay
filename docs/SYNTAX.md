@@ -57,6 +57,34 @@ Logical precedence is `notit`, then `andit`, then `orit`. Parentheses can group 
 
 Conditional bodies currently support output statements, function calls, nested conditionals, and an optional `elseit` fallback branch; other statements are not implemented yet.
 
+## Error conditions and termination
+
+Use `!#functionName` inside an `ifit` condition to check whether the most recent call to that specific function failed. The status belongs to the named function call; it is not the status of the previous unrelated statement and does not treat a false-y return value as an error.
+
+```shay
+$declr divide(left, right)
+    forw left / right
+finish
+
+insval-divide(10, 0)
+ifit !#divide
+    instxt-"The divide operation failed"
+elseit
+    instxt-"The divide operation succeeded"
+exec
+```
+
+A successful later call to the same function clears its previous failure status. The interpreter and native compiler both detect division by zero and retain the failure reason. If a failure is not checked with `!#`, the tool reports the function and its reason.
+
+Use `instxtexit-"message"` to print a message and terminate the program with a non-zero exit status:
+
+```shay
+insval-divide(10, 0)
+ifit !#divide
+    instxtexit-"Error!"
+exec
+```
+
 ## Imports
 
 ```shay
@@ -93,4 +121,4 @@ The shared frontend tokenizes source into identifiers, numbers, strings, symbols
 
 ## Not yet part of the grammar
 
-Loops, nested lexical scopes, collections, typed values, general expressions outside numeric function returns, error handling, and REPL behavior are not implemented yet. Function bodies are currently limited to an optional return expression or supported statement bodies.
+Loops, nested lexical scopes, collections, typed values, general expressions outside numeric function returns, and REPL behavior are not implemented yet. Function bodies are currently limited to an optional return expression or supported statement bodies.
