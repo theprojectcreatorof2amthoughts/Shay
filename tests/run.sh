@@ -316,6 +316,9 @@ cat > "$TMP/error-conditions.shaii" <<'EOF'
 $declr useme(x, y)
     forw x / y
 finish
+$declr safe(x, y)
+    forw x + y
+finish
 EOF
 cat > "$TMP/error-conditions.shay" <<'EOF'
 $shaiiport [error-conditions.shaii]
@@ -325,11 +328,25 @@ ifit !#useme
 elseit
     instxt-"The useme call succeeded"
 exec
+insval-safe(10, 2)
+ifit !#safe
+    instxt-"Wrong: safe inherited another function's failure"
+elseit
+    instxt-"Safe call succeeded"
+exec
+insval-useme(10, 2)
+ifit !#useme
+    instxt-"Wrong: stale useme failure"
+elseit
+    instxt-"Successful useme call cleared its failure"
+exec
 instxt-"Execution continued"
 EOF
 out=$("$SHAII" "$TMP/error-conditions.shay") || fail "interpreter operation-specific error condition"
 printf '%s\n' "$out" | grep -q 'The useme call failed' || fail "interpreter !# failure branch"
 printf '%s\n' "$out" | grep -q 'Execution continued' || fail "interpreter continues after handled failure"
+printf '%s\n' "$out" | grep -q 'Safe call succeeded' || fail "interpreter operation-specific status"
+printf '%s\n' "$out" | grep -q 'Successful useme call cleared its failure' || fail "interpreter clears stale failure"
 if printf '%s\n' "$out" | grep -q 'The useme call succeeded'; then fail "interpreter !# selected success branch"; fi
 pass "interpreter tracks a specific function call with !#"
 
@@ -337,6 +354,8 @@ CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/error-conditions-app" "$TMP/error-conditions
 out=$("$TMP/error-conditions-app") || fail "compiled operation-specific error condition"
 printf '%s\n' "$out" | grep -q 'The useme call failed' || fail "compiler !# failure branch"
 printf '%s\n' "$out" | grep -q 'Execution continued' || fail "compiler continues after handled failure"
+printf '%s\n' "$out" | grep -q 'Safe call succeeded' || fail "compiler operation-specific status"
+printf '%s\n' "$out" | grep -q 'Successful useme call cleared its failure' || fail "compiler clears stale failure"
 if printf '%s\n' "$out" | grep -q 'The useme call succeeded'; then fail "compiler !# selected success branch"; fi
 pass "compiler tracks a specific function call with !#"
 
