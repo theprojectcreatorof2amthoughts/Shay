@@ -32,6 +32,25 @@ printf '%s\n' "$out" | grep -q 'Line 1' || fail "escaped newline output"
 printf '%s\n' "$out" | grep -q -- '-42' || fail "negative number literal"
 pass "lexer strings and signed numeric literals"
 
+cat > "$TMP/arithmetic-expressions.shay" <<'EOF'
+brew base = 10
+brew multiplier = 3
+brew total = base + multiplier * 4
+brew grouped = (base + multiplier) * 4
+insval-total
+insval-grouped
+EOF
+"$SHAII" --check "$TMP/arithmetic-expressions.shay" >/dev/null || fail "arithmetic expression syntax check"
+out=$("$SHAII" "$TMP/arithmetic-expressions.shay") || fail "interpreter arithmetic expressions"
+[ "$(printf '%s\n' "$out" | sed -n '1p')" = "22" ] || fail "interpreter operator precedence"
+[ "$(printf '%s\n' "$out" | sed -n '2p')" = "52" ] || fail "interpreter parenthesized expression"
+pass "interpreter evaluates arithmetic expressions with precedence and variables"
+CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/arithmetic-app" "$TMP/arithmetic-expressions.shay" || fail "compile arithmetic expressions"
+out=$("$TMP/arithmetic-app") || fail "run compiled arithmetic expressions"
+[ "$(printf '%s\n' "$out" | sed -n '1p')" = "22" ] || fail "compiler arithmetic operator precedence"
+[ "$(printf '%s\n' "$out" | sed -n '2p')" = "52" ] || fail "compiler parenthesized arithmetic expression"
+pass "compiler generates matching arithmetic expression results"
+
 cat > "$TMP/bad-syntax.shay" <<'EOF'
 brew value =
 instxt-"unfinished
