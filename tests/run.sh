@@ -551,30 +551,32 @@ cat > "$TMP/log-missing-both.shay" <<'EOF'
 logit/>"This must fail"
 EOF
 if "$SHAII" "$TMP/log-missing-both.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpreter accepted logit without configuration"; fi
-grep -q "requires both" "$TMP/err" || fail "missing log configuration interpreter diagnostic"
+grep -q "requires" "$TMP/err" || fail "missing log configuration interpreter diagnostic"
 if "$GSHAI" -o "$TMP/log-missing-both" "$TMP/log-missing-both.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted logit without configuration"; fi
-grep -q "requires both" "$TMP/err" || fail "missing log configuration compiler diagnostic"
+grep -q "requires" "$TMP/err" || fail "missing log configuration compiler diagnostic"
 pass "logit requires both log configuration directives"
 
-cat > "$TMP/log-missing-extension.shay" <<'EOF'
+cat > "$TMP/log-name-only.shay" <<'EOF'
 $logindxnm "only-name"
-logit/>"This must fail"
+logit/>"Name-only configuration"
 EOF
-if "$SHAII" "$TMP/log-missing-extension.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpreter accepted logit without extension"; fi
-grep -q "requires both" "$TMP/err" || fail "missing extension interpreter diagnostic"
-if "$GSHAI" -o "$TMP/log-missing-extension" "$TMP/log-missing-extension.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted logit without extension"; fi
-grep -q "requires both" "$TMP/err" || fail "missing extension compiler diagnostic"
-pass "logit rejects a missing logindxfl directive"
+(cd "$TMP" && "$SHAII" "$TMP/log-name-only.shay") || fail "interpreter filename-only log configuration"
+grep -q '^Name-only configuration$' "$TMP/only-name.log" || fail "filename-only default extension"
+"$GSHAI" -o "$TMP/log-name-only-app" "$TMP/log-name-only.shay" || fail "compile filename-only log configuration"
+(cd "$TMP" && "$TMP/log-name-only-app") || fail "compiled filename-only log configuration"
+grep -q '^Name-only configuration$' "$TMP/only-name.log" || fail "compiled filename-only log output"
+pass "logindxnm works with the default .log extension"
 
-cat > "$TMP/log-missing-name.shay" <<'EOF'
-$logindxfl <.log>
-logit/>"This must fail"
+cat > "$TMP/log-extension-only.shay" <<'EOF'
+$logindxfl <.txt>
+logit/>"Extension-only configuration"
 EOF
-if "$SHAII" "$TMP/log-missing-name.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpreter accepted logit without filename"; fi
-grep -q "requires both" "$TMP/err" || fail "missing filename interpreter diagnostic"
-if "$GSHAI" -o "$TMP/log-missing-name" "$TMP/log-missing-name.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted logit without filename"; fi
-grep -q "requires both" "$TMP/err" || fail "missing filename compiler diagnostic"
-pass "logit rejects a missing logindxnm directive"
+(cd "$TMP" && "$SHAII" "$TMP/log-extension-only.shay") || fail "interpreter extension-only log configuration"
+grep -q '^Extension-only configuration$' "$TMP/shay.txt" || fail "extension-only default filename"
+"$GSHAI" -o "$TMP/log-extension-only-app" "$TMP/log-extension-only.shay" || fail "compile extension-only log configuration"
+(cd "$TMP" && "$TMP/log-extension-only-app") || fail "compiled extension-only log configuration"
+grep -q '^Extension-only configuration$' "$TMP/shay.txt" || fail "compiled extension-only log output"
+pass "logindxfl works with the default shay filename"
 
 
 cat > "$TMP/mixed-return.shaii" <<'EOF'
