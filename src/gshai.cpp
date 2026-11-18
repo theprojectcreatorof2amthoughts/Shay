@@ -27,6 +27,7 @@ struct Diagnostic{fs::path file;std::size_t line;std::string message;};
 struct BuildContext{
  std::unordered_set<std::string>loaded,active,variables;
  std::unordered_map<std::string,shay::Statement>functions;
+ std::vector<std::pair<fs::path,shay::Statement>>pending_function_validation;
  std::vector<Diagnostic>diagnostics;
  std::vector<shay::Statement>statements;
 };
@@ -104,10 +105,10 @@ void load_file(const fs::path&input,BuildContext&ctx){
    ctx.variables.insert(s.name);
   }else if(s.kind==shay::StatementKind::DeclareFunction){
    if(ctx.functions.count(s.name)){diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");continue;}
-   std::unordered_set<std::string> parameters(s.parameters.begin(),s.parameters.end());
-   if(s.has_return)validate_expression_names(ctx,input,s.line,s.value,parameters,"function '"+s.name+"' return expression");
-   validate_body(ctx,input,s.body,parameters,"function body",s.name);
    ctx.functions.emplace(s.name,s);
+   // Validate function bodies after the complete import graph is loaded so
+   // functions can reference globals declared later in the importing .shay.
+   ctx.pending_function_validation.emplace_back(input,s);
   }else if(s.kind==shay::StatementKind::If){
    validate_condition_names(ctx,input,s.line,s.condition,{},"ifit condition");
    validate_body(ctx,input,s.body,{},"ifit block");
@@ -371,7 +372,14 @@ int main(int argc,char**argv){
  if(input.extension()!=".shay"&&input.extension()!=".shaz"){std::cerr<<"gshai: input must be a .shay or .shaz file\n";return 2;}
  if(output.empty()){output=input.parent_path()/input.stem();if(object_mode)output+=".sho";}
  else if(object_mode&&output.extension()!=".sho"){std::cerr<<"gshai: -ob output must use the .sho extension\n";return 2;}
- BuildContext context;load_file(input,context);if(!context.diagnostics.empty()){print_diagnostics(context);return 1;}
+ BuildContext context;load_file(input,context);
+ for(const auto&entry:context.pending_function_validation){
+  const auto&file=entry.first;const auto&s=entry.second;
+  std::unordered_set<std::string> parameters(s.parameters.begin(),s.parameters.end());
+  if(s.has_return)validate_expression_names(context,file,s.line,s.value,parameters,"function '"+s.name+"' return expression");
+  validate_body(context,file,s.body,parameters,"function body",s.name);
+ }
+ if(!context.diagnostics.empty()){print_diagnostics(context);return 1;}
  const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();const fs::path temp=fs::temp_directory_path()/("shay-build-"+std::to_string(stamp)+".cpp");
  if(!write_translation(context,temp,!object_mode)){std::cerr<<"gshai: cannot write temporary translation unit\n";return 1;}
  const char*configured=std::getenv("CXX");const std::string cxx=configured&&*configured?configured:"c++";
