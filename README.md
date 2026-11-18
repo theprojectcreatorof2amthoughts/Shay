@@ -66,7 +66,20 @@ elseit
 exec
 ```
 
-The current implementation supports string output, literal variable declarations, variable output, imported functions, numeric-returning functions, void functions with statement bodies, numeric comparisons, and logical condition operators (`andit`, `orit`, and `notit`). Parentheses group logical conditions, with precedence `notit` then `andit` then `orit`. It also supports `ifit` blocks inside functions, function calls, imports, duplicate-import protection, circular-import detection, and source-located diagnostics. A function may use `forw expression` for a numeric return, or contain statements followed by `finish` for a void function.
+The current implementation supports string output, literal variable declarations, line-based input with `inpvarforw-name`, variable output, imported functions, numeric-returning functions, void functions with statement bodies, numeric comparisons, and logical condition operators (`andit`, `orit`, and `notit`). Parentheses group logical conditions, with precedence `notit` then `andit` then `orit`. It also supports `ifit` blocks inside functions, function calls, imports, duplicate-import protection, circular-import detection, and source-located diagnostics. A function may use `forw expression` for a numeric return, or contain statements followed by `finish` for a void function.
+
+### Read input into a variable
+
+`inpvarforw-name` reads one complete line from standard input. It creates `name` if it has not been declared yet; if `name` already exists, it replaces its previous value. Input is stored as text, including spaces, and can be used with `insval-name` afterward.
+
+```shay
+instxt-"What's your name?"
+inpvarforw-name
+instxt-"Hello,"
+insval-name
+```
+
+The interpreter and compiled executables both read from standard input. `shaii --check` does not wait for input. The first implementation supports `inpvarforw` at the top level of a program.
 
 ## Build
 
