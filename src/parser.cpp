@@ -39,26 +39,41 @@ Program Parser::parse(){
    while(!atEnd()&&peek().kind!=TokenKind::Newline){statement.condition+=peek().text;statement.condition.push_back(' ');++current_;}
    if(statement.condition.empty()){error(program.errors,"ifit requires a condition");valid=false;}
    if(peek().kind==TokenKind::Newline)++current_;
-   std::vector<Token> bodyTokens;bool foundExec=false;int ifDepth=1;
+   std::vector<Token> bodyTokens,elseTokens;bool foundExec=false,seenElse=false;int ifDepth=1;
    while(!atEnd()){
-    if(peek().kind==TokenKind::Identifier&&peek().text=="ifit"){++ifDepth;bodyTokens.push_back(peek());++current_;continue;}
+    if(peek().kind==TokenKind::Identifier&&peek().text=="ifit"){
+     ++ifDepth;(seenElse?elseTokens:bodyTokens).push_back(peek());++current_;continue;
+    }
     if(peek().kind==TokenKind::Identifier&&peek().text=="exec"){
      --ifDepth;
      if(ifDepth==0){
       foundExec=true;++current_;
       if(peek().kind!=TokenKind::Newline&&!atEnd()){error(program.errors,"unexpected token after 'exec'");valid=false;}
       if(peek().kind==TokenKind::Newline)++current_;
-      skipCurrentLine=false;
-      break;
+      skipCurrentLine=false;break;
      }
+     (seenElse?elseTokens:bodyTokens).push_back(peek());++current_;continue;
     }
-    bodyTokens.push_back(peek());++current_;
+    if(ifDepth==1&&peek().kind==TokenKind::Identifier&&peek().text=="elseit"){
+     if(seenElse){error(program.errors,"an ifit block can contain only one elseit branch");valid=false;}
+     seenElse=true;++current_;
+     if(peek().kind!=TokenKind::Newline&&!atEnd()){error(program.errors,"unexpected token after 'elseit'");valid=false;}
+     if(peek().kind==TokenKind::Newline)++current_;
+     continue;
+    }
+    (seenElse?elseTokens:bodyTokens).push_back(peek());++current_;
    }
-   bodyTokens.push_back({TokenKind::End,"",peek().line,peek().column});
+   const Token endToken{TokenKind::End,"",peek().line,peek().column};
+   bodyTokens.push_back(endToken);elseTokens.push_back(endToken);
    if(!foundExec){error(program.errors,"expected 'exec' to close the ifit block");valid=false;}
    Parser nested(bodyTokens);Program nestedProgram=nested.parse();
    statement.body=std::move(nestedProgram.statements);
    for(const auto&e:nestedProgram.errors)program.errors.push_back(e);
+   if(seenElse){
+    Parser elseNested(elseTokens);Program elseProgram=elseNested.parse();
+    statement.else_body=std::move(elseProgram.statements);
+    for(const auto&e:elseProgram.errors)program.errors.push_back(e);
+   }
   }else if(match(TokenKind::Symbol,"$")){
    if(match(TokenKind::Identifier,"shaiiport")||match(TokenKind::Identifier,"shazport")){
     const bool library=previous().text=="shaiiport";statement.kind=library?StatementKind::ImportLibrary:StatementKind::ImportTask;
