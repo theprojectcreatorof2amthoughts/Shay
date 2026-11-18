@@ -370,6 +370,7 @@ int main(int argc,char**argv){
  const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();const fs::path temp=fs::temp_directory_path()/("shay-build-"+std::to_string(stamp)+".cpp");
  if(!write_translation(context,temp,!object_mode)){std::cerr<<"gshai: cannot write temporary translation unit\n";return 1;}
  const char*configured=std::getenv("CXX");const std::string cxx=configured&&*configured?configured:"c++";
+ std::error_code ignored;
  if(!target.empty()&&cxx.find("clang")==std::string::npos){
   std::cerr<<"gshai: --shaytarget requires Clang (set CXX=clang++); this mode is hosted cross-compilation, not freestanding\\n";
   fs::remove(temp,ignored);return 2;
@@ -396,7 +397,7 @@ int main(int argc,char**argv){
  command+=(object_mode?"-c ":"")+shell_quote(temp.string())+" -o "+shell_quote(output.string());
  status=std::system(command.c_str());
 #endif
- std::error_code ignored;fs::remove(temp,ignored);
+ fs::remove(temp,ignored);
  if(status!=0){fs::remove(output,ignored);std::cerr<<"gshai: native compiler/linker failed\n";return 1;}
  std::cout<<"gshai: wrote "<<(object_mode?"object file ":"executable ")<<output.string()<<'\n';return 0;
 }
