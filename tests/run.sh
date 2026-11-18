@@ -284,10 +284,20 @@ exec
 ifit x < y andit missing_value > 0
     instxt-"This must not appear either"
 exec
+ifit x < y
+    instxt-"Wrong else branch"
+elseit
+    instxt-"ELSE works"
+    ifit z > y
+        instxt-"Nested else condition works"
+    elseit
+        instxt-"Wrong nested else branch"
+    exec
+exec
 EOF
 "$SHAII" --check "$TMP/logical-conditions.shay" >/dev/null || fail "logical condition syntax check"
 out=$("$SHAII" "$TMP/logical-conditions.shay") || fail "interpreter logical conditions"
-for expected in "AND works" "OR works" "NOT works" "Grouped logic works" "Short-circuit OR works"; do
+for expected in "AND works" "OR works" "NOT works" "Grouped logic works" "Short-circuit OR works" "ELSE works" "Nested else condition works"; do
     printf '%s\n' "$out" | grep -q "$expected" || fail "interpreter $expected"
 done
 if printf '%s\n' "$out" | grep -q 'must not appear'; then fail "interpreter logical false branch"; fi
