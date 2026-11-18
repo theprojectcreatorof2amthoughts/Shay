@@ -61,6 +61,8 @@ insval-username
 brew age = 20
 ifit age >= 18 andit notit age == 21
     instxt-"Adult"
+elseit
+    instxt-"Not an eligible adult"
 exec
 ```
 
