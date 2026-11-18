@@ -25,8 +25,8 @@ inpvarforw-name
 instxt-"Hello,"
 insval-name
 EOF
-out=$(printf 'Yamen Awartani\\n' | "$SHAII" "$TMP/input-created.shay") || fail "interpreter input declaration"
-printf '%s\\n' "$out" | grep -q 'Yamen Awartani' || fail "interpreter input preserves spaces"
+out=$(printf 'Yamen Awartani\n' | "$SHAII" "$TMP/input-created.shay") || fail "interpreter input declaration"
+printf '%s\n' "$out" | grep -q 'Yamen Awartani' || fail "interpreter input preserves spaces"
 pass "inpvarforw creates a variable and reads a full input line"
 
 cat > "$TMP/input-existing.shay" <<'EOF'
@@ -34,18 +34,27 @@ brew name = "old value"
 inpvarforw-name
 insval-name
 EOF
-out=$(printf 'new value with spaces\\n' | "$SHAII" "$TMP/input-existing.shay") || fail "interpreter input reassignment"
-printf '%s\\n' "$out" | grep -q 'new value with spaces' || fail "interpreter input overwrites an existing variable"
+out=$(printf 'new value with spaces\n' | "$SHAII" "$TMP/input-existing.shay") || fail "interpreter input reassignment"
+printf '%s\n' "$out" | grep -q 'new value with spaces' || fail "interpreter input overwrites an existing variable"
 pass "inpvarforw overwrites an existing variable"
 
+cat > "$TMP/input-repeat.shay" <<'EOF'
+inpvarforw-name
+inpvarforw-name
+insval-name
+EOF
+out=$(printf 'first value\nsecond value\n' | "$SHAII" "$TMP/input-repeat.shay") || fail "repeat inpvarforw"
+printf '%s\n' "$out" | grep -q 'second value' || fail "repeat inpvarforw updates the variable"
+pass "repeated inpvarforw statements reuse and update the same variable"
+
 CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/input-created-app" "$TMP/input-created.shay" || fail "compile program with inpvarforw"
-out=$(printf 'compiled input with spaces\\n' | "$TMP/input-created-app") || fail "run compiled input program"
-printf '%s\\n' "$out" | grep -q 'compiled input with spaces' || fail "compiled input preserves spaces"
+out=$(printf 'compiled input with spaces\n' | "$TMP/input-created-app") || fail "run compiled input program"
+printf '%s\n' "$out" | grep -q 'compiled input with spaces' || fail "compiled input preserves spaces"
 pass "gshai compiles inpvarforw into standard-input reading"
 
 CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/input-existing-app" "$TMP/input-existing.shay" || fail "compile existing-variable input program"
-out=$(printf 'updated compiler value\\n' | "$TMP/input-existing-app") || fail "run existing-variable input program"
-printf '%s\\n' "$out" | grep -q 'updated compiler value' || fail "compiled input overwrites an existing variable"
+out=$(printf 'updated compiler value\n' | "$TMP/input-existing-app") || fail "run existing-variable input program"
+printf '%s\n' "$out" | grep -q 'updated compiler value' || fail "compiled input overwrites an existing variable"
 pass "gshai supports inpvarforw on existing variables"
 
 cat > "$TMP/input-then-brew.shay" <<'EOF'
