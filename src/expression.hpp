@@ -56,9 +56,9 @@ inline bool condition(const std::string&raw,const std::unordered_map<std::string
  std::string s=trim_condition(raw);
  while(wraps_condition(s))s=trim_condition(s.substr(1,s.size()-2));
  auto pos=find_logic(s,"orit");
- if(pos!=std::string::npos){bool a=false,b=false;if(!condition(s.substr(0,pos),values,a,error))return false;if(!condition(s.substr(pos+4),values,b,error))return false;result=a||b;return true;}
+ if(pos!=std::string::npos){bool a=false;if(!condition(s.substr(0,pos),values,a,error))return false;if(a){result=true;return true;}bool b=false;if(!condition(s.substr(pos+4),values,b,error))return false;result=b;return true;}
  pos=find_logic(s,"andit");
- if(pos!=std::string::npos){bool a=false,b=false;if(!condition(s.substr(0,pos),values,a,error))return false;if(!condition(s.substr(pos+5),values,b,error))return false;result=a&&b;return true;}
+ if(pos!=std::string::npos){bool a=false;if(!condition(s.substr(0,pos),values,a,error))return false;if(!a){result=false;return true;}bool b=false;if(!condition(s.substr(pos+5),values,b,error))return false;result=b;return true;}
  if(s.rfind("notit ",0)==0){if(!condition(s.substr(6),values,result,error))return false;result=!result;return true;}
  const std::string ops[]={">=","<=","==","!=",">","<"};
  for(const auto&op:ops){
