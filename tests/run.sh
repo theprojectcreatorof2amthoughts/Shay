@@ -85,7 +85,7 @@ instxt/>"hi"
 inpvarforw/>noinp
 insval/>useme(4, 8)
 ifit !#useme
-    instxtexit-"Error!"
+    instxtexit/>"Error!"
 exec
 EOF
 cat > "$TMP/input-global-function.shaii" <<'EOF'
@@ -456,7 +456,7 @@ cat > "$TMP/error-exit.shay" <<'EOF'
 $shaiiport [error-conditions.shaii]
 insval/>useme(10, 0)
 ifit !#useme
-    instxtexit-"Error!"
+    instxtexit/>"Error!"
 exec
 instxt/>"This must not appear"
 EOF
@@ -485,7 +485,7 @@ cat > "$TMP/explicit-function-failure.shay" <<'EOF'
 $shaiiport [explicit-function-failure.shaii]
 insval/>useme(17, 2)
 ifit !#useme
-    instxtexit-"Error!"
+    instxtexit/>"Error!"
 exec
 instxt/>"This must not appear"
 EOF
@@ -902,7 +902,7 @@ cat > "$TMP/error-exit.shay" <<'EOF'
 $shaiiport [error-conditions.shaii]
 insval/>useme(10, 0)
 ifit !#useme
-    instxtexit-"Error!"
+    instxtexit/>"Error!"
 exec
 instxt/>"This must not appear"
 EOF
@@ -931,7 +931,7 @@ cat > "$TMP/explicit-function-failure.shay" <<'EOF'
 $shaiiport [explicit-function-failure.shaii]
 insval/>useme(17, 2)
 ifit !#useme
-    instxtexit-"Error!"
+    instxtexit/>"Error!"
 exec
 instxt/>"This must not appear"
 EOF
