@@ -70,7 +70,7 @@ void execute_statements(const std::vector<shay::Statement>&statements,Context&ct
    case shay::StatementKind::If:{
     bool condition=false;std::string error;
     if(!shay::evaluate_condition(s.condition,scope,condition,error)){diagnose(ctx,file,s.line,"invalid ifit condition: "+error);break;}
-    if(condition)execute_statements(s.body,ctx,file,scope);
+    if(condition)execute_statements(s.body,ctx,file,scope);else execute_statements(s.else_body,ctx,file,scope);
     break;
    }
    case shay::StatementKind::OutputCall:
@@ -115,7 +115,7 @@ void execute_file(const fs::path&input,Context&ctx){
    case shay::StatementKind::If:{
     bool condition=false;std::string error;
     if(!shay::evaluate_condition(s.condition,ctx.numbers,condition,error)){diagnose(ctx,input,s.line,"invalid ifit condition: "+error);break;}
-    if(condition){auto scope=ctx.numbers;execute_statements(s.body,ctx,input,scope);}
+    {auto scope=ctx.numbers;if(condition)execute_statements(s.body,ctx,input,scope);else execute_statements(s.else_body,ctx,input,scope);}
     break;
    }
    case shay::StatementKind::OutputText:
