@@ -61,10 +61,12 @@ insval-username
 brew age = 20
 ifit age >= 18 andit notit age == 21
     instxt-"Adult"
+elseit
+    instxt-"Not an eligible adult"
 exec
 ```
 
-The current implementation supports string output, literal variable declarations, variable output, imported functions, numeric-returning functions, void functions with statement bodies, numeric comparisons, and logical condition operators (`andit`, `orit`, and `notit`). Parentheses group logical conditions, with precedence `notit` then `andit` then `orit`. It also supports `ifit` blocks inside functions, function calls, imports, duplicate-import protection, circular-import detection, and source-located diagnostics. A function may use `forw expression` for a numeric return, or contain statements followed by `finish` for a void function.
+The current implementation supports string output, literal variable declarations, variable output, imported functions, numeric-returning functions, void functions with statement bodies, numeric comparisons, and logical condition operators (`andit`, `orit`, and `notit`), short-circuit evaluation, and `elseit` fallback branches. Parentheses group logical conditions, with precedence `notit` then `andit` then `orit`. It also supports `ifit` blocks inside functions, function calls, imports, duplicate-import protection, circular-import detection, and source-located diagnostics. A function may use `forw expression` for a numeric return, or contain statements followed by `finish` for a void function.
 
 ## Build
 
