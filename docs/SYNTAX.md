@@ -40,6 +40,8 @@ brew score = 85
 
 ifit age >= 18 andit score > 70
     instxt-"Eligible"
+elseit
+    instxt-"Not eligible"
 exec
 
 ifit notit age < 18 orit score == 100
@@ -53,7 +55,7 @@ exec
 
 Logical precedence is `notit`, then `andit`, then `orit`. Parentheses can group conditions. The interpreter and native compiler share these condition semantics.
 
-Conditional bodies currently support output statements, function calls, and nested conditionals; other statements are not implemented yet.
+Conditional bodies currently support output statements, function calls, nested conditionals, and an optional `elseit` fallback branch; other statements are not implemented yet.
 
 ## Imports
 
