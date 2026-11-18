@@ -48,7 +48,7 @@ bool evaluate_condition(const std::string&source,const NumberScope&scope,Context
 }
 bool execute_statements(const std::vector<shay::Statement>&statements,Context&ctx,const fs::path&file,NumberScope&scope,std::string&failure);
 bool call_function(const shay::Statement&call,Context&ctx,const fs::path&file,NumberScope&callerScope){
- auto fail=[&](const std::string&reason){ctx.failures[call.name]=reason;return false;};
+ auto fail=[&](const std::string&reason){ctx.handled_failures.erase(call.name);ctx.failures[call.name]=reason;return false;};
  auto found=ctx.functions.find(call.name);
  if(found==ctx.functions.end())return fail("unknown function '"+call.name+"'");
  const auto&fn=found->second;
