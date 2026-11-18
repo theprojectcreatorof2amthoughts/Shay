@@ -28,6 +28,8 @@ EOF
 out=$(printf 'Yamen Awartani\n' | "$SHAII" "$TMP/input-created.shay") || fail "interpreter input declaration"
 printf '%s\n' "$out" | grep -q 'Yamen Awartani' || fail "interpreter input preserves spaces"
 pass "inpvarforw creates a variable and reads a full input line"
+"$SHAII" --check "$TMP/input-created.shay" >/dev/null || fail "inpvarforw check-only mode"
+pass "shaii --check does not wait for input"
 
 cat > "$TMP/input-existing.shay" <<'EOF'
 brew name = "old value"
