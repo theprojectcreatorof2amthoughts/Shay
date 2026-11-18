@@ -5,9 +5,9 @@ This document records the accepted Shay vocabulary and the current grammar. Shay
 ## Output and variables
 
 ```shay
-instxt-"Hello, world!"
+instxt/>"Hello, world!"
 brew username = "Alex"
-insval-username
+insval/>username
 ```
 
 The parser accepts string, numeric (including negative), and boolean literals for `brew`. String escapes currently supported are `\\n`, `\\t`, `\\r`, `\\\\`, and `\\"`. Zeccurs files (`.shaz`) are variable-free.
@@ -21,10 +21,10 @@ $declr add(x, y)
     forw x + y
 finish
 
-insval-add(10, 20)
+insval/>add(10, 20)
 ```
 
-Functions can be declared in `.shay` programs and `.shaii` libraries. A function may use a single top-level `forw` expression or mix statements with a `forw` return inside its body (including an `ifit` or `elseit` branch). Expressions support numeric literals, parameter names, parentheses, unary minus, and the arithmetic operators `+`, `-`, `*`, and `/`. Use `insval-functionName(arguments)` to print a returned value. When a function marks itself failed with `!#functionName`, its returned value is not printed. The compiler generates native function code; the interpreter evaluates the same arithmetic expression syntax. Nested function calls, local declarations, and non-numeric return values are not implemented yet.
+Functions can be declared in `.shay` programs and `.shaii` libraries. A function may use a single top-level `forw` expression or mix statements with a `forw` return inside its body (including an `ifit` or `elseit` branch). Expressions support numeric literals, parameter names, parentheses, unary minus, and the arithmetic operators `+`, `-`, `*`, and `/`. Use `insval/>functionName(arguments)` to print a returned value. When a function marks itself failed with `!#functionName`, its returned value is not printed. The compiler generates native function code; the interpreter evaluates the same arithmetic expression syntax. Nested function calls, local declarations, and non-numeric return values are not implemented yet.
 
 ## Conditions and logical operators
 
@@ -39,17 +39,17 @@ brew age = 20
 brew score = 85
 
 ifit age >= 18 andit score > 70
-    instxt-"Eligible"
+    instxt/>"Eligible"
 elseit
-    instxt-"Not eligible"
+    instxt/>"Not eligible"
 exec
 
 ifit notit age < 18 orit score == 100
-    instxt-"Special case"
+    instxt/>"Special case"
 exec
 
 ifit (age >= 18 andit score > 70) orit score == 100
-    instxt-"Grouped condition"
+    instxt/>"Grouped condition"
 exec
 ```
 
@@ -66,12 +66,12 @@ $declr useme(x, y)
     ifit x*y = 34
         !#useme
     elseit
-        instxt-"Result:"
+        instxt/>"Result:"
         forw x*y
     exec
 finish
 
-insval-useme(17, 2)
+insval/>useme(17, 2)
 ifit !#useme
     instxtexit-"Error!"
 exec
@@ -80,11 +80,11 @@ $declr divide(left, right)
     forw left / right
 finish
 
-insval-divide(10, 0)
+insval/>divide(10, 0)
 ifit !#divide
-    instxt-"The divide operation failed"
+    instxt/>"The divide operation failed"
 elseit
-    instxt-"The divide operation succeeded"
+    instxt/>"The divide operation succeeded"
 exec
 ```
 
@@ -93,7 +93,7 @@ A successful later call to the same function clears its previous failure status.
 Use `instxtexit-"message"` to print a message and terminate the program with a non-zero exit status:
 
 ```shay
-insval-divide(10, 0)
+insval/>divide(10, 0)
 ifit !#divide
     instxtexit-"Error!"
 exec
