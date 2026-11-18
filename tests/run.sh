@@ -368,15 +368,13 @@ exec
 instxt-"This must not appear"
 EOF
 if "$SHAII" "$TMP/error-exit.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpreter instxtexit exit status"; fi
-grep -q '^Error!
- "$TMP/out" || fail "interpreter instxtexit message"
+grep -q '^Error!$' "$TMP/out" || fail "interpreter instxtexit message"
 if grep -q 'This must not appear' "$TMP/out"; then fail "interpreter continued after instxtexit"; fi
 pass "interpreter instxtexit prints and terminates"
 
 CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/error-exit-app" "$TMP/error-exit.shay" || fail "compile instxtexit program"
 if "$TMP/error-exit-app" >"$TMP/out" 2>"$TMP/err"; then fail "compiler instxtexit exit status"; fi
-grep -q '^Error!
- "$TMP/out" || fail "compiler instxtexit message"
+grep -q '^Error!$' "$TMP/out" || fail "compiler instxtexit message"
 if grep -q 'This must not appear' "$TMP/out"; then fail "compiler continued after instxtexit"; fi
 pass "compiler instxtexit prints and terminates"
 
