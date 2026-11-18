@@ -333,7 +333,7 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
 void print_diagnostics(const BuildContext&ctx){for(const auto&d:ctx.diagnostics)std::cerr<<d.file.string()<<':'<<d.line<<": error: "<<d.message<<'\n';}
 }
 int main(int argc,char**argv){
- bool warn_all=false,warn_extra=false;std::string optimization="2";
+ bool warn_all=false,warn_extra=false;std::string optimization="2",target;
  std::vector<std::string> positional;
  for(int i=1;i<argc;++i){
   const std::string arg=argv[i];
@@ -343,6 +343,7 @@ int main(int argc,char**argv){
   else if(arg=="--shayo1")optimization="1";
   else if(arg=="--shayo2")optimization="2";
   else if(arg=="--shayo3")optimization="3";
+  else if(arg.rfind("--shaytarget=",0)==0)target=arg.substr(13);
   else positional.push_back(arg);
  }
  if(positional.size()==1&&positional[0]=="--version"){std::cout<<"gshai 0.4.0 (Shay compiler)\n";return 0;}
@@ -369,9 +370,14 @@ int main(int argc,char**argv){
  const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();const fs::path temp=fs::temp_directory_path()/("shay-build-"+std::to_string(stamp)+".cpp");
  if(!write_translation(context,temp,!object_mode)){std::cerr<<"gshai: cannot write temporary translation unit\n";return 1;}
  const char*configured=std::getenv("CXX");const std::string cxx=configured&&*configured?configured:"c++";
+ if(!target.empty()&&cxx.find("clang")==std::string::npos){
+  std::cerr<<"gshai: --shaytarget requires Clang (set CXX=clang++); this mode is hosted cross-compilation, not freestanding\\n";
+  fs::remove(temp,ignored);return 2;
+ }
  int status=0;
 #ifdef _WIN32
  std::vector<std::string> arguments={cxx,"-std=c++20","-O"+optimization};
+ if(!target.empty())arguments.push_back("--target="+target);
  if(warn_all)arguments.push_back("-Wall");
  if(warn_extra)arguments.push_back("-Wextra");
  if(object_mode)arguments.push_back("-c");
@@ -384,6 +390,7 @@ int main(int argc,char**argv){
  status=static_cast<int>(_spawnvp(_P_WAIT,cxx.c_str(),compiler_argv.data()));
 #else
  std::string command=shell_quote(cxx)+" -std=c++20 -O"+optimization+" ";
+ if(!target.empty())command+="--target="+shell_quote(target)+" ";
  if(warn_all)command+="-Wall ";
  if(warn_extra)command+="-Wextra ";
  command+=(object_mode?"-c ":"")+shell_quote(temp.string())+" -o "+shell_quote(output.string());
