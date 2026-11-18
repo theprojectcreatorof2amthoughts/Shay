@@ -203,6 +203,15 @@ void execute_file(const fs::path&input,Context&ctx){
     else ctx.functions.emplace(s.name,s);
     break;
    case shay::StatementKind::If:{
+    auto validate_log_config=[&](const auto&body,const auto&self)->void{
+     for(const auto&nested:body){
+      if(nested.kind==shay::StatementKind::LogText&&!log_configuration_ready(ctx))
+       diagnose(ctx,input,nested.line,"'logit/>' requires both '$logindxfl' and '$logindxnm' to be declared before use");
+      self(nested.body,self);self(nested.else_body,self);
+     }
+    };
+    validate_log_config(s.body,validate_log_config);
+    validate_log_config(s.else_body,validate_log_config);
     bool condition=false;std::string error;
     if(!evaluate_condition(s.condition,ctx.numbers,ctx,condition,error)){diagnose(ctx,input,s.line,"invalid ifit condition: "+error);break;}
     {auto scope=ctx.numbers;{std::string ignored;if(condition)execute_statements(s.body,ctx,input,scope,ignored);else execute_statements(s.else_body,ctx,input,scope,ignored);}}
