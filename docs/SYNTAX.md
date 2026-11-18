@@ -4,7 +4,7 @@ This document records the accepted Shay vocabulary and the current grammar. Shay
 
 ## Output and variables
 
-`instxt/>`, `insval/>`, and `inpvarforw/>` use the self-closing `/>` operator; the previous hyphen forms are no longer accepted. `instxtexit-` retains its existing hyphen syntax.
+`instxt/>`, `insval/>`, and `inpvarforw/>` use the self-closing `/>` operator; the previous hyphen forms are no longer accepted. `instxtexit/>` uses the same self-closing operator.
 
 ```shay
 instxt-"Hello, world!"
@@ -75,7 +75,7 @@ finish
 
 insval-useme(17, 2)
 ifit !#useme
-    instxtexit-"Error!"
+    instxtexit/>"Error!"
 exec
 
 $declr divide(left, right)
@@ -92,12 +92,12 @@ exec
 
 A successful later call to the same function clears its previous failure status. The interpreter and native compiler both detect division by zero and retain the failure reason. If a failure is not checked with `!#`, the tool reports the function and its reason.
 
-Use `instxtexit-"message"` to print a message and terminate the program with a non-zero exit status:
+Use `instxtexit/>"message"` to print a message and terminate the program with a non-zero exit status:
 
 ```shay
 insval-divide(10, 0)
 ifit !#divide
-    instxtexit-"Error!"
+    instxtexit/>"Error!"
 exec
 ```
 
