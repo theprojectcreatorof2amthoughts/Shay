@@ -11,11 +11,9 @@ PHDRS
 SECTIONS
 {
     . = 0x100000;
-    .limine_requests : ALIGN(8) {
-        KEEP(*(.limine_requests_start))
-        KEEP(*(.limine_requests))
-        KEEP(*(.limine_requests_end))
-    } :text
+    .limine_requests_start : ALIGN(8) { KEEP(*(.limine_requests_start)) } :text
+    .limine_requests : ALIGN(8) { KEEP(*(.limine_requests)) } :text
+    .limine_requests_end : ALIGN(8) { KEEP(*(.limine_requests_end)) } :text
     .text : ALIGN(0x1000) { *(.text .text.*) } :text
     .rodata : ALIGN(0x1000) { *(.rodata .rodata.*) } :text
     .data : ALIGN(0x1000) { *(.data .data.*) } :data
