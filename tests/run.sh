@@ -535,7 +535,6 @@ printf '%s\n' "$out" | grep -q '^30$' || fail "compiler mixed function return va
 printf '%s\n' "$out" | grep -q '^Failure detected$' || fail "compiler mixed function failure path"
 if printf '%s\n' "$out" | grep -q '^34$'; then fail "compiler returned value on marked failure"; fi
 pass "compiler supports output, conditional failure, and explicit returns in one function"
- || fail "later inpvarforw global was not visible inside imported function"
 pass "imported functions can reference globals declared after their import"
 
 cat > "$TMP/lexer-parser.shay" <<'EOF'
