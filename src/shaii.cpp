@@ -28,6 +28,8 @@ struct Context{
  std::unordered_set<std::string> handled_failures;
  std::vector<std::string> active_functions;
  bool exit_requested=false;
+ std::string log_file_name="shay";
+ std::string log_file_extension=".log";
 };
 using NumberScope=std::unordered_map<std::string,double>;
 struct ReturnFlow{bool returned=false;double value=0;};
@@ -36,6 +38,14 @@ bool evaluate(const std::string&source,const NumberScope&values,double&result,st
  shay::NumericExpression expression(source,values);return expression.evaluate(result,error);
 }
 std::string number_text(double value){std::ostringstream out;out<<std::setprecision(15)<<value;return out.str();}
+fs::path configured_log_path(const Context&ctx){fs::path path(ctx.log_file_name);path.replace_extension(ctx.log_file_extension);return path;}
+bool append_log(const Context&ctx,const std::string&message){
+ std::ofstream stream(configured_log_path(ctx),std::ios::binary|std::ios::app);
+ if(!stream)return false;
+ stream.write(message.data(),static_cast<std::streamsize>(message.size()));
+ if(message.empty()||message.back()!='\n')stream.put('\n');
+ return static_cast<bool>(stream);
+}
 bool evaluate_condition(const std::string&source,const NumberScope&scope,Context&ctx,bool&result,std::string&error){
  auto trim=[](const std::string&value){const auto first=value.find_first_not_of(" \t\r\n");if(first==std::string::npos)return std::string();const auto last=value.find_last_not_of(" \t\r\n");return value.substr(first,last-first+1);};
  const std::string condition=trim(source);
@@ -108,6 +118,12 @@ bool execute_statements(const std::vector<shay::Statement>&statements,Context&ct
    case shay::StatementKind::OutputText:
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
     break;
+   case shay::StatementKind::LogText:
+    if(!ctx.check_only&&!append_log(ctx,s.value))diagnose(ctx,input,s.line,"cannot write log file '"+configured_log_path(ctx).string()+"'");
+    break;
+   case shay::StatementKind::LogText:
+    if(!ctx.check_only&&!append_log(ctx,s.value)){failure="cannot write log file '"+configured_log_path(ctx).string()+"'";success=false;}
+    break;
    case shay::StatementKind::OutputTextExit:
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
     ctx.exit_requested=true;
@@ -173,6 +189,12 @@ void execute_file(const fs::path&input,Context&ctx){
     else{ctx.values[s.name]=s.value;try{std::size_t used=0;double value=std::stod(s.value,&used);if(used==s.value.size())ctx.numbers[s.name]=value;else ctx.numbers.erase(s.name);}catch(...){ctx.numbers.erase(s.name);}}
     break;
    }
+   case shay::StatementKind::LogFileExtension:
+    ctx.log_file_extension=s.value;
+    break;
+   case shay::StatementKind::LogFileName:
+    ctx.log_file_name=s.value;
+    break;
    case shay::StatementKind::DeclareFunction:
     if(ctx.functions.count(s.name))diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");
     else ctx.functions.emplace(s.name,s);
