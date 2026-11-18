@@ -100,5 +100,6 @@ help:
 	  '  make run PROGRAM=examples/hello.shay' \
 	  '  make compile PROGRAM=examples/hello.shay  # emits .sho' \
 	  '  make executable PROGRAM=examples/hello.shay  # emits executable' \
-	  '  make install         Install gshai and shaii' \
+	  '  make kernel KERNEL_SOURCE=examples/kernel.shay  # build x86_64 kernel ELF' \
+  '  make install         Install gshai and shaii' \
 	  '  make clean           Remove build outputs'
