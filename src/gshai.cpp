@@ -355,7 +355,7 @@ int compile_kernel(const fs::path& input,const fs::path& output) {
  if(!shay::emit_x86_64_kernel_assembly(program,assembly,error)){std::cerr<<"gshai: kernel: "<<error<<'\n';return 1;}
  const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();
  const fs::path base=fs::temp_directory_path()/("shay-kernel-"+std::to_string(stamp));
- const fs::path asm_path=base;const fs::path obj_path=base.string()+".o";const fs::path ld_path=base.string()+".ld";
+ const fs::path asm_path=base.string()+".S";const fs::path obj_path=base.string()+".o";const fs::path ld_path=base.string()+".ld";
  auto cleanup=[&](){std::error_code ec;fs::remove(asm_path,ec);fs::remove(obj_path,ec);fs::remove(ld_path,ec);};
  {std::ofstream out(asm_path,std::ios::binary);if(!out){cleanup();std::cerr<<"gshai: cannot write temporary assembly\n";return 1;}out<<assembly;}
  {std::ofstream out(ld_path,std::ios::binary);if(!out){cleanup();std::cerr<<"gshai: cannot write temporary linker script\n";return 1;}out<<shay::x86_64_kernel_linker_script();}
