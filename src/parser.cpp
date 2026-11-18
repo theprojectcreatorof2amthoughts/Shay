@@ -163,24 +163,24 @@ Program Parser::parse(){
    }
   }else if(match(TokenKind::Identifier,"inpvarforw")){
    statement.kind=StatementKind::InputVariable;
-   valid=consume(TokenKind::Symbol,"-",program.errors,"expected '-' after 'inpvarforw'");
-   if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected a variable name after 'inpvarforw-'");
+   valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'inpvarforw'");
+   if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected a variable name after 'inpvarforw/>'");
    if(valid)statement.name=previous().text;
   }else if(match(TokenKind::Identifier,"forw")){
    statement.kind=StatementKind::ReturnValue;
    statement.value=collect_expression(tokens_,current_,"",valid);
    if(statement.value.empty()){error(program.errors,"'forw' requires a return expression");valid=false;}
   }else if(match(TokenKind::Identifier,"instxt")){
-   statement.kind=StatementKind::OutputText;valid=consume(TokenKind::Symbol,"-",program.errors,"expected '-' after 'instxt'");
-   if(valid)valid=consume(TokenKind::String,"",program.errors,"expected quoted text after 'instxt-'");
+   statement.kind=StatementKind::OutputText;valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'instxt'");
+   if(valid)valid=consume(TokenKind::String,"",program.errors,"expected quoted text after 'instxt/>'");
    if(valid)statement.value=previous().text;
   }else if(match(TokenKind::Identifier,"instxtexit")){
    statement.kind=StatementKind::OutputTextExit;valid=consume(TokenKind::Symbol,"-",program.errors,"expected '-' after 'instxtexit'");
    if(valid)valid=consume(TokenKind::String,"",program.errors,"expected quoted text after 'instxtexit-'");
    if(valid)statement.value=previous().text;
   }else if(match(TokenKind::Identifier,"insval")){
-   statement.kind=StatementKind::OutputValue;valid=consume(TokenKind::Symbol,"-",program.errors,"expected '-' after 'insval'");
-   if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected a variable or function name after 'insval-'");
+   statement.kind=StatementKind::OutputValue;valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'insval'");
+   if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected a variable or function name after 'insval/>'");
    if(valid)statement.name=previous().text;
    if(valid&&match(TokenKind::Symbol,"(")){
     statement.kind=StatementKind::OutputCall;
