@@ -462,7 +462,7 @@ if command -v clang >/dev/null 2>&1 && command -v ld.lld >/dev/null 2>&1 && comm
     readelf -h "$TMP/shay-kernel.elf" | grep -q 'Advanced Micro Devices X86-64' || fail "kernel ELF architecture"
     readelf -h "$TMP/shay-kernel.elf" | grep -q 'Entry point address' || fail "kernel ELF entry point"
     readelf -l "$TMP/shay-kernel.elf" | grep -q 'LOAD' || fail "kernel ELF load segment"
-    readelf -S "$TMP/shay-kernel.elf" | grep -q '.limine_requests' || fail "Limine request section"
+    readelf -SW "$TMP/shay-kernel.elf" | grep -q '.limine_requests' || fail "Limine request section"
     if readelf -l "$TMP/shay-kernel.elf" | grep -q 'INTERP'; then fail "kernel unexpectedly has an interpreter"; fi
     pass "gshai emits a freestanding x86_64 Limine ELF kernel"
 
