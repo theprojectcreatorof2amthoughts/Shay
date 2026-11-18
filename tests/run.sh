@@ -139,6 +139,15 @@ if "$SHAII" --check "$TMP/bad.shaz" >"$TMP/out" 2>"$TMP/err"; then fail "Zeccurs
 grep -q 'variable-free' "$TMP/err" || fail "Zeccurs diagnostic"
 pass "Zeccurs rejects variable declarations"
 
+cat > "$TMP/input-task.shaz" <<'EOF'
+inpvarforw-task_value
+EOF
+if "$SHAII" --check "$TMP/input-task.shaz" >"$TMP/out" 2>"$TMP/err"; then fail "Zeccurs input declaration restriction"; fi
+grep -q "variable-free; 'inpvarforw' is not allowed" "$TMP/err" || fail "Zeccurs input declaration diagnostic"
+if CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/input-task" "$TMP/input-task.shaz" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted Zeccurs input declaration"; fi
+grep -q "variable-free; 'inpvarforw' is not allowed" "$TMP/err" || fail "compiler Zeccurs input diagnostic"
+pass "Zeccurs rejects inpvarforw declarations"
+
 cat > "$TMP/a.shaz" <<'EOF'
 $shazport [b.shaz]
 EOF
