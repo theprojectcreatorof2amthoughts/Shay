@@ -16,7 +16,7 @@ The parser accepts string, numeric (including negative), and boolean literals fo
 
 ## Log files
 
-Use `$logindxfl` to select the log extension and `$logindxnm` to select the filename. The selected extension is applied to the filename. If the filename already has an extension, Shay replaces it with the selected extension. If neither setting is supplied, the default file is `shay.log`. Existing log files are appended to rather than overwritten.
+Use `$logindxfl` to select the log extension and `$logindxnm` to select the filename. The selected extension is applied to the filename. If the filename already has an extension, Shay replaces it with the selected extension. Both directives are required before the first `logit/>`. If either is missing, Shay reports an error instead of creating a default file. Existing log files are appended to rather than overwritten.
 
 ```shay
 $logindxfl <.log>
