@@ -44,6 +44,7 @@ void validate_body(BuildContext&ctx,const fs::path&file,const std::vector<shay::
   if(s.kind==shay::StatementKind::If){
    validate_expression_names(ctx,file,s.line,s.condition,locals,"ifit condition");
    validate_body(ctx,file,s.body,locals,bodyLabel);
+   validate_body(ctx,file,s.else_body,locals,bodyLabel);
   }else if(s.kind==shay::StatementKind::OutputValue){
    if(!ctx.variables.count(s.name)&&!locals.count(s.name))
     diagnose(ctx,file,s.line,"unknown variable '"+s.name+"' inside "+bodyLabel);
@@ -88,6 +89,7 @@ void load_file(const fs::path&input,BuildContext&ctx){
   }else if(s.kind==shay::StatementKind::If){
    validate_expression_names(ctx,input,s.line,s.condition,{},"ifit condition");
    validate_body(ctx,input,s.body,{},"ifit block");
+   validate_body(ctx,input,s.else_body,{},"elseit block");
   }else if(s.kind==shay::StatementKind::OutputValue&&!ctx.variables.count(s.name)){
    diagnose(ctx,input,s.line,"unknown variable '"+s.name+"'");
   }else if(s.kind==shay::StatementKind::OutputCall){
@@ -169,7 +171,9 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
    case shay::StatementKind::If:
     out<<indent<<"if ("<<cpp_condition(s.condition)<<") {\n";
     emit_body(out,s.body,ctx,indent+" ");
-    out<<indent<<"}\n";break;
+    out<<indent<<"}";
+    if(!s.else_body.empty()){out<<" else {\n";emit_body(out,s.else_body,ctx,indent+" ");out<<indent<<"}";}
+    out<<"\n";break;
    case shay::StatementKind::OutputCall:{
     auto fn=ctx.functions.find(s.name);
     if(fn==ctx.functions.end())break;
@@ -213,7 +217,9 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
    case shay::StatementKind::If:
     out<<" if ("<<cpp_condition(s.condition)<<") {\n";
     emit_body(out,s.body,ctx," ");
-    out<<" }\n";break;
+    out<<" }";
+    if(!s.else_body.empty()){out<<" else {\n";emit_body(out,s.else_body,ctx," ");out<<" }";}
+    out<<"\n";break;
    case shay::StatementKind::OutputText:out<<" shay_runtime_write("<<cpp_string(s.value+"\n")<<");\n";break;
    case shay::StatementKind::OutputValue:out<<" shay_runtime_write((values["<<cpp_string(s.name)<<"] + "<<cpp_string("\n")<<").c_str());\n";break;
    case shay::StatementKind::OutputCall:{
