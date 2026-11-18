@@ -23,7 +23,7 @@ $logindxfl <.log>
 $logindxnm "test"
 
 logit/>"Something went wrong in LN:5
-instxt-\\"hi\\"
+instxt-\"hi\"
 ------^
 Unexpected Symbol"
 ```
