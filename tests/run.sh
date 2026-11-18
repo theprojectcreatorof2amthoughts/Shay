@@ -289,7 +289,7 @@ ifit x < y
     instxt-"Wrong else branch"
 elseit
     instxt-"ELSE works"
-    ifit z > y
+    ifit y > z
         instxt-"Nested else condition works"
     elseit
         instxt-"Wrong nested else branch"
