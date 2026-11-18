@@ -517,7 +517,7 @@ cat > "$TMP/log-files.shay" <<'EOF'
 $logindxfl <.txt>
 $logindxnm "diagnostic"
 logit/>"Something went wrong in LN:5
-instxt-\"hi\"
+instxt-"hi"
 ------^
 Unexpected Symbol"
 EOF
