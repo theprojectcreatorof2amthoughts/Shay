@@ -113,6 +113,8 @@ void load_file(const fs::path&input,BuildContext&ctx){
    else if(s.arguments.size()!=fn->second.parameters.size())
     diagnose(ctx,input,s.line,"function '"+s.name+"' expects "+std::to_string(fn->second.parameters.size())+" argument(s), got "+std::to_string(s.arguments.size()));
    for(const auto&arg:s.arguments)validate_expression_names(ctx,input,s.line,arg,{},"function argument");
+  }else if(s.kind==shay::StatementKind::MarkFailure){
+   diagnose(ctx,input,s.line,"!#"+s.name+" is only valid inside a function");
   }
   ctx.statements.push_back(s);
  }
