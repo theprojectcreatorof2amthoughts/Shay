@@ -19,6 +19,18 @@ printf '%s\n' "$out" | grep -q 'Hello, world from Shay!' || fail "interpreter te
 printf '%s\n' "$out" | grep -q 'Shay' || fail "interpreter variable output"
 pass "interpreter execution"
 
+# The new self-closing operator is mandatory for these three statements.
+for legacy in "instxt-\"old syntax\"" "insval-name" "inpvarforw-name"; do
+    case "$legacy" in
+        instxt-*) printf '%s\n' "$legacy" >"$TMP/legacy-statement.shay" ;;
+        *) printf '%s\n' "brew name = \"value\"" "$legacy" >"$TMP/legacy-statement.shay" ;;
+    esac
+    if "$SHAII" --check "$TMP/legacy-statement.shay" >"$TMP/out" 2>"$TMP/err"; then
+        fail "legacy statement syntax was accepted: $legacy"
+    fi
+done
+pass "legacy hyphen syntax is rejected for instxt, insval, and inpvarforw"
+
 cat > "$TMP/input-created.shay" <<'EOF'
 instxt/>"What's your name?"
 inpvarforw/>name
