@@ -378,4 +378,40 @@ grep -q '^Error!$' "$TMP/out" || fail "compiler instxtexit message"
 if grep -q 'This must not appear' "$TMP/out"; then fail "compiler continued after instxtexit"; fi
 pass "compiler instxtexit prints and terminates"
 
+ 
+
+cat > "$TMP/explicit-function-failure.shaii" <<'EOF'
+$declr useme(x, y)
+    ifit x*y = 34
+        !#useme
+    exec
+finish
+EOF
+cat > "$TMP/explicit-function-failure.shay" <<'EOF'
+$shaiiport [explicit-function-failure.shaii]
+insval-useme(17, 2)
+ifit !#useme
+    instxtexit-"Error!"
+exec
+instxt-"This must not appear"
+EOF
+if "$SHAII" "$TMP/explicit-function-failure.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpreter explicit function failure exit status"; fi
+grep -q '^Error!$' "$TMP/out" || fail "interpreter explicit function failure was not visible to caller"
+if grep -q 'This must not appear' "$TMP/out"; then fail "interpreter continued after explicit function failure"; fi
+pass "interpreter propagates an explicit !#function failure to its caller"
+
+CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/explicit-function-failure-app" "$TMP/explicit-function-failure.shay" || fail "compile explicit function failure"
+if "$TMP/explicit-function-failure-app" >"$TMP/out" 2>"$TMP/err"; then fail "compiler explicit function failure exit status"; fi
+grep -q '^Error!$' "$TMP/out" || fail "compiler explicit function failure was not visible to caller"
+if grep -q 'This must not appear' "$TMP/out"; then fail "compiler continued after explicit function failure"; fi
+pass "compiler propagates an explicit !#function failure to its caller"
+
+cat > "$TMP/invalid-function-failure.shay" <<'EOF'
+!#useme
+EOF
+if "$SHAII" --check "$TMP/invalid-function-failure.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpreter accepted top-level !# statement"; fi
+grep -q "only valid inside" "$TMP/err" || fail "interpreter top-level !# diagnostic"
+if "$GSHAI" -o "$TMP/invalid-function-failure-app" "$TMP/invalid-function-failure.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted top-level !# statement"; fi
+grep -q "only valid inside" "$TMP/err" || fail "compiler top-level !# diagnostic"
+pass "!#function statements are restricted to function bodies"
 printf '\nAll Shay toolchain tests passed.\n'

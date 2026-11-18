@@ -26,6 +26,7 @@ struct Context{
  bool check_only=false;
  std::unordered_map<std::string,std::string> failures;
  std::unordered_set<std::string> handled_failures;
+ std::vector<std::string> active_functions;
  bool exit_requested=false;
 };
 using NumberScope=std::unordered_map<std::string,double>;
@@ -48,6 +49,8 @@ bool evaluate_condition(const std::string&source,const NumberScope&scope,Context
 }
 bool execute_statements(const std::vector<shay::Statement>&statements,Context&ctx,const fs::path&file,NumberScope&scope,std::string&failure);
 bool call_function(const shay::Statement&call,Context&ctx,const fs::path&file,NumberScope&callerScope){
+ ctx.failures.erase(call.name);
+ ctx.handled_failures.erase(call.name);
  auto fail=[&](const std::string&reason){ctx.handled_failures.erase(call.name);ctx.failures[call.name]=reason;return false;};
  auto found=ctx.functions.find(call.name);
  if(found==ctx.functions.end())return fail("unknown function '"+call.name+"'");
@@ -68,10 +71,12 @@ bool call_function(const shay::Statement&call,Context&ctx,const fs::path&file,Nu
   if(!ctx.check_only)shay_runtime_write((number_text(result)+"\n").c_str());
  }else{
   std::string reason;
-  if(!execute_statements(fn.body,ctx,file,local,reason))return fail(reason);
+  ctx.active_functions.push_back(call.name);
+  const bool body_ok=execute_statements(fn.body,ctx,file,local,reason);
+  ctx.active_functions.pop_back();
+  if(!body_ok)return fail(reason);
+  if(ctx.failures.count(call.name))return false;
  }
- ctx.failures.erase(call.name);
- ctx.handled_failures.erase(call.name);
  return true;
 }
 bool execute_statements(const std::vector<shay::Statement>&statements,Context&ctx,const fs::path&file,NumberScope&scope,std::string&failure){
@@ -79,6 +84,15 @@ bool execute_statements(const std::vector<shay::Statement>&statements,Context&ct
  for(const auto&s:statements){
   if(ctx.exit_requested)break;
   switch(s.kind){
+   case shay::StatementKind::MarkFailure:
+    if(ctx.active_functions.empty()||ctx.active_functions.back()!=s.name){
+     failure="!#"+s.name+" can only mark the currently executing function";
+     success=false;
+    }else{
+     ctx.failures[s.name]="function explicitly marked as failed";
+     ctx.handled_failures.erase(s.name);
+    }
+    break;
    case shay::StatementKind::OutputText:
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
     break;
@@ -151,6 +165,9 @@ void execute_file(const fs::path&input,Context&ctx){
     {auto scope=ctx.numbers;{std::string ignored;if(condition)execute_statements(s.body,ctx,input,scope,ignored);else execute_statements(s.else_body,ctx,input,scope,ignored);}}
     break;
    }
+   case shay::StatementKind::MarkFailure:
+    diagnose(ctx,input,s.line,"!#"+s.name+" is only valid inside its matching function");
+    break;
    case shay::StatementKind::OutputText:
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
     break;

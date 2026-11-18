@@ -34,7 +34,11 @@ Program Parser::parse(){
  while(!atEnd()){
   if(match(TokenKind::Newline))continue;
   const auto line=peek().line;Statement statement;statement.line=line;bool valid=true;bool skipCurrentLine=true;
-  if(match(TokenKind::Identifier,"ifit")){
+  if(match(TokenKind::Symbol,"!#")){
+   statement.kind=StatementKind::MarkFailure;
+   valid=consume(TokenKind::Identifier,"",program.errors,"expected a function name after '!#'");
+   if(valid)statement.name=previous().text;
+  }else if(match(TokenKind::Identifier,"ifit")){
    statement.kind=StatementKind::If;
    while(!atEnd()&&peek().kind!=TokenKind::Newline){statement.condition+=peek().text;statement.condition.push_back(' ');++current_;}
    if(statement.condition.empty()){error(program.errors,"ifit requires a condition");valid=false;}

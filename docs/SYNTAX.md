@@ -59,9 +59,20 @@ Conditional bodies currently support output statements, function calls, nested c
 
 ## Error conditions and termination
 
-Use `!#functionName` inside an `ifit` condition to check whether the most recent call to that specific function failed. The status belongs to the named function call; it is not the status of the previous unrelated statement and does not treat a false-y return value as an error.
+Use `!#functionName` as a statement inside that same function to explicitly mark the current invocation as failed. Use `ifit !#functionName` in the caller to check the latest call result. The status belongs to the named function call; it is not the status of the previous unrelated statement and does not treat a false-y return value as an error. A marker statement must name the function currently executing, and the failure remains set when that invocation returns.
 
 ```shay
+$declr useme(x, y)
+    ifit x*y = 34
+        !#useme
+    exec
+finish
+
+insval-useme(17, 2)
+ifit !#useme
+    instxtexit-"Error!"
+exec
+
 $declr divide(left, right)
     forw left / right
 finish
