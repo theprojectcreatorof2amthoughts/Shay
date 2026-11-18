@@ -43,6 +43,7 @@ std::vector<Token> Lexer::scan() {
     tokens.push_back({TokenKind::Symbol,op,startLine,startColumn});continue;
    }
   }
+  if(c=='/'&&peek(1)=='>'){take();take();tokens.push_back({TokenKind::Symbol,"/>",startLine,startColumn});continue;}
   if(c=='$'||c=='-'||c=='['||c==']'||c=='.'||c=='+'||c=='*'||c=='/'||c=='('||c==')'||c==','){
    tokens.push_back({TokenKind::Symbol,std::string(1,take()),startLine,startColumn});continue;
   }

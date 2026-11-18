@@ -19,11 +19,23 @@ printf '%s\n' "$out" | grep -q 'Hello, world from Shay!' || fail "interpreter te
 printf '%s\n' "$out" | grep -q 'Shay' || fail "interpreter variable output"
 pass "interpreter execution"
 
+# The new self-closing operator is mandatory for these three statements.
+for legacy in "instxt-\"old syntax\"" "instxtexit-\"old syntax\"" "insval-name" "inpvarforw-name"; do
+    case "$legacy" in
+        instxt-*|instxtexit-*) printf '%s\n' "$legacy" >"$TMP/legacy-statement.shay" ;;
+        *) printf '%s\n' "brew name = \"value\"" "$legacy" >"$TMP/legacy-statement.shay" ;;
+    esac
+    if "$SHAII" --check "$TMP/legacy-statement.shay" >"$TMP/out" 2>"$TMP/err"; then
+        fail "legacy statement syntax was accepted: $legacy"
+    fi
+done
+pass "legacy hyphen syntax is rejected for instxt, instxtexit, insval, and inpvarforw"
+
 cat > "$TMP/input-created.shay" <<'EOF'
-instxt-"What's your name?"
-inpvarforw-name
-instxt-"Hello,"
-insval-name
+instxt/>"What's your name?"
+inpvarforw/>name
+instxt/>"Hello,"
+insval/>name
 EOF
 out=$(printf 'Yamen Awartani\n' | "$SHAII" "$TMP/input-created.shay") || fail "interpreter input declaration"
 printf '%s\n' "$out" | grep -q 'Yamen Awartani' || fail "interpreter input preserves spaces"
@@ -33,17 +45,17 @@ pass "shaii --check does not wait for input"
 
 cat > "$TMP/input-existing.shay" <<'EOF'
 brew name = "old value"
-inpvarforw-name
-insval-name
+inpvarforw/>name
+insval/>name
 EOF
 out=$(printf 'new value with spaces\n' | "$SHAII" "$TMP/input-existing.shay") || fail "interpreter input reassignment"
 printf '%s\n' "$out" | grep -q 'new value with spaces' || fail "interpreter input overwrites an existing variable"
 pass "inpvarforw overwrites an existing variable"
 
 cat > "$TMP/input-repeat.shay" <<'EOF'
-inpvarforw-name
-inpvarforw-name
-insval-name
+inpvarforw/>name
+inpvarforw/>name
+insval/>name
 EOF
 out=$(printf 'first value\nsecond value\n' | "$SHAII" "$TMP/input-repeat.shay") || fail "repeat inpvarforw"
 printf '%s\n' "$out" | grep -q 'second value' || fail "repeat inpvarforw updates the variable"
@@ -60,7 +72,7 @@ printf '%s\n' "$out" | grep -q 'updated compiler value' || fail "compiled input 
 pass "gshai supports inpvarforw on existing variables"
 
 cat > "$TMP/input-then-brew.shay" <<'EOF'
-inpvarforw-name
+inpvarforw/>name
 brew name = "duplicate"
 EOF
 if CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/input-then-brew" "$TMP/input-then-brew.shay" >"$TMP/out" 2>"$TMP/err"; then fail "brew redeclared an inpvarforw variable"; fi
@@ -69,11 +81,11 @@ pass "inpvarforw registers newly created variables for duplicate-declaration che
 
 cat > "$TMP/input-global-function.shay" <<'EOF'
 $shaiiport "input-global-function.shaii"
-instxt-"hi"
-inpvarforw-noinp
-insval-useme(4, 8)
+instxt/>"hi"
+inpvarforw/>noinp
+insval/>useme(4, 8)
 ifit !#useme
-    instxtexit-"Error!"
+    instxtexit/>"Error!"
 exec
 EOF
 cat > "$TMP/input-global-function.shaii" <<'EOF'
@@ -81,7 +93,7 @@ $declr useme(x, y)
     ifit x*y = noinp
         !#useme
     elseit
-        instxt-"Result:"
+        instxt/>"Result:"
         forw x*y
     exec
 finish
@@ -94,9 +106,9 @@ pass "imported functions can reference globals declared after their import"
 cat > "$TMP/lexer-parser.shay" <<'EOF'
 brew greeting = "Line 1\nLine 2"
 brew debt = -42
-instxt-"Escaped quote: \"Shay\""
-insval-greeting
-insval-debt
+instxt/>"Escaped quote: \"Shay\""
+insval/>greeting
+insval/>debt
 EOF
 out=$("$SHAII" "$TMP/lexer-parser.shay")
 printf '%s\n' "$out" | grep -q 'Escaped quote: "Shay"' || fail "escaped quote output"
@@ -106,7 +118,7 @@ pass "lexer strings and signed numeric literals"
 
 cat > "$TMP/bad-syntax.shay" <<'EOF'
 brew value =
-instxt-"unfinished
+instxt/>"unfinished
 EOF
 if "$SHAII" --check "$TMP/bad-syntax.shay" >"$TMP/out" 2>"$TMP/err"; then fail "malformed syntax"; fi
 grep -q 'expected a string, number, or boolean literal' "$TMP/err" || fail "parser diagnostic"
@@ -114,7 +126,7 @@ grep -q 'unterminated string literal' "$TMP/err" || fail "lexer diagnostic"
 pass "lexer and parser diagnostics"
 
 cat > "$TMP/task.shaz" <<'EOF'
-instxt-"Zeccurs task ran"
+instxt/>"Zeccurs task ran"
 EOF
 cat > "$TMP/lib.shaii" <<'EOF'
 $shazport [task.shaz]
@@ -129,9 +141,9 @@ pass "Shaii imports Zeccurs"
 cat > "$TMP/siil-main.shay" <<'EOF'
 $shaiiport [math.shaii]
 $shaiiport [text.shaii]
-insval-math_pi
-instxt-"separator:"
-insval-text_space
+insval/>math_pi
+instxt/>"separator:"
+insval/>text_space
 EOF
 out=$("$SHAII" "$TMP/siil-main.shay")
 printf '%s\n' "$out" | grep -q '3.14159' || fail "siil math library lookup"
@@ -145,7 +157,7 @@ pass "compiler resolves standard libraries from siil/"
 
 mkdir -p "$TMP/external"
 cat > "$TMP/external/custom.shaii" <<'EOF'
-instxt-"External library loaded"
+instxt/>"External library loaded"
 EOF
 cat > "$TMP/external-main.shay" <<'EOF'
 $shaiiport "external/custom.shaii"
@@ -166,7 +178,7 @@ grep -q 'variable-free' "$TMP/err" || fail "Zeccurs diagnostic"
 pass "Zeccurs rejects variable declarations"
 
 cat > "$TMP/input-task.shaz" <<'EOF'
-inpvarforw-task_value
+inpvarforw/>task_value
 EOF
 if "$SHAII" --check "$TMP/input-task.shaz" >"$TMP/out" 2>"$TMP/err"; then fail "Zeccurs input declaration restriction"; fi
 grep -q "variable-free; 'inpvarforw' is not allowed" "$TMP/err" || fail "Zeccurs input declaration diagnostic"
@@ -237,8 +249,8 @@ finish
 EOF
 cat > "$TMP/function-main.shay" <<'EOF'
 $shaiiport [functions.shaii]
-insval-add(10, 20)
-insval-square(6)
+insval/>add(10, 20)
+insval/>square(6)
 EOF
 "$SHAII" --check "$TMP/function-main.shay" >/dev/null || fail "function syntax check"
 out=$("$SHAII" "$TMP/function-main.shay")
@@ -263,13 +275,13 @@ cat > "$TMP/conditionals.shay" <<'EOF'
 brew x = 20
 brew y = 10
 ifit x > y
-    instxt-"X is greater than Y"
+    instxt/>"X is greater than Y"
 exec
 ifit x < y
-    instxt-"This must not appear"
+    instxt/>"This must not appear"
 exec
 ifit x == 20
-    instxt-"Equality works"
+    instxt/>"Equality works"
 exec
 EOF
 out=$("$SHAII" "$TMP/conditionals.shay") || fail "interpreter ifit execution"
@@ -285,7 +297,7 @@ if printf '%s\n' "$out" | grep -Eq 'must not appear|Wrong else branch|Wrong nest
 pass "compiler generates native ifit conditionals"
 cat > "$TMP/missing-exec.shay" <<'EOF'
 ifit 2 > 1
-    instxt-"missing terminator"
+    instxt/>"missing terminator"
 EOF
 if "$SHAII" --check "$TMP/missing-exec.shay" >"$TMP/out" 2>"$TMP/err"; then fail "ifit missing exec"; fi
 grep -q "expected 'exec' to close the ifit block" "$TMP/err" || fail "missing exec diagnostic"
@@ -294,11 +306,11 @@ pass "ifit requires exec terminator"
 cat > "$TMP/preflight-errors.shay" <<'EOF'
 brew first = 10
 brew first = 20
-insval-missing_value
+insval/>missing_value
 ifit missing_condition > 0
-    insval-missing_inside_block
+    insval/>missing_inside_block
 exec
-insval-missing_function(unknown_argument)
+insval/>missing_function(unknown_argument)
 EOF
 if "$GSHAI" -o "$TMP/must-not-exist" "$TMP/preflight-errors.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler preflight accepted invalid source"; fi
 grep -q "variable 'first' is already declared" "$TMP/err" || fail "duplicate variable preflight diagnostic"
@@ -314,15 +326,15 @@ pass "gshai preflight reports multiple semantic errors and blocks output"
 cat > "$TMP/function-body.shaii" <<'EOF'
 $declr useme(x, y)
     ifit x > y
-        instxt-"the first val is bigger than second val"
+        instxt/>"the first val is bigger than second val"
     exec
 finish
 EOF
 cat > "$TMP/function-body-main.shay" <<'EOF'
 $shaiiport "function-body.shaii"
-instxt-"function body test:"
-insval-useme(7, 6)
-insval-useme(6, 7)
+instxt/>"function body test:"
+insval/>useme(7, 6)
+insval/>useme(6, 7)
 EOF
 "$SHAII" --check "$TMP/function-body-main.shay" >/dev/null || fail "statement function body syntax check"
 out=$("$SHAII" "$TMP/function-body-main.shay") || fail "interpreter statement function call"
@@ -346,34 +358,34 @@ brew y = 10
 brew z = 5
 brew invalid_number = "not numeric"
 ifit x > y andit y > z
-    instxt-"AND works"
+    instxt/>"AND works"
 exec
 ifit x < y orit y == 10
-    instxt-"OR works"
+    instxt/>"OR works"
 exec
 ifit notit x < y
-    instxt-"NOT works"
+    instxt/>"NOT works"
 exec
 ifit (x > y andit y > z) orit z > 100
-    instxt-"Grouped logic works"
+    instxt/>"Grouped logic works"
 exec
 ifit x < y andit y > z
-    instxt-"This must not appear"
+    instxt/>"This must not appear"
 exec
 ifit x > y orit invalid_number > 0
-    instxt-"Short-circuit OR works"
+    instxt/>"Short-circuit OR works"
 exec
 ifit x < y andit invalid_number > 0
-    instxt-"This must not appear either"
+    instxt/>"This must not appear either"
 exec
 ifit x < y
-    instxt-"Wrong else branch"
+    instxt/>"Wrong else branch"
 elseit
-    instxt-"ELSE works"
+    instxt/>"ELSE works"
     ifit y > z
-        instxt-"Nested else condition works"
+        instxt/>"Nested else condition works"
     elseit
-        instxt-"Wrong nested else branch"
+        instxt/>"Wrong nested else branch"
     exec
 exec
 EOF
@@ -403,25 +415,25 @@ finish
 EOF
 cat > "$TMP/error-conditions.shay" <<'EOF'
 $shaiiport [error-conditions.shaii]
-insval-useme(10, 0)
+insval/>useme(10, 0)
 ifit !#useme
-    instxt-"The useme call failed"
+    instxt/>"The useme call failed"
 elseit
-    instxt-"The useme call succeeded"
+    instxt/>"The useme call succeeded"
 exec
-insval-safe(10, 2)
+insval/>safe(10, 2)
 ifit !#safe
-    instxt-"Wrong: safe inherited another function's failure"
+    instxt/>"Wrong: safe inherited another function's failure"
 elseit
-    instxt-"Safe call succeeded"
+    instxt/>"Safe call succeeded"
 exec
-insval-useme(10, 2)
+insval/>useme(10, 2)
 ifit !#useme
-    instxt-"Wrong: stale useme failure"
+    instxt/>"Wrong: stale useme failure"
 elseit
-    instxt-"Successful useme call cleared its failure"
+    instxt/>"Successful useme call cleared its failure"
 exec
-instxt-"Execution continued"
+instxt/>"Execution continued"
 EOF
 out=$("$SHAII" "$TMP/error-conditions.shay") || fail "interpreter operation-specific error condition"
 printf '%s\n' "$out" | grep -q 'The useme call failed' || fail "interpreter !# failure branch"
@@ -442,11 +454,11 @@ pass "compiler tracks a specific function call with !#"
 
 cat > "$TMP/error-exit.shay" <<'EOF'
 $shaiiport [error-conditions.shaii]
-insval-useme(10, 0)
+insval/>useme(10, 0)
 ifit !#useme
-    instxtexit-"Error!"
+    instxtexit/>"Error!"
 exec
-instxt-"This must not appear"
+instxt/>"This must not appear"
 EOF
 if "$SHAII" "$TMP/error-exit.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpreter instxtexit exit status"; fi
 grep -q '^Error!$' "$TMP/out" || fail "interpreter instxtexit message"
@@ -466,16 +478,16 @@ $declr useme(x, y)
     ifit x*y = 34
         !#useme
     exec
-    instxt-"Function continued after marking failure"
+    instxt/>"Function continued after marking failure"
 finish
 EOF
 cat > "$TMP/explicit-function-failure.shay" <<'EOF'
 $shaiiport [explicit-function-failure.shaii]
-insval-useme(17, 2)
+insval/>useme(17, 2)
 ifit !#useme
-    instxtexit-"Error!"
+    instxtexit/>"Error!"
 exec
-instxt-"This must not appear"
+instxt/>"This must not appear"
 EOF
 if "$SHAII" "$TMP/explicit-function-failure.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpreter explicit function failure exit status"; fi
 grep -q '^Error!$' "$TMP/out" || fail "interpreter explicit function failure was not visible to caller"
@@ -505,20 +517,20 @@ $declr useme(x, y)
     ifit x*y = 34
         !#useme
     elseit
-        instxt-"Result:"
+        instxt/>"Result:"
         forw x*y
     exec
 finish
 EOF
 cat > "$TMP/mixed-return.shay" <<'EOF'
 $shaiiport [mixed-return.shaii]
-insval-useme(5, 6)
+insval/>useme(5, 6)
 ifit !#useme
-    instxt-"Failure branch"
+    instxt/>"Failure branch"
 exec
-insval-useme(17, 2)
+insval/>useme(17, 2)
 ifit !#useme
-    instxt-"Failure detected"
+    instxt/>"Failure detected"
 exec
 EOF
 out=$("$SHAII" "$TMP/mixed-return.shay") || fail "interpreter mixed function return"
@@ -540,9 +552,9 @@ pass "imported functions can reference globals declared after their import"
 cat > "$TMP/lexer-parser.shay" <<'EOF'
 brew greeting = "Line 1\nLine 2"
 brew debt = -42
-instxt-"Escaped quote: \"Shay\""
-insval-greeting
-insval-debt
+instxt/>"Escaped quote: \"Shay\""
+insval/>greeting
+insval/>debt
 EOF
 out=$("$SHAII" "$TMP/lexer-parser.shay")
 printf '%s\n' "$out" | grep -q 'Escaped quote: "Shay"' || fail "escaped quote output"
@@ -552,7 +564,7 @@ pass "lexer strings and signed numeric literals"
 
 cat > "$TMP/bad-syntax.shay" <<'EOF'
 brew value =
-instxt-"unfinished
+instxt/>"unfinished
 EOF
 if "$SHAII" --check "$TMP/bad-syntax.shay" >"$TMP/out" 2>"$TMP/err"; then fail "malformed syntax"; fi
 grep -q 'expected a string, number, or boolean literal' "$TMP/err" || fail "parser diagnostic"
@@ -560,7 +572,7 @@ grep -q 'unterminated string literal' "$TMP/err" || fail "lexer diagnostic"
 pass "lexer and parser diagnostics"
 
 cat > "$TMP/task.shaz" <<'EOF'
-instxt-"Zeccurs task ran"
+instxt/>"Zeccurs task ran"
 EOF
 cat > "$TMP/lib.shaii" <<'EOF'
 $shazport [task.shaz]
@@ -575,9 +587,9 @@ pass "Shaii imports Zeccurs"
 cat > "$TMP/siil-main.shay" <<'EOF'
 $shaiiport [math.shaii]
 $shaiiport [text.shaii]
-insval-math_pi
-instxt-"separator:"
-insval-text_space
+insval/>math_pi
+instxt/>"separator:"
+insval/>text_space
 EOF
 out=$("$SHAII" "$TMP/siil-main.shay")
 printf '%s\n' "$out" | grep -q '3.14159' || fail "siil math library lookup"
@@ -591,7 +603,7 @@ pass "compiler resolves standard libraries from siil/"
 
 mkdir -p "$TMP/external"
 cat > "$TMP/external/custom.shaii" <<'EOF'
-instxt-"External library loaded"
+instxt/>"External library loaded"
 EOF
 cat > "$TMP/external-main.shay" <<'EOF'
 $shaiiport "external/custom.shaii"
@@ -612,7 +624,7 @@ grep -q 'variable-free' "$TMP/err" || fail "Zeccurs diagnostic"
 pass "Zeccurs rejects variable declarations"
 
 cat > "$TMP/input-task.shaz" <<'EOF'
-inpvarforw-task_value
+inpvarforw/>task_value
 EOF
 if "$SHAII" --check "$TMP/input-task.shaz" >"$TMP/out" 2>"$TMP/err"; then fail "Zeccurs input declaration restriction"; fi
 grep -q "variable-free; 'inpvarforw' is not allowed" "$TMP/err" || fail "Zeccurs input declaration diagnostic"
@@ -683,8 +695,8 @@ finish
 EOF
 cat > "$TMP/function-main.shay" <<'EOF'
 $shaiiport [functions.shaii]
-insval-add(10, 20)
-insval-square(6)
+insval/>add(10, 20)
+insval/>square(6)
 EOF
 "$SHAII" --check "$TMP/function-main.shay" >/dev/null || fail "function syntax check"
 out=$("$SHAII" "$TMP/function-main.shay")
@@ -709,13 +721,13 @@ cat > "$TMP/conditionals.shay" <<'EOF'
 brew x = 20
 brew y = 10
 ifit x > y
-    instxt-"X is greater than Y"
+    instxt/>"X is greater than Y"
 exec
 ifit x < y
-    instxt-"This must not appear"
+    instxt/>"This must not appear"
 exec
 ifit x == 20
-    instxt-"Equality works"
+    instxt/>"Equality works"
 exec
 EOF
 out=$("$SHAII" "$TMP/conditionals.shay") || fail "interpreter ifit execution"
@@ -731,7 +743,7 @@ if printf '%s\n' "$out" | grep -Eq 'must not appear|Wrong else branch|Wrong nest
 pass "compiler generates native ifit conditionals"
 cat > "$TMP/missing-exec.shay" <<'EOF'
 ifit 2 > 1
-    instxt-"missing terminator"
+    instxt/>"missing terminator"
 EOF
 if "$SHAII" --check "$TMP/missing-exec.shay" >"$TMP/out" 2>"$TMP/err"; then fail "ifit missing exec"; fi
 grep -q "expected 'exec' to close the ifit block" "$TMP/err" || fail "missing exec diagnostic"
@@ -740,11 +752,11 @@ pass "ifit requires exec terminator"
 cat > "$TMP/preflight-errors.shay" <<'EOF'
 brew first = 10
 brew first = 20
-insval-missing_value
+insval/>missing_value
 ifit missing_condition > 0
-    insval-missing_inside_block
+    insval/>missing_inside_block
 exec
-insval-missing_function(unknown_argument)
+insval/>missing_function(unknown_argument)
 EOF
 if "$GSHAI" -o "$TMP/must-not-exist" "$TMP/preflight-errors.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler preflight accepted invalid source"; fi
 grep -q "variable 'first' is already declared" "$TMP/err" || fail "duplicate variable preflight diagnostic"
@@ -760,15 +772,15 @@ pass "gshai preflight reports multiple semantic errors and blocks output"
 cat > "$TMP/function-body.shaii" <<'EOF'
 $declr useme(x, y)
     ifit x > y
-        instxt-"the first val is bigger than second val"
+        instxt/>"the first val is bigger than second val"
     exec
 finish
 EOF
 cat > "$TMP/function-body-main.shay" <<'EOF'
 $shaiiport "function-body.shaii"
-instxt-"function body test:"
-insval-useme(7, 6)
-insval-useme(6, 7)
+instxt/>"function body test:"
+insval/>useme(7, 6)
+insval/>useme(6, 7)
 EOF
 "$SHAII" --check "$TMP/function-body-main.shay" >/dev/null || fail "statement function body syntax check"
 out=$("$SHAII" "$TMP/function-body-main.shay") || fail "interpreter statement function call"
@@ -792,34 +804,34 @@ brew y = 10
 brew z = 5
 brew invalid_number = "not numeric"
 ifit x > y andit y > z
-    instxt-"AND works"
+    instxt/>"AND works"
 exec
 ifit x < y orit y == 10
-    instxt-"OR works"
+    instxt/>"OR works"
 exec
 ifit notit x < y
-    instxt-"NOT works"
+    instxt/>"NOT works"
 exec
 ifit (x > y andit y > z) orit z > 100
-    instxt-"Grouped logic works"
+    instxt/>"Grouped logic works"
 exec
 ifit x < y andit y > z
-    instxt-"This must not appear"
+    instxt/>"This must not appear"
 exec
 ifit x > y orit invalid_number > 0
-    instxt-"Short-circuit OR works"
+    instxt/>"Short-circuit OR works"
 exec
 ifit x < y andit invalid_number > 0
-    instxt-"This must not appear either"
+    instxt/>"This must not appear either"
 exec
 ifit x < y
-    instxt-"Wrong else branch"
+    instxt/>"Wrong else branch"
 elseit
-    instxt-"ELSE works"
+    instxt/>"ELSE works"
     ifit y > z
-        instxt-"Nested else condition works"
+        instxt/>"Nested else condition works"
     elseit
-        instxt-"Wrong nested else branch"
+        instxt/>"Wrong nested else branch"
     exec
 exec
 EOF
@@ -849,25 +861,25 @@ finish
 EOF
 cat > "$TMP/error-conditions.shay" <<'EOF'
 $shaiiport [error-conditions.shaii]
-insval-useme(10, 0)
+insval/>useme(10, 0)
 ifit !#useme
-    instxt-"The useme call failed"
+    instxt/>"The useme call failed"
 elseit
-    instxt-"The useme call succeeded"
+    instxt/>"The useme call succeeded"
 exec
-insval-safe(10, 2)
+insval/>safe(10, 2)
 ifit !#safe
-    instxt-"Wrong: safe inherited another function's failure"
+    instxt/>"Wrong: safe inherited another function's failure"
 elseit
-    instxt-"Safe call succeeded"
+    instxt/>"Safe call succeeded"
 exec
-insval-useme(10, 2)
+insval/>useme(10, 2)
 ifit !#useme
-    instxt-"Wrong: stale useme failure"
+    instxt/>"Wrong: stale useme failure"
 elseit
-    instxt-"Successful useme call cleared its failure"
+    instxt/>"Successful useme call cleared its failure"
 exec
-instxt-"Execution continued"
+instxt/>"Execution continued"
 EOF
 out=$("$SHAII" "$TMP/error-conditions.shay") || fail "interpreter operation-specific error condition"
 printf '%s\n' "$out" | grep -q 'The useme call failed' || fail "interpreter !# failure branch"
@@ -888,11 +900,11 @@ pass "compiler tracks a specific function call with !#"
 
 cat > "$TMP/error-exit.shay" <<'EOF'
 $shaiiport [error-conditions.shaii]
-insval-useme(10, 0)
+insval/>useme(10, 0)
 ifit !#useme
-    instxtexit-"Error!"
+    instxtexit/>"Error!"
 exec
-instxt-"This must not appear"
+instxt/>"This must not appear"
 EOF
 if "$SHAII" "$TMP/error-exit.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpreter instxtexit exit status"; fi
 grep -q '^Error!$' "$TMP/out" || fail "interpreter instxtexit message"
@@ -912,16 +924,16 @@ $declr useme(x, y)
     ifit x*y = 34
         !#useme
     exec
-    instxt-"Function continued after marking failure"
+    instxt/>"Function continued after marking failure"
 finish
 EOF
 cat > "$TMP/explicit-function-failure.shay" <<'EOF'
 $shaiiport [explicit-function-failure.shaii]
-insval-useme(17, 2)
+insval/>useme(17, 2)
 ifit !#useme
-    instxtexit-"Error!"
+    instxtexit/>"Error!"
 exec
-instxt-"This must not appear"
+instxt/>"This must not appear"
 EOF
 if "$SHAII" "$TMP/explicit-function-failure.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpreter explicit function failure exit status"; fi
 grep -q '^Error!$' "$TMP/out" || fail "interpreter explicit function failure was not visible to caller"
@@ -951,20 +963,20 @@ $declr useme(x, y)
     ifit x*y = 34
         !#useme
     elseit
-        instxt-"Result:"
+        instxt/>"Result:"
         forw x*y
     exec
 finish
 EOF
 cat > "$TMP/mixed-return.shay" <<'EOF'
 $shaiiport [mixed-return.shaii]
-insval-useme(5, 6)
+insval/>useme(5, 6)
 ifit !#useme
-    instxt-"Failure branch"
+    instxt/>"Failure branch"
 exec
-insval-useme(17, 2)
+insval/>useme(17, 2)
 ifit !#useme
-    instxt-"Failure detected"
+    instxt/>"Failure detected"
 exec
 EOF
 out=$("$SHAII" "$TMP/mixed-return.shay") || fail "interpreter mixed function return"
