@@ -311,4 +311,146 @@ done
 if printf '%s\n' "$out" | grep -Eq 'must not appear|Wrong else branch|Wrong nested else branch'; then fail "compiler logical false branch"; fi
 pass "compiler generates native logical conditions"
 
+
+cat > "$TMP/error-conditions.shaii" <<'EOF'
+$declr useme(x, y)
+    forw x / y
+finish
+$declr safe(x, y)
+    forw x + y
+finish
+EOF
+cat > "$TMP/error-conditions.shay" <<'EOF'
+$shaiiport [error-conditions.shaii]
+insval-useme(10, 0)
+ifit !#useme
+    instxt-"The useme call failed"
+elseit
+    instxt-"The useme call succeeded"
+exec
+insval-safe(10, 2)
+ifit !#safe
+    instxt-"Wrong: safe inherited another function's failure"
+elseit
+    instxt-"Safe call succeeded"
+exec
+insval-useme(10, 2)
+ifit !#useme
+    instxt-"Wrong: stale useme failure"
+elseit
+    instxt-"Successful useme call cleared its failure"
+exec
+instxt-"Execution continued"
+EOF
+out=$("$SHAII" "$TMP/error-conditions.shay") || fail "interpreter operation-specific error condition"
+printf '%s\n' "$out" | grep -q 'The useme call failed' || fail "interpreter !# failure branch"
+printf '%s\n' "$out" | grep -q 'Execution continued' || fail "interpreter continues after handled failure"
+printf '%s\n' "$out" | grep -q 'Safe call succeeded' || fail "interpreter operation-specific status"
+printf '%s\n' "$out" | grep -q 'Successful useme call cleared its failure' || fail "interpreter clears stale failure"
+if printf '%s\n' "$out" | grep -q 'The useme call succeeded'; then fail "interpreter !# selected success branch"; fi
+pass "interpreter tracks a specific function call with !#"
+
+CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/error-conditions-app" "$TMP/error-conditions.shay" || fail "compile operation-specific error condition"
+out=$("$TMP/error-conditions-app") || fail "compiled operation-specific error condition"
+printf '%s\n' "$out" | grep -q 'The useme call failed' || fail "compiler !# failure branch"
+printf '%s\n' "$out" | grep -q 'Execution continued' || fail "compiler continues after handled failure"
+printf '%s\n' "$out" | grep -q 'Safe call succeeded' || fail "compiler operation-specific status"
+printf '%s\n' "$out" | grep -q 'Successful useme call cleared its failure' || fail "compiler clears stale failure"
+if printf '%s\n' "$out" | grep -q 'The useme call succeeded'; then fail "compiler !# selected success branch"; fi
+pass "compiler tracks a specific function call with !#"
+
+cat > "$TMP/error-exit.shay" <<'EOF'
+$shaiiport [error-conditions.shaii]
+insval-useme(10, 0)
+ifit !#useme
+    instxtexit-"Error!"
+exec
+instxt-"This must not appear"
+EOF
+if "$SHAII" "$TMP/error-exit.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpreter instxtexit exit status"; fi
+grep -q '^Error!$' "$TMP/out" || fail "interpreter instxtexit message"
+if grep -q 'This must not appear' "$TMP/out"; then fail "interpreter continued after instxtexit"; fi
+pass "interpreter instxtexit prints and terminates"
+
+CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/error-exit-app" "$TMP/error-exit.shay" || fail "compile instxtexit program"
+if "$TMP/error-exit-app" >"$TMP/out" 2>"$TMP/err"; then fail "compiler instxtexit exit status"; fi
+grep -q '^Error!$' "$TMP/out" || fail "compiler instxtexit message"
+if grep -q 'This must not appear' "$TMP/out"; then fail "compiler continued after instxtexit"; fi
+pass "compiler instxtexit prints and terminates"
+
+ 
+
+cat > "$TMP/explicit-function-failure.shaii" <<'EOF'
+$declr useme(x, y)
+    ifit x*y = 34
+        !#useme
+    exec
+    instxt-"Function continued after marking failure"
+finish
+EOF
+cat > "$TMP/explicit-function-failure.shay" <<'EOF'
+$shaiiport [explicit-function-failure.shaii]
+insval-useme(17, 2)
+ifit !#useme
+    instxtexit-"Error!"
+exec
+instxt-"This must not appear"
+EOF
+if "$SHAII" "$TMP/explicit-function-failure.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpreter explicit function failure exit status"; fi
+grep -q '^Error!$' "$TMP/out" || fail "interpreter explicit function failure was not visible to caller"
+grep -q 'Function continued after marking failure' "$TMP/out" || fail "interpreter stopped function execution after marker"
+if grep -q 'This must not appear' "$TMP/out"; then fail "interpreter continued after explicit function failure"; fi
+pass "interpreter propagates an explicit !#function failure to its caller"
+
+CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/explicit-function-failure-app" "$TMP/explicit-function-failure.shay" || fail "compile explicit function failure"
+if "$TMP/explicit-function-failure-app" >"$TMP/out" 2>"$TMP/err"; then fail "compiler explicit function failure exit status"; fi
+grep -q '^Error!$' "$TMP/out" || fail "compiler explicit function failure was not visible to caller"
+grep -q 'Function continued after marking failure' "$TMP/out" || fail "compiler stopped function execution after marker"
+if grep -q 'This must not appear' "$TMP/out"; then fail "compiler continued after explicit function failure"; fi
+pass "compiler propagates an explicit !#function failure to its caller"
+
+cat > "$TMP/invalid-function-failure.shay" <<'EOF'
+!#useme
+EOF
+if "$SHAII" --check "$TMP/invalid-function-failure.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpreter accepted top-level !# statement"; fi
+grep -q "only valid inside" "$TMP/err" || fail "interpreter top-level !# diagnostic"
+if "$GSHAI" -o "$TMP/invalid-function-failure-app" "$TMP/invalid-function-failure.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted top-level !# statement"; fi
+grep -q "only valid inside" "$TMP/err" || fail "compiler top-level !# diagnostic"
+pass "!#function statements are restricted to function bodies"
 printf '\nAll Shay toolchain tests passed.\n'
+
+cat > "$TMP/mixed-return.shaii" <<'EOF'
+$declr useme(x, y)
+    ifit x*y = 34
+        !#useme
+    elseit
+        instxt-"Result:"
+        forw x*y
+    exec
+finish
+EOF
+cat > "$TMP/mixed-return.shay" <<'EOF'
+$shaiiport [mixed-return.shaii]
+insval-useme(5, 6)
+ifit !#useme
+    instxt-"Failure branch"
+exec
+insval-useme(17, 2)
+ifit !#useme
+    instxt-"Failure detected"
+exec
+EOF
+out=$("$SHAII" "$TMP/mixed-return.shay") || fail "interpreter mixed function return"
+printf '%s\n' "$out" | grep -q '^Result:$' || fail "interpreter mixed function output"
+printf '%s\n' "$out" | grep -q '^30$' || fail "interpreter mixed function return value"
+printf '%s\n' "$out" | grep -q '^Failure detected$' || fail "interpreter mixed function failure path"
+if printf '%s\n' "$out" | grep -q '^34$'; then fail "interpreter returned value on marked failure"; fi
+pass "interpreter supports output, conditional failure, and explicit returns in one function"
+
+CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/mixed-return-app" "$TMP/mixed-return.shay" || fail "compile mixed function return"
+out=$("$TMP/mixed-return-app") || fail "run compiled mixed function return"
+printf '%s\n' "$out" | grep -q '^Result:$' || fail "compiler mixed function output"
+printf '%s\n' "$out" | grep -q '^30$' || fail "compiler mixed function return value"
+printf '%s\n' "$out" | grep -q '^Failure detected$' || fail "compiler mixed function failure path"
+if printf '%s\n' "$out" | grep -q '^34$'; then fail "compiler returned value on marked failure"; fi
+pass "compiler supports output, conditional failure, and explicit returns in one function"

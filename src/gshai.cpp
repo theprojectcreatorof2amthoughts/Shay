@@ -15,6 +15,7 @@
 #include <iterator>
 #include <regex>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -39,22 +40,39 @@ void validate_expression_names(BuildContext&ctx,const fs::path&file,std::size_t 
  for(const auto&name:expression_names(source))if(!ctx.variables.count(name)&&!locals.count(name)&&name!="true"&&name!="false"&&name!="andit"&&name!="orit"&&name!="notit")
   diagnose(ctx,file,line,label+" references unknown variable '"+name+"'");
 }
-void validate_body(BuildContext&ctx,const fs::path&file,const std::vector<shay::Statement>&body,const std::unordered_set<std::string>&locals,const std::string&bodyLabel){
+void validate_condition_names(BuildContext&ctx,const fs::path&file,std::size_t line,const std::string&source,const std::unordered_set<std::string>&locals,const std::string&label){
+ auto trim=[](const std::string&value){const auto first=value.find_first_not_of(" \t\r\n");if(first==std::string::npos)return std::string();const auto last=value.find_last_not_of(" \t\r\n");return value.substr(first,last-first+1);};
+ const std::string condition=trim(source);
+ if(condition.rfind("!#",0)==0){
+  const std::string name=trim(condition.substr(2));
+  if(name.empty())diagnose(ctx,file,line,"expected a function name after '!#'");
+  else if(!ctx.functions.count(name))diagnose(ctx,file,line,"error condition references unknown function '"+name+"'");
+  return;
+ }
+ validate_expression_names(ctx,file,line,condition,locals,label);
+}
+void validate_body(BuildContext&ctx,const fs::path&file,const std::vector<shay::Statement>&body,const std::unordered_set<std::string>&locals,const std::string&bodyLabel,const std::string&function_name=""){
  for(const auto&s:body){
   if(s.kind==shay::StatementKind::If){
-   validate_expression_names(ctx,file,s.line,s.condition,locals,"ifit condition");
-   validate_body(ctx,file,s.body,locals,bodyLabel);
-   validate_body(ctx,file,s.else_body,locals,bodyLabel);
+   validate_condition_names(ctx,file,s.line,s.condition,locals,"ifit condition");
+   validate_body(ctx,file,s.body,locals,bodyLabel,function_name);
+   validate_body(ctx,file,s.else_body,locals,bodyLabel,function_name);
+  }else if(s.kind==shay::StatementKind::MarkFailure){
+   if(function_name.empty())diagnose(ctx,file,s.line,"!#"+s.name+" is only valid inside a function");
+   else if(s.name!=function_name)diagnose(ctx,file,s.line,"!#"+s.name+" can only mark the currently executing function '"+function_name+"'");
   }else if(s.kind==shay::StatementKind::OutputValue){
    if(!ctx.variables.count(s.name)&&!locals.count(s.name))
     diagnose(ctx,file,s.line,"unknown variable '"+s.name+"' inside "+bodyLabel);
+  }else if(s.kind==shay::StatementKind::ReturnValue){
+   if(function_name.empty())diagnose(ctx,file,s.line,"'forw' is only valid inside a function");
+   else validate_expression_names(ctx,file,s.line,s.value,locals,"function return expression");
   }else if(s.kind==shay::StatementKind::OutputCall){
    auto fn=ctx.functions.find(s.name);
    if(fn==ctx.functions.end())diagnose(ctx,file,s.line,"unknown function '"+s.name+"' inside "+bodyLabel);
    else if(s.arguments.size()!=fn->second.parameters.size())
     diagnose(ctx,file,s.line,"function '"+s.name+"' expects "+std::to_string(fn->second.parameters.size())+" argument(s), got "+std::to_string(s.arguments.size()));
    for(const auto&arg:s.arguments)validate_expression_names(ctx,file,s.line,arg,locals,"function argument");
-  }else if(s.kind!=shay::StatementKind::OutputText){
+  }else if(s.kind!=shay::StatementKind::OutputText&&s.kind!=shay::StatementKind::OutputTextExit){
    diagnose(ctx,file,s.line,"unsupported statement inside function body");
   }
  }
@@ -84,10 +102,10 @@ void load_file(const fs::path&input,BuildContext&ctx){
    if(ctx.functions.count(s.name)){diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");continue;}
    std::unordered_set<std::string> parameters(s.parameters.begin(),s.parameters.end());
    if(s.has_return)validate_expression_names(ctx,input,s.line,s.value,parameters,"function '"+s.name+"' return expression");
-   validate_body(ctx,input,s.body,parameters,"function body");
+   validate_body(ctx,input,s.body,parameters,"function body",s.name);
    ctx.functions.emplace(s.name,s);
   }else if(s.kind==shay::StatementKind::If){
-   validate_expression_names(ctx,input,s.line,s.condition,{},"ifit condition");
+   validate_condition_names(ctx,input,s.line,s.condition,{},"ifit condition");
    validate_body(ctx,input,s.body,{},"ifit block");
    validate_body(ctx,input,s.else_body,{},"elseit block");
   }else if(s.kind==shay::StatementKind::OutputValue&&!ctx.variables.count(s.name)){
@@ -98,6 +116,10 @@ void load_file(const fs::path&input,BuildContext&ctx){
    else if(s.arguments.size()!=fn->second.parameters.size())
     diagnose(ctx,input,s.line,"function '"+s.name+"' expects "+std::to_string(fn->second.parameters.size())+" argument(s), got "+std::to_string(s.arguments.size()));
    for(const auto&arg:s.arguments)validate_expression_names(ctx,input,s.line,arg,{},"function argument");
+  }else if(s.kind==shay::StatementKind::MarkFailure){
+   diagnose(ctx,input,s.line,"!#"+s.name+" is only valid inside a function");
+  }else if(s.kind==shay::StatementKind::ReturnValue){
+   diagnose(ctx,input,s.line,"'forw' is only valid inside a function");
   }
   ctx.statements.push_back(s);
  }
@@ -106,6 +128,41 @@ void load_file(const fs::path&input,BuildContext&ctx){
 std::string cpp_string(const std::string&value){
  std::ostringstream out;out<<'"';for(unsigned char c:value){switch(c){case '\\':out<<"\\\\";break;case '"':out<<"\\\"";break;case '\n':out<<"\\n";break;case '\r':out<<"\\r";break;case '\t':out<<"\\t";break;default:if(c<32||c>=127){const char octal[]="01234567";out<<"\\"<<octal[(c>>6)&7]<<octal[(c>>3)&7]<<octal[c&7];}else out<<static_cast<char>(c);}}out<<'"';return out.str();
 }
+class ExpressionEmitter{
+ std::string source;std::size_t at=0;
+ void skip(){while(at<source.size()&&std::isspace(static_cast<unsigned char>(source[at])))++at;}
+ bool take(char c){skip();if(at<source.size()&&source[at]==c){++at;return true;}return false;}
+ std::string factor(){
+  skip();
+  if(take('+'))return "(+"+factor()+")";
+  if(take('-'))return "(-"+factor()+")";
+  if(take('(')){auto value=expression();if(!take(')'))throw std::runtime_error("missing ')' in generated expression");return "("+value+")";}
+  skip();const std::size_t start=at;
+  if(at<source.size()&&(std::isdigit(static_cast<unsigned char>(source[at]))||source[at]=='.')){
+   while(at<source.size()&&(std::isdigit(static_cast<unsigned char>(source[at]))||source[at]=='.'))++at;
+   return source.substr(start,at-start);
+  }
+  if(at<source.size()&&(std::isalpha(static_cast<unsigned char>(source[at]))||source[at]=='_')){
+   while(at<source.size()&&(std::isalnum(static_cast<unsigned char>(source[at]))||source[at]=='_'))++at;
+   return "shay_number(values,"+cpp_string(source.substr(start,at-start))+")";
+  }
+  throw std::runtime_error("invalid generated numeric expression");
+ }
+ std::string term(){
+  std::string value=factor();
+  for(;;){if(take('*'))value="("+value+" * "+factor()+")";else if(take('/'))value="shay_div("+value+", "+factor()+")";else break;}
+  return value;
+ }
+ std::string expression(){
+  std::string value=term();
+  for(;;){if(take('+'))value="("+value+" + "+term()+")";else if(take('-'))value="("+value+" - "+term()+")";else break;}
+  return value;
+ }
+public:
+ explicit ExpressionEmitter(const std::string&text):source(text){}
+ std::string emit(){auto result=expression();skip();if(at!=source.size())throw std::runtime_error("unexpected generated expression token");return result;}
+};
+std::string cpp_expression(const std::string&source){try{return ExpressionEmitter(source).emit();}catch(...){return "0";}}
 std::string cpp_condition(const std::string&raw){
  auto trim=[](const std::string&s){
   std::size_t first=0,last=s.size();
@@ -114,6 +171,7 @@ std::string cpp_condition(const std::string&raw){
   return s.substr(first,last-first);
  };
  std::string condition=trim(raw);
+ if(condition.rfind("!#",0)==0)return "shay_failed("+cpp_string(trim(condition.substr(2)))+")";
  auto wraps=[](const std::string&s){
   if(s.size()<2||s.front()!='('||s.back()!=')')return false;
   int depth=0;
@@ -146,44 +204,59 @@ std::string cpp_condition(const std::string&raw){
  if(condition.size()>=5&&condition.compare(0,5,"notit")==0&&
     (condition.size()==5||std::isspace(static_cast<unsigned char>(condition[5]))))
   return "!("+cpp_condition(condition.substr(5))+")";
- std::regex identifier(R"([A-Za-z_][A-Za-z0-9_]*)");
- std::string out;std::sregex_iterator it(condition.begin(),condition.end(),identifier),end;std::size_t last=0;
- for(;it!=end;++it){
-  const auto&m=*it;
-  out+=condition.substr(last,static_cast<std::size_t>(m.position())-last);
-  out+="std::stod(values["+cpp_string(m.str())+"])";
-  last=static_cast<std::size_t>(m.position()+m.length());
+ const std::string operators[]={">=","<=","==","!=",">","<","="};
+ for(const auto&op:operators){
+  int depth=0;
+  for(std::size_t i=0;i+op.size()<=condition.size();++i){
+   if(condition[i]=='('){++depth;continue;}if(condition[i]==')'){--depth;continue;}
+   if(depth==0&&condition.compare(i,op.size(),op)==0){
+    const std::string cpp_op=op=="="?"==":op;
+    return "("+cpp_expression(condition.substr(0,i))+" "+cpp_op+" "+cpp_expression(condition.substr(i+op.size()))+")";
+   }
+  }
  }
- out+=condition.substr(last);return out;
+ return cpp_expression(condition);
 }
 #ifndef _WIN32
 std::string shell_quote(const std::string&value){
  std::string out="'";for(char c:value){if(c=='\'')out+="'\\''";else out+=c;}return out+"'";
 }
 #endif
-void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const BuildContext&ctx,const std::string&indent){
+void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const BuildContext&ctx,const std::string&indent,const std::string&function_name=""){
  for(const auto&s:body){
   switch(s.kind){
+   case shay::StatementKind::MarkFailure:
+    if(!function_name.empty()){
+     out<<indent<<"shay_failures["<<cpp_string(function_name)<<"]="<<cpp_string("function explicitly marked as failed")<<"; shay_handled_failures.erase("<<cpp_string(function_name)<<");\n";
+    }
+    break;
+   case shay::StatementKind::ReturnValue:
+    out<<indent<<"return ("<<cpp_expression(s.value)<<");\n";break;
    case shay::StatementKind::OutputText:
     out<<indent<<"shay_runtime_write("<<cpp_string(s.value+"\n")<<");\n";break;
+   case shay::StatementKind::OutputTextExit:
+    out<<indent<<"shay_runtime_write("<<cpp_string(s.value+"\n")<<"); throw ShayExit{};\n";break;
    case shay::StatementKind::OutputValue:
     out<<indent<<"shay_runtime_write((values["<<cpp_string(s.name)<<" ] + "<<cpp_string("\n")<<").c_str());\n";break;
    case shay::StatementKind::If:
     out<<indent<<"if ("<<cpp_condition(s.condition)<<") {\n";
-    emit_body(out,s.body,ctx,indent+" ");
+    emit_body(out,s.body,ctx,indent+" ",function_name);
     out<<indent<<"}";
-    if(!s.else_body.empty()){out<<" else {\n";emit_body(out,s.else_body,ctx,indent+" ");out<<indent<<"}";}
+    if(!s.else_body.empty()){out<<" else {\n";emit_body(out,s.else_body,ctx,indent+" ",function_name);out<<indent<<"}";}
     out<<"\n";break;
    case shay::StatementKind::OutputCall:{
     auto fn=ctx.functions.find(s.name);
     if(fn==ctx.functions.end())break;
-    out<<indent;
-    if(fn->second.has_return)out<<"{ std::ostringstream shay_nested_call; shay_nested_call<<std::setprecision(15)<<";
-    out<<"shay_fn_"<<s.name<<"(values";
-    for(const auto&arg:s.arguments)out<<", "<<arg;
+    out<<indent<<"shay_failures.erase("<<cpp_string(s.name)<<"); shay_handled_failures.erase("<<cpp_string(s.name)<<");\n";
+    out<<indent<<"try {\n";
+    if(fn->second.has_return)out<<indent<<" { auto shay_result = ";
+    out<<indent<<(fn->second.has_return?"  ":" ")<<"shay_fn_"<<s.name<<"(values";
+    for(const auto&arg:s.arguments)out<<", "<<cpp_expression(arg);
     out<<")";
-    if(fn->second.has_return)out<<"; shay_nested_call<<"<<cpp_string("\n")<<"; shay_runtime_write(shay_nested_call.str().c_str()); }";
-    out<<";\n";break;
+    if(fn->second.has_return)out<<"; if(!shay_failures.count("<<cpp_string(s.name)<<")) { std::ostringstream shay_nested_call; shay_nested_call<<std::setprecision(15)<<shay_result<<"<<cpp_string("\n")<<"; shay_runtime_write(shay_nested_call.str().c_str()); } }";
+    out<<";\n";
+    out<<indent<<"} catch(const std::exception& shay_error) { shay_failures["<<cpp_string(s.name)<<"]=shay_error.what(); throw; }\n";
+    break;
    }
    default:break;
   }
@@ -191,7 +264,13 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
 }
 bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main){
  std::ofstream out(path,std::ios::binary);if(!out)return false;
- out<<"#include <cstdio>\n#include <iomanip>\n#include <sstream>\n#include <string>\n#include <unordered_map>\n"
+ out<<"#include <cstdio>\n#include <exception>\n#include <iomanip>\n#include <sstream>\n#include <stdexcept>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n"
+       "struct ShayExit {};\n"
+       "static std::unordered_map<std::string,std::string> shay_failures;\n"
+       "static std::unordered_set<std::string> shay_handled_failures;\n"
+       "static bool shay_failed(const std::string& name){auto it=shay_failures.find(name);if(it==shay_failures.end())return false;shay_handled_failures.insert(name);return true;}\n"
+       "static double shay_number(const std::unordered_map<std::string,std::string>& values,const std::string& name){auto it=values.find(name);if(it==values.end())throw std::runtime_error(\"unknown numeric value '\"+name+\"'\");std::size_t used=0;double value=std::stod(it->second,&used);if(used!=it->second.size())throw std::runtime_error(\"value '\"+name+\"' is not numeric\");return value;}\n"
+       "static double shay_div(double left,double right){if(right==0.0)throw std::runtime_error(\"division by zero\");return left/right;}\n"
        "extern \"C\" void shay_runtime_write(const char* text) { if(text){std::fputs(text,stdout);std::fflush(stdout);} }\n";
  for(const auto&s:ctx.statements)if(s.kind==shay::StatementKind::DeclareFunction){
   out<<"static "<<(s.has_return?"double":"void")<<" shay_fn_"<<s.name<<"(std::unordered_map<std::string,std::string>& global_values";
@@ -203,11 +282,14 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
   for(const auto&p:s.parameters)out<<", double "<<p;
   out<<") {\n auto values = global_values;\n";
   for(const auto&p:s.parameters)out<<" values["<<cpp_string(p)<<"] = std::to_string("<<p<<");\n";
-  if(s.has_return)out<<" return ("<<s.value<<");\n";
-  else emit_body(out,s.body,ctx," ");
+  if(s.has_return&&s.body.empty())out<<" return ("<<cpp_expression(s.value)<<");\n";
+  else{
+   emit_body(out,s.body,ctx," ",s.name);
+   if(s.has_return)out<<" return 0;\n";
+  }
   out<<"}\n";
  }
- out<<"extern \"C\" int shay_program_entry() {\n std::unordered_map<std::string,std::string> values;\n";
+ out<<"extern \"C\" int shay_program_entry() {\n try {\n std::unordered_map<std::string,std::string> values;\n";
  for(const auto&s:ctx.statements){
   switch(s.kind){
    case shay::StatementKind::Declare:{
@@ -220,22 +302,33 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
     out<<" }";
     if(!s.else_body.empty()){out<<" else {\n";emit_body(out,s.else_body,ctx," ");out<<" }";}
     out<<"\n";break;
-   case shay::StatementKind::OutputText:out<<" shay_runtime_write("<<cpp_string(s.value+"\n")<<");\n";break;
-   case shay::StatementKind::OutputValue:out<<" shay_runtime_write((values["<<cpp_string(s.name)<<"] + "<<cpp_string("\n")<<").c_str());\n";break;
+   case shay::StatementKind::OutputText:
+    out<<" shay_runtime_write("<<cpp_string(s.value+"\n")<<");\n";break;
+   case shay::StatementKind::OutputTextExit:
+    out<<" shay_runtime_write("<<cpp_string(s.value+"\n")<<"); throw ShayExit{};\n";break;
+   case shay::StatementKind::OutputValue:
+    out<<" shay_runtime_write((values["<<cpp_string(s.name)<<"] + "<<cpp_string("\n")<<").c_str());\n";break;
    case shay::StatementKind::OutputCall:{
     auto fn=ctx.functions.find(s.name);if(fn==ctx.functions.end())break;
-    out<<" ";
-    if(fn->second.has_return)out<<"{ std::ostringstream shay_call_output; shay_call_output<<std::setprecision(15)<<";
-    out<<"shay_fn_"<<s.name<<"(values";
-    for(const auto&arg:s.arguments)out<<", "<<arg;
+    out<<" shay_failures.erase("<<cpp_string(s.name)<<"); shay_handled_failures.erase("<<cpp_string(s.name)<<");\n";
+    out<<" try {\n";
+    if(fn->second.has_return)out<<"  { std::ostringstream shay_call_output; shay_call_output<<std::setprecision(15)<<";
+    out<<(fn->second.has_return?"   ":"  ")<<"shay_fn_"<<s.name<<"(values";
+    for(const auto&arg:s.arguments)out<<", "<<cpp_expression(arg);
     out<<")";
     if(fn->second.has_return)out<<"; shay_call_output<<"<<cpp_string("\n")<<"; shay_runtime_write(shay_call_output.str().c_str()); }";
-    out<<";\n";break;
+    out<<";\n";
+    out<<" } catch(const std::exception& shay_error) { shay_failures["<<cpp_string(s.name)<<"]=shay_error.what(); }\n";
+    break;
    }
    default:break;
   }
  }
- out<<" return 0;\n}\n";if(add_main)out<<"int main(){return shay_program_entry();}\n";return static_cast<bool>(out);
+ out<<" for(const auto& failure : shay_failures) if(!shay_handled_failures.count(failure.first)){std::fprintf(stderr,\"Shay function '%s' failed: %s\\n\",failure.first.c_str(),failure.second.c_str());return 1;}\n"
+       " return 0;\n } catch(const ShayExit&) { return 1; }\n"
+       " catch(const std::exception& error) { std::fprintf(stderr,\"Shay runtime error: %s\\n\",error.what()); return 1; }\n}\n";
+ if(add_main)out<<"int main(){return shay_program_entry();}\n";
+ return static_cast<bool>(out);
 }
 void print_diagnostics(const BuildContext&ctx){for(const auto&d:ctx.diagnostics)std::cerr<<d.file.string()<<':'<<d.line<<": error: "<<d.message<<'\n';}
 }

@@ -60,7 +60,7 @@ inline bool condition(const std::string&raw,const std::unordered_map<std::string
  pos=find_logic(s,"andit");
  if(pos!=std::string::npos){bool a=false;if(!condition(s.substr(0,pos),values,a,error))return false;if(!a){result=false;return true;}bool b=false;if(!condition(s.substr(pos+5),values,b,error))return false;result=b;return true;}
  if(s.rfind("notit ",0)==0){if(!condition(s.substr(6),values,result,error))return false;result=!result;return true;}
- const std::string ops[]={">=","<=","==","!=",">","<"};
+ const std::string ops[]={">=","<=","==","!=",">","<","="};
  for(const auto&op:ops){
   int depth=0;
   for(std::size_t i=0;i+op.size()<=s.size();++i){
@@ -69,12 +69,12 @@ inline bool condition(const std::string&raw,const std::unordered_map<std::string
     double left=0,right=0;NumericExpression a(s.substr(0,i),values),b(s.substr(i+op.size()),values);
     if(!a.evaluate(left,error)){error="left operand '"+s.substr(0,i)+"': "+error;return false;}
     if(!b.evaluate(right,error)){error="right operand '"+s.substr(i+op.size())+"': "+error;return false;}
-    if(op==">")result=left>right;else if(op=="<")result=left<right;else if(op==">=")result=left>=right;else if(op=="<=")result=left<=right;else if(op=="==")result=left==right;else result=left!=right;
+    if(op==">")result=left>right;else if(op=="<")result=left<right;else if(op==">=")result=left>=right;else if(op=="<=")result=left<=right;else if(op=="=="||op=="=")result=left==right;else result=left!=right;
     return true;
    }
   }
  }
- error="expected a comparison operator (>, <, >=, <=, ==, !=)";return false;
+ error="expected a comparison operator (>, <, >=, <=, ==, =, !=)";return false;
 }
 }
 inline bool evaluate_condition(const std::string&condition,const std::unordered_map<std::string,double>&values,bool&result,std::string&error){

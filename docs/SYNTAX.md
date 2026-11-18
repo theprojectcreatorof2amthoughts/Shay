@@ -24,11 +24,11 @@ finish
 insval-add(10, 20)
 ```
 
-Functions can be declared in `.shay` programs and `.shaii` libraries. A function currently has zero or more numeric parameters and an optional single `forw` expression. Expressions support numeric literals, parameter names, parentheses, unary minus, and the arithmetic operators `+`, `-`, `*`, and `/`. Use `insval-functionName(arguments)` to print a returned value. The compiler generates native function code; the interpreter evaluates the same arithmetic expression syntax. Nested function calls, local declarations, multiple statements in a function body, and non-numeric return values are not implemented yet.
+Functions can be declared in `.shay` programs and `.shaii` libraries. A function may use a single top-level `forw` expression or mix statements with a `forw` return inside its body (including an `ifit` or `elseit` branch). Expressions support numeric literals, parameter names, parentheses, unary minus, and the arithmetic operators `+`, `-`, `*`, and `/`. Use `insval-functionName(arguments)` to print a returned value. When a function marks itself failed with `!#functionName`, its returned value is not printed. The compiler generates native function code; the interpreter evaluates the same arithmetic expression syntax. Nested function calls, local declarations, and non-numeric return values are not implemented yet.
 
 ## Conditions and logical operators
 
-Use `ifit` to begin a conditional block and `exec` to close it. Numeric comparisons support `>`, `<`, `>=`, `<=`, `==`, and `!=`. Combine comparisons with Shay's logical operators:
+Use `ifit` to begin a conditional block and `exec` to close it. Numeric comparisons support `>`, `<`, `>=`, `<=`, `==`, and `!=`. A single `=` is also accepted as an equality shorthand. Combine comparisons with Shay's logical operators:
 
 - `andit` — both conditions must be true.
 - `orit` — at least one condition must be true.
@@ -56,6 +56,48 @@ exec
 Logical precedence is `notit`, then `andit`, then `orit`. Parentheses can group conditions. The interpreter and native compiler share these condition semantics.
 
 Conditional bodies currently support output statements, function calls, nested conditionals, and an optional `elseit` fallback branch; other statements are not implemented yet.
+
+## Error conditions and termination
+
+Use `!#functionName` as a statement inside that same function to explicitly mark the current invocation as failed. Use `ifit !#functionName` in the caller to check the latest call result. The status belongs to the named function call; it is not the status of the previous unrelated statement and does not treat a false-y return value as an error. A marker statement must name the function currently executing, and the failure remains set when that invocation returns.
+
+```shay
+$declr useme(x, y)
+    ifit x*y = 34
+        !#useme
+    elseit
+        instxt-"Result:"
+        forw x*y
+    exec
+finish
+
+insval-useme(17, 2)
+ifit !#useme
+    instxtexit-"Error!"
+exec
+
+$declr divide(left, right)
+    forw left / right
+finish
+
+insval-divide(10, 0)
+ifit !#divide
+    instxt-"The divide operation failed"
+elseit
+    instxt-"The divide operation succeeded"
+exec
+```
+
+A successful later call to the same function clears its previous failure status. The interpreter and native compiler both detect division by zero and retain the failure reason. If a failure is not checked with `!#`, the tool reports the function and its reason.
+
+Use `instxtexit-"message"` to print a message and terminate the program with a non-zero exit status:
+
+```shay
+insval-divide(10, 0)
+ifit !#divide
+    instxtexit-"Error!"
+exec
+```
 
 ## Imports
 
@@ -93,4 +135,4 @@ The shared frontend tokenizes source into identifiers, numbers, strings, symbols
 
 ## Not yet part of the grammar
 
-Loops, nested lexical scopes, collections, typed values, general expressions outside numeric function returns, error handling, and REPL behavior are not implemented yet. Function bodies are currently limited to an optional return expression or supported statement bodies.
+Loops, nested lexical scopes, collections, typed values, general expressions outside numeric function returns, and REPL behavior are not implemented yet. Function bodies are currently limited to an optional return expression or supported statement bodies.

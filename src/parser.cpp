@@ -1,5 +1,6 @@
 #include "parser.hpp"
 #include <filesystem>
+#include <functional>
 #include <unordered_set>
 namespace shay {
 Parser::Parser(const std::vector<Token> &tokens):tokens_(tokens){}
@@ -34,7 +35,11 @@ Program Parser::parse(){
  while(!atEnd()){
   if(match(TokenKind::Newline))continue;
   const auto line=peek().line;Statement statement;statement.line=line;bool valid=true;bool skipCurrentLine=true;
-  if(match(TokenKind::Identifier,"ifit")){
+  if(match(TokenKind::Symbol,"!#")){
+   statement.kind=StatementKind::MarkFailure;
+   valid=consume(TokenKind::Identifier,"",program.errors,"expected a function name after '!#'");
+   if(valid)statement.name=previous().text;
+  }else if(match(TokenKind::Identifier,"ifit")){
    statement.kind=StatementKind::If;
    while(!atEnd()&&peek().kind!=TokenKind::Newline){statement.condition+=peek().text;statement.condition.push_back(' ');++current_;}
    if(statement.condition.empty()){error(program.errors,"ifit requires a condition");valid=false;}
@@ -133,6 +138,14 @@ Program Parser::parse(){
      bodyTokens.push_back({TokenKind::End,"",peek().line,peek().column});
      Parser nested(bodyTokens);Program nestedProgram=nested.parse();
      statement.body=std::move(nestedProgram.statements);
+     std::function<bool(const std::vector<Statement>&)> has_return=[&](const auto&items){
+      for(const auto&item:items){
+       if(item.kind==StatementKind::ReturnValue)return true;
+       if(has_return(item.body)||has_return(item.else_body))return true;
+      }
+      return false;
+     };
+     statement.has_return=has_return(statement.body);
      for(const auto&e:nestedProgram.errors)program.errors.push_back(e);
     }
     if(valid&&peek().kind!=TokenKind::Newline&&!atEnd()){error(program.errors,"unexpected token after 'finish'");valid=false;}
@@ -148,9 +161,17 @@ Program Parser::parse(){
     else if(match(TokenKind::Symbol,"-")){if(match(TokenKind::Number))statement.value="-"+previous().text;else{error(program.errors,"expected digits after unary '-'");valid=false;}}
     else{error(program.errors,"expected a string, number, or boolean literal");valid=false;}
    }
+  }else if(match(TokenKind::Identifier,"forw")){
+   statement.kind=StatementKind::ReturnValue;
+   statement.value=collect_expression(tokens_,current_,"",valid);
+   if(statement.value.empty()){error(program.errors,"'forw' requires a return expression");valid=false;}
   }else if(match(TokenKind::Identifier,"instxt")){
    statement.kind=StatementKind::OutputText;valid=consume(TokenKind::Symbol,"-",program.errors,"expected '-' after 'instxt'");
    if(valid)valid=consume(TokenKind::String,"",program.errors,"expected quoted text after 'instxt-'");
+   if(valid)statement.value=previous().text;
+  }else if(match(TokenKind::Identifier,"instxtexit")){
+   statement.kind=StatementKind::OutputTextExit;valid=consume(TokenKind::Symbol,"-",program.errors,"expected '-' after 'instxtexit'");
+   if(valid)valid=consume(TokenKind::String,"",program.errors,"expected quoted text after 'instxtexit-'");
    if(valid)statement.value=previous().text;
   }else if(match(TokenKind::Identifier,"insval")){
    statement.kind=StatementKind::OutputValue;valid=consume(TokenKind::Symbol,"-",program.errors,"expected '-' after 'insval'");
