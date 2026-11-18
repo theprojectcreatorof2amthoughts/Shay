@@ -85,10 +85,6 @@ bool execute_statements(const std::vector<shay::Statement>&statements,Context&ct
    case shay::StatementKind::OutputTextExit:
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
     ctx.exit_requested=true;
-    break;
-   case shay::StatementKind::OutputTextExit:
-    if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
-    ctx.exit_requested=true;
     failure="program terminated by instxtexit";
     return false;
    case shay::StatementKind::OutputValue:{
@@ -131,6 +127,7 @@ void execute_file(const fs::path&input,Context&ctx){
  for(const auto&e:program.errors)diagnose(ctx,input,e.line,e.message);
  ctx.active.insert(key);
  for(const auto&s:program.statements){
+  if(ctx.exit_requested)break;
   switch(s.kind){
    case shay::StatementKind::ImportLibrary:case shay::StatementKind::ImportTask:{
     const bool library=s.kind==shay::StatementKind::ImportLibrary;const std::string required=library?".shaii":".shaz";
@@ -156,6 +153,10 @@ void execute_file(const fs::path&input,Context&ctx){
    }
    case shay::StatementKind::OutputText:
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
+    break;
+   case shay::StatementKind::OutputTextExit:
+    if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
+    ctx.exit_requested=true;
     break;
    case shay::StatementKind::OutputValue:{
     auto found=ctx.values.find(s.name);
