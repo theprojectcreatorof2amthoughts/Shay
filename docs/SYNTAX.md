@@ -24,7 +24,7 @@ finish
 insval-add(10, 20)
 ```
 
-Functions can be declared in `.shay` programs and `.shaii` libraries. A function currently has zero or more numeric parameters and an optional single `forw` expression. Expressions support numeric literals, parameter names, parentheses, unary minus, and the arithmetic operators `+`, `-`, `*`, and `/`. Use `insval-functionName(arguments)` to print a returned value. The compiler generates native function code; the interpreter evaluates the same arithmetic expression syntax. Nested function calls, local declarations, multiple statements in a function body, and non-numeric return values are not implemented yet.
+Functions can be declared in `.shay` programs and `.shaii` libraries. A function may use a single top-level `forw` expression or mix statements with a `forw` return inside its body (including an `ifit` or `elseit` branch). Expressions support numeric literals, parameter names, parentheses, unary minus, and the arithmetic operators `+`, `-`, `*`, and `/`. Use `insval-functionName(arguments)` to print a returned value. When a function marks itself failed with `!#functionName`, its returned value is not printed. The compiler generates native function code; the interpreter evaluates the same arithmetic expression syntax. Nested function calls, local declarations, and non-numeric return values are not implemented yet.
 
 ## Conditions and logical operators
 
@@ -65,6 +65,9 @@ Use `!#functionName` as a statement inside that same function to explicitly mark
 $declr useme(x, y)
     ifit x*y = 34
         !#useme
+    elseit
+        instxt-"Result:"
+        forw x*y
     exec
 finish
 

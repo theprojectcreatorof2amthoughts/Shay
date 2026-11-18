@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 namespace shay {
-enum class StatementKind { ImportLibrary, ImportTask, Declare, OutputText, OutputTextExit, MarkFailure, OutputValue, DeclareFunction, OutputCall, If, Invalid };
+enum class StatementKind { ImportLibrary, ImportTask, Declare, OutputText, OutputTextExit, MarkFailure, OutputValue, ReturnValue, DeclareFunction, OutputCall, If, Invalid };
 struct Statement {
     StatementKind kind = StatementKind::Invalid;
     std::size_t line = 1;

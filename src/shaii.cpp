@@ -30,6 +30,7 @@ struct Context{
  bool exit_requested=false;
 };
 using NumberScope=std::unordered_map<std::string,double>;
+struct ReturnFlow{bool returned=false;double value=0;};
 void diagnose(Context&ctx,const fs::path&file,std::size_t line,const std::string&message){ctx.diagnostics.push_back({file,line,message});}
 bool evaluate(const std::string&source,const NumberScope&values,double&result,std::string&error){
  shay::NumericExpression expression(source,values);return expression.evaluate(result,error);
@@ -47,7 +48,7 @@ bool evaluate_condition(const std::string&source,const NumberScope&scope,Context
  }
  return shay::evaluate_condition(condition,scope,result,error);
 }
-bool execute_statements(const std::vector<shay::Statement>&statements,Context&ctx,const fs::path&file,NumberScope&scope,std::string&failure);
+bool execute_statements(const std::vector<shay::Statement>&statements,Context&ctx,const fs::path&file,NumberScope&scope,std::string&failure,ReturnFlow*return_flow=nullptr);
 bool call_function(const shay::Statement&call,Context&ctx,const fs::path&file,NumberScope&callerScope){
  ctx.failures.erase(call.name);
  ctx.handled_failures.erase(call.name);
@@ -64,25 +65,29 @@ bool call_function(const shay::Statement&call,Context&ctx,const fs::path&file,Nu
    return fail("invalid argument "+std::to_string(i+1)+" for '"+call.name+"': "+error);
   local[fn.parameters[i]]=value;
  }
- if(fn.has_return){
+ if(fn.has_return&&fn.body.empty()){
   double result=0;std::string error;
   if(!evaluate(fn.value,local,result,error))
    return fail("invalid return expression in '"+call.name+"': "+error);
   if(!ctx.check_only)shay_runtime_write((number_text(result)+"\n").c_str());
  }else{
-  std::string reason;
+  std::string reason;ReturnFlow flow;
   ctx.active_functions.push_back(call.name);
-  const bool body_ok=execute_statements(fn.body,ctx,file,local,reason);
+  const bool body_ok=execute_statements(fn.body,ctx,file,local,reason,&flow);
   ctx.active_functions.pop_back();
   if(!body_ok)return fail(reason);
   if(ctx.failures.count(call.name))return false;
+  if(fn.has_return){
+   if(!flow.returned)return fail("function '"+call.name+"' completed without returning a value");
+   if(!ctx.check_only)shay_runtime_write((number_text(flow.value)+"\n").c_str());
+  }
  }
  return true;
 }
-bool execute_statements(const std::vector<shay::Statement>&statements,Context&ctx,const fs::path&file,NumberScope&scope,std::string&failure){
+bool execute_statements(const std::vector<shay::Statement>&statements,Context&ctx,const fs::path&file,NumberScope&scope,std::string&failure,ReturnFlow*return_flow){
  bool success=true;
  for(const auto&s:statements){
-  if(ctx.exit_requested)break;
+  if(ctx.exit_requested||(return_flow&&return_flow->returned))break;
   switch(s.kind){
    case shay::StatementKind::MarkFailure:
     if(ctx.active_functions.empty()||ctx.active_functions.back()!=s.name){
@@ -93,6 +98,13 @@ bool execute_statements(const std::vector<shay::Statement>&statements,Context&ct
      ctx.handled_failures.erase(s.name);
     }
     break;
+   case shay::StatementKind::ReturnValue:{
+    if(!return_flow){failure="'forw' is only valid inside a function";success=false;break;}
+    double value=0;std::string error;
+    if(!evaluate(s.value,scope,value,error)){failure="invalid return expression: "+error;success=false;break;}
+    return_flow->value=value;return_flow->returned=true;
+    break;
+   }
    case shay::StatementKind::OutputText:
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
     break;
@@ -113,7 +125,7 @@ bool execute_statements(const std::vector<shay::Statement>&statements,Context&ct
     bool condition=false;std::string error;
     if(!evaluate_condition(s.condition,scope,ctx,condition,error)){failure="invalid ifit condition: "+error;success=false;break;}
     std::string nestedFailure;
-    const bool nestedOk=condition?execute_statements(s.body,ctx,file,scope,nestedFailure):execute_statements(s.else_body,ctx,file,scope,nestedFailure);
+    const bool nestedOk=condition?execute_statements(s.body,ctx,file,scope,nestedFailure,return_flow):execute_statements(s.else_body,ctx,file,scope,nestedFailure,return_flow);
     if(!nestedOk&&!ctx.exit_requested){failure=nestedFailure;success=false;}
     break;
    }
@@ -167,6 +179,9 @@ void execute_file(const fs::path&input,Context&ctx){
    }
    case shay::StatementKind::MarkFailure:
     diagnose(ctx,input,s.line,"!#"+s.name+" is only valid inside its matching function");
+    break;
+   case shay::StatementKind::ReturnValue:
+    diagnose(ctx,input,s.line,"'forw' is only valid inside a function");
     break;
    case shay::StatementKind::OutputText:
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());

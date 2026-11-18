@@ -418,3 +418,39 @@ if "$GSHAI" -o "$TMP/invalid-function-failure-app" "$TMP/invalid-function-failur
 grep -q "only valid inside" "$TMP/err" || fail "compiler top-level !# diagnostic"
 pass "!#function statements are restricted to function bodies"
 printf '\nAll Shay toolchain tests passed.\n'
+
+cat > "$TMP/mixed-return.shaii" <<'EOF'
+$declr useme(x, y)
+    ifit x*y = 34
+        !#useme
+    elseit
+        instxt-"Result:"
+        forw x*y
+    exec
+finish
+EOF
+cat > "$TMP/mixed-return.shay" <<'EOF'
+$shaiiport [mixed-return.shaii]
+insval-useme(5, 6)
+ifit !#useme
+    instxt-"Failure branch"
+exec
+insval-useme(17, 2)
+ifit !#useme
+    instxt-"Failure detected"
+exec
+EOF
+out=$("$SHAII" "$TMP/mixed-return.shay") || fail "interpreter mixed function return"
+printf '%s\n' "$out" | grep -q '^Result:$' || fail "interpreter mixed function output"
+printf '%s\n' "$out" | grep -q '^30$' || fail "interpreter mixed function return value"
+printf '%s\n' "$out" | grep -q '^Failure detected$' || fail "interpreter mixed function failure path"
+if printf '%s\n' "$out" | grep -q '^34$'; then fail "interpreter returned value on marked failure"; fi
+pass "interpreter supports output, conditional failure, and explicit returns in one function"
+
+CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/mixed-return-app" "$TMP/mixed-return.shay" || fail "compile mixed function return"
+out=$("$TMP/mixed-return-app") || fail "run compiled mixed function return"
+printf '%s\n' "$out" | grep -q '^Result:$' || fail "compiler mixed function output"
+printf '%s\n' "$out" | grep -q '^30$' || fail "compiler mixed function return value"
+printf '%s\n' "$out" | grep -q '^Failure detected$' || fail "compiler mixed function failure path"
+if printf '%s\n' "$out" | grep -q '^34$'; then fail "compiler returned value on marked failure"; fi
+pass "compiler supports output, conditional failure, and explicit returns in one function"
