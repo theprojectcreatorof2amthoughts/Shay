@@ -140,6 +140,18 @@ Compiler flags use Shay's own `--shay...` spelling and can appear before or afte
 
 These flags configure the native C++ compiler used by `gshai`; they do not change Shay source syntax. The existing `-o` and `-ob` output modes remain supported.
 
+## Cross-compilation groundwork
+
+`gshai` accepts an explicit Clang target triple for hosted cross-compilation:
+
+```sh
+CXX=clang++ ./build/gshai --shaytarget=x86_64-unknown-linux-gnu -o build/hello examples/hello.shay
+```
+
+`--shaytarget=TRIPLE` is passed to Clang as `--target=TRIPLE`. The option requires `CXX=clang++` (or another compiler executable whose name contains `clang`). The selected target must have a compatible C++ standard library and linker installed.
+
+**Important:** this is only the first cross-compilation building block. It still uses Shay's existing hosted C++ runtime. It does not yet produce freestanding binaries, firmware, bootloaders, or kernels. Those require a separate freestanding backend, a defined low-level Shay subset, startup/linker support, and target-specific runtime primitives. Do not use this mode to flash firmware or boot a machine.
+
 ## Make targets
 
 - `make` — build compiler `gshai` and interpreter `shaii`.
