@@ -162,7 +162,7 @@ void execute_file(const fs::path&input,Context&ctx){
     execute_file(shay::resolve_import(input,s.value,library&&!s.external_import),ctx);break;
    }
    case shay::StatementKind::InputVariable:{
-    if(!ctx.check_only){std::string input;if(!std::getline(std::cin,input)&&!std::cin.eof())diagnose(ctx,input,s.line,"failed to read standard input");ctx.values[s.name]=input;ctx.numbers.erase(s.name);}
+    if(!ctx.check_only){std::string entered;std::getline(std::cin,entered);ctx.values[s.name]=entered;ctx.numbers.erase(s.name);}
     else ctx.values.emplace(s.name,std::string());
     break;
    }
