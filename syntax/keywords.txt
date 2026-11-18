@@ -20,5 +20,5 @@ notit
 true
 false
 logit
-logindxfl
-logindxnm
+$logindxfl
+$logindxnm
