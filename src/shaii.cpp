@@ -30,6 +30,8 @@ struct Context{
  bool exit_requested=false;
  std::string log_file_name="shay";
  std::string log_file_extension=".log";
+ bool log_file_name_set=false;
+ bool log_file_extension_set=false;
 };
 using NumberScope=std::unordered_map<std::string,double>;
 struct ReturnFlow{bool returned=false;double value=0;};
@@ -39,6 +41,7 @@ bool evaluate(const std::string&source,const NumberScope&values,double&result,st
 }
 std::string number_text(double value){std::ostringstream out;out<<std::setprecision(15)<<value;return out.str();}
 fs::path configured_log_path(const Context&ctx){fs::path path(ctx.log_file_name);path.replace_extension(ctx.log_file_extension);return path;}
+bool log_configuration_ready(const Context&ctx){return ctx.log_file_name_set&&ctx.log_file_extension_set;}
 bool append_log(const Context&ctx,const std::string&message){
  std::ofstream stream(configured_log_path(ctx),std::ios::binary|std::ios::app);
  if(!stream)return false;
@@ -119,7 +122,8 @@ bool execute_statements(const std::vector<shay::Statement>&statements,Context&ct
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
     break;
    case shay::StatementKind::LogText:
-    if(!ctx.check_only&&!append_log(ctx,s.value)){failure="cannot write log file '"+configured_log_path(ctx).string()+"'";success=false;}
+    if(!log_configuration_ready(ctx)){failure="'logit/>' requires both '$logindxfl' and '$logindxnm' to be declared before use";success=false;}
+    else if(!ctx.check_only&&!append_log(ctx,s.value)){failure="cannot write log file '"+configured_log_path(ctx).string()+"'";success=false;}
     break;
    case shay::StatementKind::OutputTextExit:
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
@@ -188,9 +192,11 @@ void execute_file(const fs::path&input,Context&ctx){
    }
    case shay::StatementKind::LogFileExtension:
     ctx.log_file_extension=s.value;
+    ctx.log_file_extension_set=true;
     break;
    case shay::StatementKind::LogFileName:
     ctx.log_file_name=s.value;
+    ctx.log_file_name_set=true;
     break;
    case shay::StatementKind::DeclareFunction:
     if(ctx.functions.count(s.name))diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");
@@ -212,7 +218,8 @@ void execute_file(const fs::path&input,Context&ctx){
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
     break;
    case shay::StatementKind::LogText:
-    if(!ctx.check_only&&!append_log(ctx,s.value))diagnose(ctx,input,s.line,"cannot write log file '"+configured_log_path(ctx).string()+"'");
+    if(!log_configuration_ready(ctx))diagnose(ctx,input,s.line,"'logit/>' requires both '$logindxfl' and '$logindxnm' to be declared before use");
+    else if(!ctx.check_only&&!append_log(ctx,s.value))diagnose(ctx,input,s.line,"cannot write log file '"+configured_log_path(ctx).string()+"'");
     break;
    case shay::StatementKind::OutputTextExit:
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
