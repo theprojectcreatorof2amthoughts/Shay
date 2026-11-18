@@ -8,6 +8,8 @@ BUILD_DIR ?= build
 INTERPRETER := $(BUILD_DIR)/shaii
 COMPILER := $(BUILD_DIR)/gshai
 PROGRAM ?= examples/hello.shay
+KERNEL_SOURCE ?= examples/kernel.shay
+KERNEL_OUTPUT ?= $(BUILD_DIR)/shay-kernel.elf
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 SHAREDIR ?= $(PREFIX)/share/shay
@@ -27,7 +29,7 @@ COMPILER_OBJECT := $(BUILD_DIR)/gshai.o
 KERNEL_BACKEND_OBJECT := $(BUILD_DIR)/kernel_backend.o
 DEPFILES := $(FRONTEND_OBJECTS:.o=.d) $(RUNTIME_OBJECT:.o=.d) $(INTERPRETER_OBJECT:.o=.d) $(COMPILER_OBJECT:.o=.d) $(KERNEL_BACKEND_OBJECT:.o=.d)
 
-.PHONY: all build test check run compile executable clean install uninstall debug release help
+.PHONY: all build test check run compile executable kernel clean install uninstall debug release help
 all: build
 build: $(INTERPRETER) $(COMPILER)
 
@@ -63,6 +65,9 @@ compile: $(COMPILER)
 
 executable: $(COMPILER)
 	CXX="$(CXX)" ./$(COMPILER) -o "$(PROGRAM)"
+
+kernel: $(COMPILER)
+	./$(COMPILER) --kernel -o "$(KERNEL_OUTPUT)" "$(KERNEL_SOURCE)"
 
 install: build
 	$(INSTALL) -d "$(DESTDIR)$(BINDIR)"
