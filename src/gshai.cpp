@@ -98,6 +98,9 @@ void load_file(const fs::path&input,BuildContext&ctx){
   if(s.kind==shay::StatementKind::Declare){
    if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'brew' is not allowed");continue;}
    if(!ctx.variables.insert(s.name).second){diagnose(ctx,input,s.line,"variable '"+s.name+"' is already declared");continue;}
+  }else if(s.kind==shay::StatementKind::InputVariable){
+   // First use declares the variable; later uses intentionally reuse it.
+   ctx.variables.insert(s.name);
   }else if(s.kind==shay::StatementKind::DeclareFunction){
    if(ctx.functions.count(s.name)){diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");continue;}
    std::unordered_set<std::string> parameters(s.parameters.begin(),s.parameters.end());
@@ -264,7 +267,7 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
 }
 bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main){
  std::ofstream out(path,std::ios::binary);if(!out)return false;
- out<<"#include <cstdio>\n#include <exception>\n#include <iomanip>\n#include <sstream>\n#include <stdexcept>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n"
+ out<<"#include <cstdio>\n#include <exception>\n#include <iomanip>\n#include <iostream>\n#include <sstream>\n#include <stdexcept>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n"
        "struct ShayExit {};\n"
        "static std::unordered_map<std::string,std::string> shay_failures;\n"
        "static std::unordered_set<std::string> shay_handled_failures;\n"
@@ -292,6 +295,8 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
  out<<"extern \"C\" int shay_program_entry() {\n try {\n std::unordered_map<std::string,std::string> values;\n";
  for(const auto&s:ctx.statements){
   switch(s.kind){
+   case shay::StatementKind::InputVariable:
+    out<<" std::getline(std::cin, values["<<cpp_string(s.name)<<"]);\n";break;
    case shay::StatementKind::Declare:{
     std::string value=s.value;if(!value.empty()&&value.front()==StringMarker)value.erase(value.begin());
     out<<" values["<<cpp_string(s.name)<<"] = "<<cpp_string(value)<<";\n";break;
