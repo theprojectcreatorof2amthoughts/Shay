@@ -292,7 +292,7 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
  fs::path logPath(ctx.log_file_name);
  logPath.replace_extension(ctx.log_file_extension);
  out<<"static const std::string shay_log_path = "<<cpp_string(logPath.string())<<";\n"
-    "static void shay_log(const std::string& message){std::ofstream stream(shay_log_path,std::ios::binary|std::ios::app);if(!stream)throw std::runtime_error(\"cannot open Shay log file: \"+shay_log_path);stream.write(message.data(),static_cast<std::streamsize>(message.size()));if(message.empty()||message.back()!='\n')stream.put('\n');if(!stream)throw std::runtime_error(\"cannot write Shay log file: \"+shay_log_path);}\n";
+    "static void shay_log(const std::string& message){std::ofstream stream(shay_log_path,std::ios::binary|std::ios::app);if(!stream)throw std::runtime_error(\"cannot open Shay log file: \"+shay_log_path);stream.write(message.data(),static_cast<std::streamsize>(message.size()));if(message.empty()||message.back()!='\\n')stream.put('\\n');if(!stream)throw std::runtime_error(\"cannot write Shay log file: \"+shay_log_path);}\n";
  for(const auto&s:ctx.statements)if(s.kind==shay::StatementKind::DeclareFunction){
   out<<"static "<<(s.has_return?"double":"void")<<" shay_fn_"<<s.name<<"(std::unordered_map<std::string,std::string>& global_values";
   for(const auto&p:s.parameters)out<<", double "<<p;
