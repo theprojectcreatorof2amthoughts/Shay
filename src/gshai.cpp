@@ -353,7 +353,7 @@ int main(int argc,char**argv){
  }
  if(positional.size()==1&&positional[0]=="--version"){std::cout<<"gshai 0.4.0 (Shay compiler)\n";return 0;}
  if(positional.size()==1&&(positional[0]=="--help"||positional[0]=="-h")){
-  std::cout<<"Usage:\n  gshai [Shay flags] -ob [output.sho] program.shay   Compile a native object\n  gshai [Shay flags] -o  [output]     program.shay   Compile a runnable executable\n  gshai --version\n\n"
+  std::cout<<"Usage:\n  gshai [Shay flags] -ob [output.sho] program.shay|program.shaz   Compile a native object\n  gshai [Shay flags] -o  [output]     program.shay|program.shaz   Compile a runnable executable\n  gshai --version\n\n"
            <<"-ob emits .sho object files; -o links a standalone executable.\n"
            <<"Shay-native compiler flags (may appear anywhere):\n"
            <<"  --shaywall    Enable all common native compiler warnings (-Wall)\n"
@@ -368,7 +368,7 @@ int main(int argc,char**argv){
  const std::string mode=positional[0];if(mode!="-ob"&&mode!="-o"){std::cerr<<"gshai: unknown output mode: "<<mode<<'\n';return 2;}
  const bool object_mode=mode=="-ob";fs::path output,input;
  if(positional.size()==2)input=positional[1];else{output=positional[1];input=positional[2];}
- if(input.extension()!=".shay"){std::cerr<<"gshai: input must be a .shay file\n";return 2;}
+ if(input.extension()!=".shay"&&input.extension()!=".shaz"){std::cerr<<"gshai: input must be a .shay or .shaz file\n";return 2;}
  if(output.empty()){output=input.parent_path()/input.stem();if(object_mode)output+=".sho";}
  else if(object_mode&&output.extension()!=".sho"){std::cerr<<"gshai: -ob output must use the .sho extension\n";return 2;}
  BuildContext context;load_file(input,context);if(!context.diagnostics.empty()){print_diagnostics(context);return 1;}
