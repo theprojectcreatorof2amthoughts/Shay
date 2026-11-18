@@ -15,6 +15,7 @@
 #include <iterator>
 #include <regex>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -227,13 +228,15 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
    case shay::StatementKind::OutputCall:{
     auto fn=ctx.functions.find(s.name);
     if(fn==ctx.functions.end())break;
-    out<<indent;
-    if(fn->second.has_return)out<<"{ std::ostringstream shay_nested_call; shay_nested_call<<std::setprecision(15)<<";
-    out<<"shay_fn_"<<s.name<<"(values";
+    out<<indent<<"try {\n";
+    if(fn->second.has_return)out<<indent<<" { std::ostringstream shay_nested_call; shay_nested_call<<std::setprecision(15)<<";
+    out<<indent<<(fn->second.has_return?"  ":" ")<<"shay_fn_"<<s.name<<"(values";
     for(const auto&arg:s.arguments)out<<", "<<cpp_expression(arg);
     out<<")";
     if(fn->second.has_return)out<<"; shay_nested_call<<"<<cpp_string("\n")<<"; shay_runtime_write(shay_nested_call.str().c_str()); }";
-    out<<";\n";break;
+    out<<";\n"<<indent<<" shay_failures.erase("<<cpp_string(s.name)<<");\n";
+    out<<indent<<"} catch(const std::exception& shay_error) { shay_failures["<<cpp_string(s.name)<<"]=shay_error.what(); throw; }\n";
+    break;
    }
    default:break;
   }
@@ -241,7 +244,13 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
 }
 bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main){
  std::ofstream out(path,std::ios::binary);if(!out)return false;
- out<<"#include <cstdio>\n#include <iomanip>\n#include <sstream>\n#include <string>\n#include <unordered_map>\n"
+ out<<"#include <cstdio>\n#include <exception>\n#include <iomanip>\n#include <sstream>\n#include <stdexcept>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n"
+       "struct ShayExit {};\n"
+       "static std::unordered_map<std::string,std::string> shay_failures;\n"
+       "static std::unordered_set<std::string> shay_handled_failures;\n"
+       "static bool shay_failed(const std::string& name){auto it=shay_failures.find(name);if(it==shay_failures.end())return false;shay_handled_failures.insert(name);return true;}\n"
+       "static double shay_number(const std::unordered_map<std::string,std::string>& values,const std::string& name){auto it=values.find(name);if(it==values.end())throw std::runtime_error(\"unknown numeric value '\"+name+\"'\");std::size_t used=0;double value=std::stod(it->second,&used);if(used!=it->second.size())throw std::runtime_error(\"value '\"+name+\"' is not numeric\");return value;}\n"
+       "static double shay_div(double left,double right){if(right==0.0)throw std::runtime_error(\"division by zero\");return left/right;}\n"
        "extern \"C\" void shay_runtime_write(const char* text) { if(text){std::fputs(text,stdout);std::fflush(stdout);} }\n";
  for(const auto&s:ctx.statements)if(s.kind==shay::StatementKind::DeclareFunction){
   out<<"static "<<(s.has_return?"double":"void")<<" shay_fn_"<<s.name<<"(std::unordered_map<std::string,std::string>& global_values";
@@ -257,7 +266,7 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
   else emit_body(out,s.body,ctx," ");
   out<<"}\n";
  }
- out<<"extern \"C\" int shay_program_entry() {\n std::unordered_map<std::string,std::string> values;\n";
+ out<<"extern \"C\" int shay_program_entry() {\n try {\n std::unordered_map<std::string,std::string> values;\n";
  for(const auto&s:ctx.statements){
   switch(s.kind){
    case shay::StatementKind::Declare:{
@@ -270,22 +279,32 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
     out<<" }";
     if(!s.else_body.empty()){out<<" else {\n";emit_body(out,s.else_body,ctx," ");out<<" }";}
     out<<"\n";break;
-   case shay::StatementKind::OutputText:out<<" shay_runtime_write("<<cpp_string(s.value+"\n")<<");\n";break;
-   case shay::StatementKind::OutputValue:out<<" shay_runtime_write((values["<<cpp_string(s.name)<<"] + "<<cpp_string("\n")<<").c_str());\n";break;
+   case shay::StatementKind::OutputText:
+    out<<" shay_runtime_write("<<cpp_string(s.value+"\n")<<");\n";break;
+   case shay::StatementKind::OutputTextExit:
+    out<<" shay_runtime_write("<<cpp_string(s.value+"\n")<<"); throw ShayExit{};\n";break;
+   case shay::StatementKind::OutputValue:
+    out<<" shay_runtime_write((values["<<cpp_string(s.name)<<"] + "<<cpp_string("\n")<<").c_str());\n";break;
    case shay::StatementKind::OutputCall:{
     auto fn=ctx.functions.find(s.name);if(fn==ctx.functions.end())break;
-    out<<" ";
-    if(fn->second.has_return)out<<"{ std::ostringstream shay_call_output; shay_call_output<<std::setprecision(15)<<";
-    out<<"shay_fn_"<<s.name<<"(values";
-    for(const auto&arg:s.arguments)out<<", "<<arg;
+    out<<" try {\n";
+    if(fn->second.has_return)out<<"  { std::ostringstream shay_call_output; shay_call_output<<std::setprecision(15)<<";
+    out<<(fn->second.has_return?"   ":"  ")<<"shay_fn_"<<s.name<<"(values";
+    for(const auto&arg:s.arguments)out<<", "<<cpp_expression(arg);
     out<<")";
     if(fn->second.has_return)out<<"; shay_call_output<<"<<cpp_string("\n")<<"; shay_runtime_write(shay_call_output.str().c_str()); }";
-    out<<";\n";break;
+    out<<";\n  shay_failures.erase("<<cpp_string(s.name)<<");\n";
+    out<<" } catch(const std::exception& shay_error) { shay_failures["<<cpp_string(s.name)<<"]=shay_error.what(); }\n";
+    break;
    }
    default:break;
   }
  }
- out<<" return 0;\n}\n";if(add_main)out<<"int main(){return shay_program_entry();}\n";return static_cast<bool>(out);
+ out<<" for(const auto& failure : shay_failures) if(!shay_handled_failures.count(failure.first)){std::fprintf(stderr,\"Shay function '%s' failed: %s\\n\",failure.first.c_str(),failure.second.c_str());return 1;}\n"
+       " return 0;\n } catch(const ShayExit&) { return 1; }\n"
+       " catch(const std::exception& error) { std::fprintf(stderr,\"Shay runtime error: %s\\n\",error.what()); return 1; }\n}\n";
+ if(add_main)out<<"int main(){return shay_program_entry();}\n";
+ return static_cast<bool>(out);
 }
 void print_diagnostics(const BuildContext&ctx){for(const auto&d:ctx.diagnostics)std::cerr<<d.file.string()<<':'<<d.line<<": error: "<<d.message<<'\n';}
 }
