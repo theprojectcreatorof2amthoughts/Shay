@@ -121,6 +121,22 @@ You can also choose an explicit `.sho` output path:
 
 The `.sho` file is a native relocatable object. It exports `shay_program_entry` and includes the minimal runtime write function used by the currently supported language subset, so it can be linked with a host entry point.
 
+## Freestanding x86_64 kernel (experimental)
+
+`gshai` has an experimental `--kernel` mode that uses a separate freestanding backend instead of the normal hosted C++ translation unit. It emits x86_64 assembly, assembles it with Clang for `x86_64-unknown-none-elf`, and links a static ELF with `ld.lld` and a kernel linker script. No C or C++ runtime, standard library, startup object, or host system libraries are linked.
+
+Requirements: Clang with the x86_64-none-elf target and LLVM's `ld.lld` linker.
+
+```sh
+make
+./build/gshai --kernel -o build/shay-kernel.elf examples/kernel.shay
+```
+
+The first kernel-language subset intentionally supports only top-level `instxt-"..."` statements. Each statement becomes a NUL-terminated message written directly to the COM1 UART (I/O port `0x3F8`), followed by CRLF. The generated ELF contains Limine protocol request markers and a base-revision request, uses `_start` as its entry point, and is linked at 1 MiB. The initial entry routine expects the x86_64 environment supplied by a Limine-compatible loader, initializes COM1, prints the messages, and halts.
+
+You can override tool executable names with `CLANG` and `LD_LLD` environment variables. The linker script is also available at `kernel/linker.ld`.
+
+**Current limitations:** this is a first boot-kernel foundation, not a complete operating system. `brew`, variables, functions, imports, conditionals, memory management, interrupts, graphics, keyboard input, and device drivers are not supported by this kernel backend yet. Unsupported Shay statements are rejected instead of silently compiling as hosted code. The CI test checks the ELF format and Limine section, but a real boot under QEMU/Limine still needs to be verified.
 ## Shay-native compiler flags
 
 Compiler flags use Shay's own `--shay...` spelling and can appear before or after the output mode and source path:
