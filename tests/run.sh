@@ -476,5 +476,5 @@ EOF
     test ! -e "$TMP/unsupported-kernel.elf" || fail "kernel backend emitted output for unsupported syntax"
     pass "kernel backend rejects unsupported hosted Shay features"
 else
-    printf '%s\\n' 'SKIP: freestanding kernel tests (need clang, ld.lld, and readelf)'
+    printf '%s\n' 'SKIP: freestanding kernel tests (need clang, ld.lld, and readelf)'
 fi
