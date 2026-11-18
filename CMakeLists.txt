@@ -16,7 +16,7 @@ target_include_directories(shay_runtime PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_executable(shaii src/shaii.cpp)
 target_link_libraries(shaii PRIVATE shay_frontend shay_runtime)
 
-add_executable(gshai src/gshai.cpp)
+add_executable(gshai src/gshai.cpp src/kernel_backend.cpp)
 target_link_libraries(gshai PRIVATE shay_frontend)
 
 foreach(target shaii gshai shay_frontend shay_runtime)
