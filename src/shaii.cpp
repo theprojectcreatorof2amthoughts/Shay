@@ -119,9 +119,6 @@ bool execute_statements(const std::vector<shay::Statement>&statements,Context&ct
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
     break;
    case shay::StatementKind::LogText:
-    if(!ctx.check_only&&!append_log(ctx,s.value))diagnose(ctx,input,s.line,"cannot write log file '"+configured_log_path(ctx).string()+"'");
-    break;
-   case shay::StatementKind::LogText:
     if(!ctx.check_only&&!append_log(ctx,s.value)){failure="cannot write log file '"+configured_log_path(ctx).string()+"'";success=false;}
     break;
    case shay::StatementKind::OutputTextExit:
@@ -213,6 +210,9 @@ void execute_file(const fs::path&input,Context&ctx){
     break;
    case shay::StatementKind::OutputText:
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
+    break;
+   case shay::StatementKind::LogText:
+    if(!ctx.check_only&&!append_log(ctx,s.value))diagnose(ctx,input,s.line,"cannot write log file '"+configured_log_path(ctx).string()+"'");
     break;
    case shay::StatementKind::OutputTextExit:
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
