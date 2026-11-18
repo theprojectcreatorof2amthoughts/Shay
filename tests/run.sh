@@ -194,13 +194,13 @@ EOF
 out=$("$SHAII" "$TMP/conditionals.shay") || fail "interpreter ifit execution"
 printf '%s\n' "$out" | grep -q 'X is greater than Y' || fail "interpreter ifit true branch"
 printf '%s\n' "$out" | grep -q 'Equality works' || fail "interpreter ifit equality"
-if printf '%s\n' "$out" | grep -q 'must not appear'; then fail "interpreter ifit false branch"; fi
+if printf '%s\n' "$out" | grep -Eq 'must not appear|Wrong else branch|Wrong nested else branch'; then fail "interpreter ifit false branch"; fi
 pass "interpreter evaluates ifit comparisons and exec blocks"
 CXX=c++ "$GSHAI" -o "$TMP/conditional-app" "$TMP/conditionals.shay" || fail "compile ifit program"
 out=$("$TMP/conditional-app") || fail "run compiled ifit program"
 printf '%s\n' "$out" | grep -q 'X is greater than Y' || fail "compiled ifit true branch"
 printf '%s\n' "$out" | grep -q 'Equality works' || fail "compiled ifit equality"
-if printf '%s\n' "$out" | grep -q 'must not appear'; then fail "compiled ifit false branch"; fi
+if printf '%s\n' "$out" | grep -Eq 'must not appear|Wrong else branch|Wrong nested else branch'; then fail "compiled ifit false branch"; fi
 pass "compiler generates native ifit conditionals"
 cat > "$TMP/missing-exec.shay" <<'EOF'
 ifit 2 > 1
@@ -285,20 +285,30 @@ exec
 ifit x < y andit invalid_number > 0
     instxt-"This must not appear either"
 exec
+ifit x < y
+    instxt-"Wrong else branch"
+elseit
+    instxt-"ELSE works"
+    ifit y > z
+        instxt-"Nested else condition works"
+    elseit
+        instxt-"Wrong nested else branch"
+    exec
+exec
 EOF
 "$SHAII" --check "$TMP/logical-conditions.shay" >/dev/null || fail "logical condition syntax check"
 out=$("$SHAII" "$TMP/logical-conditions.shay") || fail "interpreter logical conditions"
-for expected in "AND works" "OR works" "NOT works" "Grouped logic works" "Short-circuit OR works"; do
+for expected in "AND works" "OR works" "NOT works" "Grouped logic works" "Short-circuit OR works" "ELSE works" "Nested else condition works"; do
     printf '%s\n' "$out" | grep -q "$expected" || fail "interpreter $expected"
 done
-if printf '%s\n' "$out" | grep -q 'must not appear'; then fail "interpreter logical false branch"; fi
+if printf '%s\n' "$out" | grep -Eq 'must not appear|Wrong else branch|Wrong nested else branch'; then fail "interpreter logical false branch"; fi
 pass "interpreter supports andit, orit, notit, and grouped conditions"
 CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/logical-conditions-app" "$TMP/logical-conditions.shay" || fail "compile logical conditions"
 out=$("$TMP/logical-conditions-app") || fail "run compiled logical conditions"
 for expected in "AND works" "OR works" "NOT works" "Grouped logic works"; do
     printf '%s\n' "$out" | grep -q "$expected" || fail "compiler $expected"
 done
-if printf '%s\n' "$out" | grep -q 'must not appear'; then fail "compiler logical false branch"; fi
+if printf '%s\n' "$out" | grep -Eq 'must not appear|Wrong else branch|Wrong nested else branch'; then fail "compiler logical false branch"; fi
 pass "compiler generates native logical conditions"
 
 printf '\nAll Shay toolchain tests passed.\n'
