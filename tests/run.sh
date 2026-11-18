@@ -19,6 +19,54 @@ printf '%s\n' "$out" | grep -q 'Hello, world from Shay!' || fail "interpreter te
 printf '%s\n' "$out" | grep -q 'Shay' || fail "interpreter variable output"
 pass "interpreter execution"
 
+cat > "$TMP/input-created.shay" <<'EOF'
+instxt-"What's your name?"
+inpvarforw-name
+instxt-"Hello,"
+insval-name
+EOF
+out=$(printf 'Yamen Awartani\n' | "$SHAII" "$TMP/input-created.shay") || fail "interpreter input declaration"
+printf '%s\n' "$out" | grep -q 'Yamen Awartani' || fail "interpreter input preserves spaces"
+pass "inpvarforw creates a variable and reads a full input line"
+"$SHAII" --check "$TMP/input-created.shay" >/dev/null || fail "inpvarforw check-only mode"
+pass "shaii --check does not wait for input"
+
+cat > "$TMP/input-existing.shay" <<'EOF'
+brew name = "old value"
+inpvarforw-name
+insval-name
+EOF
+out=$(printf 'new value with spaces\n' | "$SHAII" "$TMP/input-existing.shay") || fail "interpreter input reassignment"
+printf '%s\n' "$out" | grep -q 'new value with spaces' || fail "interpreter input overwrites an existing variable"
+pass "inpvarforw overwrites an existing variable"
+
+cat > "$TMP/input-repeat.shay" <<'EOF'
+inpvarforw-name
+inpvarforw-name
+insval-name
+EOF
+out=$(printf 'first value\nsecond value\n' | "$SHAII" "$TMP/input-repeat.shay") || fail "repeat inpvarforw"
+printf '%s\n' "$out" | grep -q 'second value' || fail "repeat inpvarforw updates the variable"
+pass "repeated inpvarforw statements reuse and update the same variable"
+
+CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/input-created-app" "$TMP/input-created.shay" || fail "compile program with inpvarforw"
+out=$(printf 'compiled input with spaces\n' | "$TMP/input-created-app") || fail "run compiled input program"
+printf '%s\n' "$out" | grep -q 'compiled input with spaces' || fail "compiled input preserves spaces"
+pass "gshai compiles inpvarforw into standard-input reading"
+
+CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/input-existing-app" "$TMP/input-existing.shay" || fail "compile existing-variable input program"
+out=$(printf 'updated compiler value\n' | "$TMP/input-existing-app") || fail "run existing-variable input program"
+printf '%s\n' "$out" | grep -q 'updated compiler value' || fail "compiled input overwrites an existing variable"
+pass "gshai supports inpvarforw on existing variables"
+
+cat > "$TMP/input-then-brew.shay" <<'EOF'
+inpvarforw-name
+brew name = "duplicate"
+EOF
+if CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/input-then-brew" "$TMP/input-then-brew.shay" >"$TMP/out" 2>"$TMP/err"; then fail "brew redeclared an inpvarforw variable"; fi
+grep -q "variable 'name' is already declared" "$TMP/err" || fail "inpvarforw declaration tracking"
+pass "inpvarforw registers newly created variables for duplicate-declaration checks"
+
 cat > "$TMP/lexer-parser.shay" <<'EOF'
 brew greeting = "Line 1\nLine 2"
 brew debt = -42
@@ -92,6 +140,15 @@ EOF
 if "$SHAII" --check "$TMP/bad.shaz" >"$TMP/out" 2>"$TMP/err"; then fail "Zeccurs variable restriction"; fi
 grep -q 'variable-free' "$TMP/err" || fail "Zeccurs diagnostic"
 pass "Zeccurs rejects variable declarations"
+
+cat > "$TMP/input-task.shaz" <<'EOF'
+inpvarforw-task_value
+EOF
+if "$SHAII" --check "$TMP/input-task.shaz" >"$TMP/out" 2>"$TMP/err"; then fail "Zeccurs input declaration restriction"; fi
+grep -q "variable-free; 'inpvarforw' is not allowed" "$TMP/err" || fail "Zeccurs input declaration diagnostic"
+if CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/input-task" "$TMP/input-task.shaz" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted Zeccurs input declaration"; fi
+grep -q "variable-free; 'inpvarforw' is not allowed" "$TMP/err" || fail "compiler Zeccurs input diagnostic"
+pass "Zeccurs rejects inpvarforw declarations"
 
 cat > "$TMP/a.shaz" <<'EOF'
 $shazport [b.shaz]

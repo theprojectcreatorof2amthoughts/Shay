@@ -98,6 +98,10 @@ void load_file(const fs::path&input,BuildContext&ctx){
   if(s.kind==shay::StatementKind::Declare){
    if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'brew' is not allowed");continue;}
    if(!ctx.variables.insert(s.name).second){diagnose(ctx,input,s.line,"variable '"+s.name+"' is already declared");continue;}
+  }else if(s.kind==shay::StatementKind::InputVariable){
+   if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'inpvarforw' is not allowed");continue;}
+   // First use declares the variable; later uses intentionally reuse it.
+   ctx.variables.insert(s.name);
   }else if(s.kind==shay::StatementKind::DeclareFunction){
    if(ctx.functions.count(s.name)){diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");continue;}
    std::unordered_set<std::string> parameters(s.parameters.begin(),s.parameters.end());
@@ -264,7 +268,7 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
 }
 bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main){
  std::ofstream out(path,std::ios::binary);if(!out)return false;
- out<<"#include <cstdio>\n#include <exception>\n#include <iomanip>\n#include <sstream>\n#include <stdexcept>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n"
+ out<<"#include <cstdio>\n#include <exception>\n#include <iomanip>\n#include <iostream>\n#include <sstream>\n#include <stdexcept>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n"
        "struct ShayExit {};\n"
        "static std::unordered_map<std::string,std::string> shay_failures;\n"
        "static std::unordered_set<std::string> shay_handled_failures;\n"
@@ -292,6 +296,8 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
  out<<"extern \"C\" int shay_program_entry() {\n try {\n std::unordered_map<std::string,std::string> values;\n";
  for(const auto&s:ctx.statements){
   switch(s.kind){
+   case shay::StatementKind::InputVariable:
+    out<<" std::getline(std::cin, values["<<cpp_string(s.name)<<"]);\n";break;
    case shay::StatementKind::Declare:{
     std::string value=s.value;if(!value.empty()&&value.front()==StringMarker)value.erase(value.begin());
     out<<" values["<<cpp_string(s.name)<<"] = "<<cpp_string(value)<<";\n";break;
@@ -347,7 +353,7 @@ int main(int argc,char**argv){
  }
  if(positional.size()==1&&positional[0]=="--version"){std::cout<<"gshai 0.4.0 (Shay compiler)\n";return 0;}
  if(positional.size()==1&&(positional[0]=="--help"||positional[0]=="-h")){
-  std::cout<<"Usage:\n  gshai [Shay flags] -ob [output.sho] program.shay   Compile a native object\n  gshai [Shay flags] -o  [output]     program.shay   Compile a runnable executable\n  gshai --version\n\n"
+  std::cout<<"Usage:\n  gshai [Shay flags] -ob [output.sho] program.shay|program.shaz   Compile a native object\n  gshai [Shay flags] -o  [output]     program.shay|program.shaz   Compile a runnable executable\n  gshai --version\n\n"
            <<"-ob emits .sho object files; -o links a standalone executable.\n"
            <<"Shay-native compiler flags (may appear anywhere):\n"
            <<"  --shaywall    Enable all common native compiler warnings (-Wall)\n"
@@ -362,7 +368,7 @@ int main(int argc,char**argv){
  const std::string mode=positional[0];if(mode!="-ob"&&mode!="-o"){std::cerr<<"gshai: unknown output mode: "<<mode<<'\n';return 2;}
  const bool object_mode=mode=="-ob";fs::path output,input;
  if(positional.size()==2)input=positional[1];else{output=positional[1];input=positional[2];}
- if(input.extension()!=".shay"){std::cerr<<"gshai: input must be a .shay file\n";return 2;}
+ if(input.extension()!=".shay"&&input.extension()!=".shaz"){std::cerr<<"gshai: input must be a .shay or .shaz file\n";return 2;}
  if(output.empty()){output=input.parent_path()/input.stem();if(object_mode)output+=".sho";}
  else if(object_mode&&output.extension()!=".sho"){std::cerr<<"gshai: -ob output must use the .sho extension\n";return 2;}
  BuildContext context;load_file(input,context);if(!context.diagnostics.empty()){print_diagnostics(context);return 1;}
