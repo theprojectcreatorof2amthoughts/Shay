@@ -161,6 +161,11 @@ void execute_file(const fs::path&input,Context&ctx){
     if(fs::path(s.value).extension()!=required){diagnose(ctx,input,s.line,std::string("$")+(library?"shaiiport":"shazport")+" requires a "+required+" file");break;}
     execute_file(shay::resolve_import(input,s.value,library&&!s.external_import),ctx);break;
    }
+   case shay::StatementKind::InputVariable:{
+    if(!ctx.check_only){std::string input;if(!std::getline(std::cin,input)&&!std::cin.eof())diagnose(ctx,input,s.line,"failed to read standard input");ctx.values[s.name]=input;ctx.numbers.erase(s.name);}
+    else ctx.values.emplace(s.name,std::string());
+    break;
+   }
    case shay::StatementKind::Declare:{
     if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'brew' is not allowed");break;}
     if(!s.value.empty()&&s.value.front()==StringMarker){ctx.values[s.name]=s.value.substr(1);ctx.numbers.erase(s.name);}
