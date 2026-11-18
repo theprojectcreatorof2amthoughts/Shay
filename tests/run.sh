@@ -517,12 +517,12 @@ cat > "$TMP/log-files.shay" <<'EOF'
 $logindxfl <.txt>
 $logindxnm "diagnostic"
 logit/>"Something went wrong in LN:5
-instxt-"hi"
+instxt-\\"hi\\"
 ------^
 Unexpected Symbol"
 EOF
 (cd "$TMP" && "$SHAII" "$TMP/log-files.shay") || fail "interpreter log output"
-printf 'Something went wrong in LN:5\ninstxt-"hi"\n------^\nUnexpected Symbol\n' > "$TMP/expected-log.txt"
+printf 'Something went wrong in LN:5\ninstxt-\\"hi\\"\n------^\nUnexpected Symbol\n' > "$TMP/expected-log.txt"
 cmp "$TMP/expected-log.txt" "$TMP/diagnostic.txt" || fail "multiline interpreter log content"
 pass "interpreter writes multiline .txt log files"
 
@@ -554,7 +554,7 @@ if "$SHAII" "$TMP/log-missing-both.shay" >"$TMP/out" 2>"$TMP/err"; then fail "in
 grep -q "requires" "$TMP/err" || fail "missing log configuration interpreter diagnostic"
 if "$GSHAI" -o "$TMP/log-missing-both" "$TMP/log-missing-both.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted logit without configuration"; fi
 grep -q "requires" "$TMP/err" || fail "missing log configuration compiler diagnostic"
-pass "logit requires both log configuration directives"
+pass "logit requires at least one log configuration directive"
 
 cat > "$TMP/log-name-only.shay" <<'EOF'
 $logindxnm "only-name"
