@@ -3,69 +3,221 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#10131d">
+  <meta name="theme-color" content="#050505">
   <meta name="description" content="Shay is an independent hybrid programming language with its own syntax, interpreter, and native compiler toolchain.">
-  <title>Shay — A language of its own</title>
+  <meta property="og:title" content="Shay — Programming language">
+  <meta property="og:description" content="A language of its own. Explore Shay, its tools, syntax, and documentation.">
+  <meta property="og:image" content="https://esolangs.org/w/images/9/90/ShayLogo.png">
+  <title>Shay — Programming language</title>
   <style>
-    :root{color-scheme:dark;--bg:#0b0e16;--panel:#121827;--panel2:#171f30;--text:#f4f5fb;--muted:#a5aec2;--line:#273149;--mint:#8ef0cf;--blue:#91baff;--pink:#d9a6ff;--max:1120px}
-    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(ellipse at 75% 0%,#1b2940 0,transparent 42%),var(--bg);color:var(--text);font:16px/1.65 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-    a{color:var(--mint);text-decoration:none}a:hover{text-decoration:underline}.wrap{width:min(var(--max),calc(100% - 40px));margin:auto}
-    header{border-bottom:1px solid #ffffff12;position:sticky;top:0;background:#0b0e16d9;backdrop-filter:blur(16px);z-index:3}.nav{height:70px;display:flex;align-items:center;justify-content:space-between;gap:24px}.brand{font-size:1.2rem;font-weight:850;letter-spacing:.04em;color:var(--text)}.brand span{color:var(--mint)}nav{display:flex;gap:22px;flex-wrap:wrap;font-size:.92rem}nav a{color:var(--muted)}
-    .hero{padding:100px 0 78px;display:grid;grid-template-columns:1.1fr .9fr;gap:54px;align-items:center}.eyebrow{color:var(--mint);font-weight:750;letter-spacing:.14em;text-transform:uppercase;font-size:.76rem}.hero h1{font-size:clamp(3.2rem,8vw,6.4rem);line-height:.98;letter-spacing:-.075em;margin:18px 0 24px}.hero h1 em{font-style:normal;color:var(--mint)}.lead{font-size:1.18rem;color:var(--muted);max-width:620px}.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}.btn{display:inline-flex;padding:11px 17px;border-radius:10px;border:1px solid var(--line);font-weight:750}.btn.primary{background:var(--mint);color:#07130f;border-color:var(--mint)}.terminal{background:#080c13;border:1px solid #34415b;border-radius:18px;overflow:hidden;box-shadow:0 28px 90px #0008;transform:rotate(1deg)}.termbar{padding:13px 17px;border-bottom:1px solid #ffffff12;color:var(--muted);font-size:.8rem}.dots{color:#e4a4a4;letter-spacing:5px;margin-right:12px}.terminal pre{margin:0;padding:25px 24px 30px;white-space:pre-wrap;overflow:auto;font: .91rem/1.9 ui-monospace,SFMono-Regular,Consolas,monospace;color:#dce6f7}.kw{color:var(--pink)}.fn{color:var(--mint)}.str{color:#f3d28d}.comment{color:#71809a}
-    section{padding:68px 0;border-top:1px solid #ffffff10}.section-head{max-width:680px;margin-bottom:30px}h2{font-size:clamp(2rem,4vw,3rem);letter-spacing:-.05em;line-height:1.1;margin:0 0 13px}.section-head p,.muted{color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}.card{padding:23px;background:linear-gradient(145deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:15px}.card h3{margin:0 0 8px;font-size:1.08rem}.card p{margin:0;color:var(--muted);font-size:.94rem}.tag{display:inline-block;color:var(--mint);font: .75rem ui-monospace,monospace;margin-bottom:12px}
-    .codebox{background:#080c13;border:1px solid var(--line);border-radius:14px;overflow:auto}.codebox pre{padding:20px 24px;margin:0;font: .9rem/1.85 ui-monospace,SFMono-Regular,Consolas,monospace;color:#dce6f7}
-    .split{display:grid;grid-template-columns:1fr 1fr;gap:20px}.split .card{height:100%}table{border-collapse:collapse;width:100%;font-size:.93rem}td,th{text-align:left;padding:12px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:650}
-    footer{padding:35px 0 55px;color:var(--muted);font-size:.9rem;border-top:1px solid #ffffff10}.foot{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap}
-    @media(max-width:780px){.hero{grid-template-columns:1fr;padding:72px 0 55px;gap:35px}.grid{grid-template-columns:1fr}.split{grid-template-columns:1fr}nav{gap:12px}.nav{height:auto;min-height:68px;align-items:flex-start;padding:17px 0;flex-direction:column}.terminal{transform:none}}
+    :root {
+      color-scheme: dark;
+      --bg: #050505;
+      --surface: #0c0c0c;
+      --surface-raised: #111;
+      --text: #f2f2f2;
+      --muted: #a3a3a3;
+      --soft: #777;
+      --line: #292929;
+      --accent: #d8d8d8;
+      --content: 1040px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.7 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    a { color: #ededed; text-decoration: underline; text-decoration-color: #666; text-underline-offset: 3px; }
+    a:hover { color: #fff; text-decoration-color: #fff; }
+    .container { width: min(var(--content), calc(100% - 44px)); margin: 0 auto; }
+    header { border-bottom: 1px solid var(--line); background: #050505; }
+    .topbar { min-height: 82px; display: flex; align-items: center; justify-content: space-between; gap: 30px; }
+    .identity { display: inline-flex; align-items: center; gap: 14px; color: var(--text); text-decoration: none; }
+    .identity img { width: 54px; height: 54px; object-fit: contain; }
+    .identity strong { font-size: 1.18rem; letter-spacing: .04em; }
+    .identity span { display: block; color: var(--muted); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; }
+    nav { display: flex; flex-wrap: wrap; gap: 22px; align-items: center; }
+    nav a { color: #c5c5c5; font-size: .9rem; text-decoration: none; }
+    nav a:hover { color: white; }
+    main { padding: 56px 0 76px; }
+    .intro { max-width: 760px; padding: 8px 0 42px; }
+    .eyebrow { color: var(--soft); font-size: .75rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+    h1 { margin: 12px 0 14px; font-size: clamp(2.7rem, 7vw, 4.7rem); line-height: 1.04; letter-spacing: -.065em; }
+    .intro p { max-width: 700px; color: #bdbdbd; font-size: 1.08rem; margin: 0; }
+    .quicklinks { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 24px; }
+    .quicklinks a { font-weight: 650; }
+    .rule { height: 1px; background: var(--line); margin: 34px 0; }
+    .columns { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(230px, .65fr); gap: 54px; align-items: start; }
+    section { scroll-margin-top: 24px; }
+    h2 { margin: 0 0 12px; font-size: 1.55rem; letter-spacing: -.035em; }
+    h3 { margin: 0 0 7px; font-size: 1.03rem; }
+    p { margin: 0 0 16px; color: #b5b5b5; }
+    .feature-list { display: grid; gap: 22px; }
+    .feature { padding-bottom: 18px; border-bottom: 1px solid #202020; }
+    .feature:last-child { border: 0; padding-bottom: 0; }
+    .feature p { margin: 0; font-size: .94rem; }
+    .side-panel { border: 1px solid var(--line); background: var(--surface); padding: 22px; }
+    .side-panel h2 { font-size: 1.12rem; margin-bottom: 12px; }
+    .side-panel ul { margin: 0; padding-left: 19px; color: #b5b5b5; }
+    .side-panel li { margin: 7px 0; }
+    .code { overflow-x: auto; border: 1px solid var(--line); background: #090909; padding: 18px 20px; margin: 18px 0; color: #e5e5e5; font: .88rem/1.85 ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .code .comment { color: #777; }
+    .code .keyword { color: #e4c6a4; }
+    .code .string { color: #b8d6bf; }
+    .resource-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 20px; }
+    .resource { border: 1px solid var(--line); background: var(--surface); padding: 18px; }
+    .resource p { margin: 0; font-size: .9rem; }
+    .resource a { font-weight: 700; }
+    footer { border-top: 1px solid var(--line); padding: 25px 0 34px; color: var(--soft); font-size: .86rem; }
+    .footer-inner { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 25px; }
+    footer a { color: #c8c8c8; }
+    @media (max-width: 760px) {
+      .topbar { align-items: flex-start; flex-direction: column; padding: 15px 0 18px; gap: 12px; }
+      nav { gap: 12px 18px; }
+      main { padding-top: 38px; }
+      .columns { grid-template-columns: 1fr; gap: 34px; }
+      .resource-grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
-<header><div class="wrap nav"><a class="brand" href="#">SHAY<span>++</span></a><nav><a href="#about">About</a><a href="#syntax">Syntax</a><a href="#toolchain">Toolchain</a><a href="#roadmap">Roadmap</a><a href="https://github.com/theprojectcreatorof2amthoughts/Shay">GitHub ↗</a></nav></div></header>
-<main>
-  <div class="wrap hero">
-    <div><div class="eyebrow">An independent programming language</div><h1>Code with<br><em>its own</em> voice.</h1><p class="lead">Shay is a hybrid programming language project with original syntax, a dedicated interpreter, and a native compiler toolchain. Small beginnings. A language with room to grow.</p><div class="actions"><a class="btn primary" href="https://github.com/theprojectcreatorof2amthoughts/Shay">Explore the repository ↗</a><a class="btn" href="#syntax">See the syntax</a></div></div>
-    <div class="terminal"><div class="termbar"><span class="dots">● ● ●</span> hello.shay</div><pre><span class="comment">## A first Shay program</span>
-<span class="kw">brew</span> name = <span class="str">"world"</span>
-<span class="fn">instxt</span>-<span class="str">"Hello, "</span>
-<span class="fn">insval</span>-name
-
-<span class="kw">brew</span> score = 42
-<span class="kw">ifit</span> score >= 40
-    <span class="fn">instxt</span>-<span class="str">"You did it!"</span>
-<span class="kw">exec</span></pre></div>
+<header>
+  <div class="container topbar">
+    <a class="identity" href="#top" aria-label="Shay home">
+      <img src="https://esolangs.org/w/images/9/90/ShayLogo.png" alt="Shay logo">
+      <span><strong>SHAY</strong>Independent programming language</span>
+    </a>
+    <nav aria-label="Main navigation">
+      <a href="#about">About</a>
+      <a href="#getting-started">Get started</a>
+      <a href="#syntax">Syntax</a>
+      <a href="#tools">Tools</a>
+      <a href="#documentation">Documentation</a>
+      <a href="https://github.com/theprojectcreatorof2amthoughts/Shay">GitHub ↗</a>
+    </nav>
   </div>
-  <section id="about"><div class="wrap"><div class="section-head"><div class="eyebrow">01 / The idea</div><h2>A language, not just a syntax theme.</h2><p>Shay has its own vocabulary and file formats, backed by a shared lexer and parser. The project is developed as an evolving language and toolchain.</p></div><div class="grid">
-    <article class="card"><div class="tag">INTERPRET</div><h3>shaii</h3><p>Run Shay source files directly and check source syntax from the command line.</p></article>
-    <article class="card"><div class="tag">COMPILE</div><h3>gshai</h3><p>Compile supported Shay programs into native executables or relocatable <code>.sho</code> object files.</p></article>
-    <article class="card"><div class="tag">LIBRARIES</div><h3>Shaii + Zeccurs</h3><p>Use <code>.shaii</code> libraries and <code>.shaz</code> task files through Shay's import system.</p></article>
-  </div></div></section>
-  <section id="syntax"><div class="wrap"><div class="section-head"><div class="eyebrow">02 / A taste of Shay</div><h2>Readable by design. Distinct by choice.</h2><p>Shay uses its own keywords for declarations, output, functions, and control flow.</p></div><div class="split"><div class="codebox"><pre><span class="comment">## Variables and output</span>
-brew language = "Shay"
-instxt-"Welcome to"
-insval-language
+</header>
 
-<span class="comment">## A function</span>
-$declr add(x, y)
-    forw x + y
-finish
+<main id="top" class="container">
+  <div class="intro">
+    <div class="eyebrow">A programming language project</div>
+    <h1>A language of its own.</h1>
+    <p>Shay is an independent hybrid programming language with original syntax, a dedicated interpreter, and a native compiler toolchain. It is built in the open and evolving one feature at a time.</p>
+    <div class="quicklinks">
+      <a href="https://github.com/theprojectcreatorof2amthoughts/Shay">Explore the source code →</a>
+      <a href="#getting-started">Start using Shay →</a>
+      <a href="#documentation">Read the documentation →</a>
+    </div>
+  </div>
 
-insval-add(8, 4)</pre></div><div class="codebox"><pre><span class="comment">## Conditional logic</span>
-brew temperature = 24
+  <div class="rule"></div>
 
-ifit temperature >= 20 andit temperature < 30
-    instxt-"Comfortable"
-elseit
-    instxt-"Check the weather"
-exec</pre></div></div><p class="muted">Examples show currently documented syntax. Language capabilities are evolving; see the syntax reference for implementation details.</p></div></section>
-  <section id="toolchain"><div class="wrap"><div class="section-head"><div class="eyebrow">03 / Get started</div><h2>Build the tools. Run your first program.</h2><p>Build requirements: a C11 compiler, a C++20 compiler, and GNU Make or CMake 3.20+.</p></div><div class="split"><article class="card"><h3>Build</h3><div class="codebox"><pre>git clone https://github.com/theprojectcreatorof2amthoughts/Shay.git
+  <div class="columns">
+    <div>
+      <section id="about">
+        <h2>About Shay</h2>
+        <p>Shay is designed around its own vocabulary and file formats, with an interpreter and a native compiler in the same toolchain. The project focuses on making a distinct language while steadily improving its implementation, diagnostics, and developer experience.</p>
+      </section>
+
+      <div class="rule"></div>
+
+      <section id="getting-started">
+        <h2>Getting started</h2>
+        <p>Clone the repository and build the project with the included Makefile. Check the README for platform-specific notes and the latest build instructions.</p>
+        <pre class="code">git clone https://github.com/theprojectcreatorof2amthoughts/Shay.git
 cd Shay
 make
-make test</pre></div></article><article class="card"><h3>Run and compile</h3><div class="codebox"><pre>./build/shaii examples/hello.shay
-./build/shaii --check examples/hello.shay
-./build/gshai -o hello examples/hello.shay
-./hello</pre></div></article></div><p class="muted">See the repository README for installation, compiler flags, CMake, and object-file instructions.</p></div></section>
-  <section id="files"><div class="wrap"><div class="section-head"><div class="eyebrow">04 / File formats</div><h2>One project. A few distinct file types.</h2></div><div class="card"><table><thead><tr><th>Extension</th><th>Purpose</th></tr></thead><tbody><tr><td><code>.shay</code></td><td>Shay source program</td></tr><tr><td><code>.shaii</code></td><td>Shay library</td></tr><tr><td><code>.shaz</code></td><td>Zeccurs task file</td></tr><tr><td><code>.sho</code></td><td>Native relocatable object file</td></tr></tbody></table></div></div></section>
-  <section id="roadmap"><div class="wrap"><div class="section-head"><div class="eyebrow">05 / What's next</div><h2>Built in the open. Growing step by step.</h2><p>The roadmap is aspirational; these are areas of ongoing and future development, not promises that every feature is already available.</p></div><div class="grid"><article class="card"><h3>Language foundations</h3><p>Richer expressions, robust diagnostics, expanded values, scopes, and control flow.</p></article><article class="card"><h3>Developer experience</h3><p>More standard-library modules, improved tooling, clearer errors, and a possible interactive REPL.</p></article><article class="card"><h3>Native ecosystem</h3><p>Compiler improvements, object linking, optimization, and a C/C++ interoperability story.</p></article></div><p style="margin-top:25px"><a href="https://github.com/theprojectcreatorof2amthoughts/Shay/issues">Follow development and contribute on GitHub ↗</a></p></div></section>
+make test</pre>
+      </section>
+
+      <div class="rule"></div>
+
+      <section id="syntax">
+        <h2>Writing Shay</h2>
+        <p>Shay uses its own keywords for declarations, output, functions, and control flow. Here is a small example:</p>
+        <pre class="code"><span class="comment">## A first Shay program</span>
+<span class="keyword">brew</span> name = <span class="string">"world"</span>
+instxt-<span class="string">"Hello, "</span>
+insval-name
+
+<span class="keyword">brew</span> score = 42
+<span class="keyword">ifit</span> score >= 40
+    instxt-<span class="string">"You did it!"</span>
+<span class="keyword">exec</span></pre>
+        <p>For the complete and current syntax, use the syntax reference in the repository.</p>
+      </section>
+
+      <div class="rule"></div>
+
+      <section id="tools">
+        <h2>The toolchain</h2>
+        <div class="feature-list">
+          <article class="feature">
+            <h3><code>shaii</code> — interpreter</h3>
+            <p>Run Shay source files directly and check source syntax from the command line.</p>
+          </article>
+          <article class="feature">
+            <h3><code>gshai</code> — native compiler</h3>
+            <p>Compile supported Shay programs into native executables or relocatable <code>.sho</code> object files.</p>
+          </article>
+          <article class="feature">
+            <h3>Libraries and task files</h3>
+            <p>Shay's ecosystem includes <code>.shaii</code> libraries and <code>.shaz</code> task files.</p>
+          </article>
+        </div>
+      </section>
+
+      <div class="rule"></div>
+
+      <section id="documentation">
+        <h2>Documentation and resources</h2>
+        <div class="resource-grid">
+          <article class="resource">
+            <h3>README</h3>
+            <p><a href="https://github.com/theprojectcreatorof2amthoughts/Shay/blob/main/README.md">Build and installation guide →</a></p>
+          </article>
+          <article class="resource">
+            <h3>Syntax reference</h3>
+            <p><a href="https://github.com/theprojectcreatorof2amthoughts/Shay/blob/main/docs/SYNTAX.md">Explore Shay syntax →</a></p>
+          </article>
+          <article class="resource">
+            <h3>Examples</h3>
+            <p><a href="https://github.com/theprojectcreatorof2amthoughts/Shay/tree/main/examples">Browse example programs →</a></p>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <aside class="side-panel">
+      <h2>Shay at a glance</h2>
+      <ul>
+        <li>Hybrid programming language</li>
+        <li>Dedicated interpreter: <code>shaii</code></li>
+        <li>Native compiler: <code>gshai</code></li>
+        <li>Source files: <code>.shay</code></li>
+        <li>Library files: <code>.shaii</code></li>
+        <li>Task files: <code>.shaz</code></li>
+        <li>Object files: <code>.sho</code></li>
+      </ul>
+      <div class="rule"></div>
+      <h2>Development</h2>
+      <p>Shay is developed in the open. Follow changes, report issues, or contribute through GitHub.</p>
+      <a href="https://github.com/theprojectcreatorof2amthoughts/Shay/issues">Issues and discussions →</a>
+      <div class="rule"></div>
+      <h2>Project status</h2>
+      <p>Actively evolving. Features and syntax may change as the language develops.</p>
+    </aside>
+  </div>
 </main>
-<footer><div class="wrap foot"><span>Shay — an independent programming language project.</span><span><a href="https://github.com/theprojectcreatorof2amthoughts/Shay">Source code</a> · <a href="https://github.com/theprojectcreatorof2amthoughts/Shay/blob/main/README.md">Documentation</a> · <a href="https://github.com/theprojectcreatorof2amthoughts/Shay/blob/main/docs/SYNTAX.md">Syntax reference</a></span></div></footer>
-</body></html>
+
+<footer>
+  <div class="container footer-inner">
+    <span>Shay — an independent programming language project.</span>
+    <span><a href="https://github.com/theprojectcreatorof2amthoughts/Shay">Source code</a> · <a href="https://github.com/theprojectcreatorof2amthoughts/Shay/issues">Community</a></span>
+  </div>
+</footer>
+</body>
+</html>
