@@ -1,6 +1,7 @@
 #include "ast.hpp"
 #include "imports.hpp"
 #include "lexer.hpp"
+#include "kernel_backend.hpp"
 #include "parser.hpp"
 #include <chrono>
 #include <cctype>
@@ -331,13 +332,52 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
  return static_cast<bool>(out);
 }
 void print_diagnostics(const BuildContext&ctx){for(const auto&d:ctx.diagnostics)std::cerr<<d.file.string()<<':'<<d.line<<": error: "<<d.message<<'\n';}
+
+int run_kernel_command(const std::vector<std::string>& args) {
+#ifdef _WIN32
+ std::vector<const char*> argv; for(const auto&arg:args) argv.push_back(arg.c_str()); argv.push_back(nullptr);
+ return static_cast<int>(_spawnvp(_P_WAIT,args.front().c_str(),argv.data()));
+#else
+ std::string command; for(const auto&arg:args){if(!command.empty())command+=" ";command+=shell_quote(arg);}
+ return std::system(command.c_str());
+#endif
+}
+int compile_kernel(const fs::path& input,const fs::path& output) {
+ std::ifstream file(input,std::ios::binary);
+ if(!file){std::cerr<<"gshai: cannot open kernel source: "<<input.string()<<'\n';return 1;}
+ const std::string source((std::istreambuf_iterator<char>(file)),std::istreambuf_iterator<char>());
+ shay::Lexer lexer(source);const auto tokens=lexer.scan();shay::Parser parser(tokens);const shay::Program program=parser.parse();
+ bool invalid=false;
+ for(const auto&e:lexer.errors()){std::cerr<<input.string()<<':'<<e.line<<':'<<e.column<<": error: "<<e.message<<'\n';invalid=true;}
+ for(const auto&e:program.errors){std::cerr<<input.string()<<':'<<e.line<<": error: "<<e.message<<'\n';invalid=true;}
+ if(invalid)return 1;
+ std::string assembly,error;
+ if(!shay::emit_x86_64_kernel_assembly(program,assembly,error)){std::cerr<<"gshai: kernel: "<<error<<'\n';return 1;}
+ const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();
+ const fs::path base=fs::temp_directory_path()/("shay-kernel-"+std::to_string(stamp));
+ const fs::path asm_path=base;const fs::path obj_path=base.string()+".o";const fs::path ld_path=base.string()+".ld";
+ auto cleanup=[&](){std::error_code ec;fs::remove(asm_path,ec);fs::remove(obj_path,ec);fs::remove(ld_path,ec);};
+ {std::ofstream out(asm_path,std::ios::binary);if(!out){cleanup();std::cerr<<"gshai: cannot write temporary assembly\n";return 1;}out<<assembly;}
+ {std::ofstream out(ld_path,std::ios::binary);if(!out){cleanup();std::cerr<<"gshai: cannot write temporary linker script\n";return 1;}out<<shay::x86_64_kernel_linker_script();}
+ const char*clang_env=std::getenv("CLANG");const std::string clang=clang_env&&*clang_env?clang_env:"clang";
+ const char*lld_env=std::getenv("LD_LLD");const std::string lld=lld_env&&*lld_env?lld_env:"ld.lld";
+ int status=run_kernel_command({clang,"--target=x86_64-unknown-none-elf","-ffreestanding","-fno-pic","-fno-stack-protector","-mno-red-zone","-c",asm_path.string(),"-o",obj_path.string()});
+ if(status!=0){cleanup();std::error_code ec;fs::remove(output,ec);std::cerr<<"gshai: Clang failed to assemble the kernel (set CLANG to your Clang executable)\n";return 1;}
+ status=run_kernel_command({lld,"-nostdlib","-static","-z","max-page-size=0x1000","-T",ld_path.string(),"-o",output.string(),obj_path.string()});
+ cleanup();
+ if(status!=0){std::error_code ec;fs::remove(output,ec);std::cerr<<"gshai: ld.lld failed to link the kernel (set LD_LLD to your LLD linker)\n";return 1;}
+ std::cout<<"gshai: wrote freestanding x86_64 kernel "<<output.string()<<'\n';
+ return 0;
+}
+
 }
 int main(int argc,char**argv){
- bool warn_all=false,warn_extra=false;std::string optimization="2";
+ bool warn_all=false,warn_extra=false,kernel_mode=false;std::string optimization="2";
  std::vector<std::string> positional;
  for(int i=1;i<argc;++i){
   const std::string arg=argv[i];
-  if(arg=="--shaywall")warn_all=true;
+  if(arg=="--kernel")kernel_mode=true;
+  else if(arg=="--shaywall")warn_all=true;
   else if(arg=="--shaywextra")warn_extra=true;
   else if(arg=="--shayo0")optimization="0";
   else if(arg=="--shayo1")optimization="1";
@@ -355,7 +395,8 @@ int main(int argc,char**argv){
            <<"  --shayo0      Disable optimization (-O0)\n"
            <<"  --shayo1      Enable level 1 optimization (-O1)\n"
            <<"  --shayo2      Enable level 2 optimization (-O2; default)\n"
-           <<"  --shayo3      Enable level 3 optimization (-O3)\n";
+           <<"  --shayo3      Enable level 3 optimization (-O3)\n"
+           <<"  --kernel      Build a freestanding x86_64 Limine kernel (instxt subset)\n";
   return 0;
  }
  if(positional.size()<2||positional.size()>3){std::cerr<<"gshai: expected -ob or -o and a .shay input (try --help)\n";return 2;}
@@ -363,8 +404,9 @@ int main(int argc,char**argv){
  const bool object_mode=mode=="-ob";fs::path output,input;
  if(positional.size()==2)input=positional[1];else{output=positional[1];input=positional[2];}
  if(input.extension()!=".shay"){std::cerr<<"gshai: input must be a .shay file\n";return 2;}
- if(output.empty()){output=input.parent_path()/input.stem();if(object_mode)output+=".sho";}
+ if(output.empty()){output=input.parent_path()/input.stem();if(object_mode)output+=".sho";else if(kernel_mode)output+=".elf";}
  else if(object_mode&&output.extension()!=".sho"){std::cerr<<"gshai: -ob output must use the .sho extension\n";return 2;}
+ if(kernel_mode){if(object_mode){std::cerr<<"gshai: --kernel requires -o, not -ob\n";return 2;}if(output.extension()!=".elf"){std::cerr<<"gshai: --kernel output must use the .elf extension\n";return 2;}return compile_kernel(input,output);}
  BuildContext context;load_file(input,context);if(!context.diagnostics.empty()){print_diagnostics(context);return 1;}
  const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();const fs::path temp=fs::temp_directory_path()/("shay-build-"+std::to_string(stamp)+".cpp");
  if(!write_translation(context,temp,!object_mode)){std::cerr<<"gshai: cannot write temporary translation unit\n";return 1;}
