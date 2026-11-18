@@ -129,6 +129,8 @@ Requirements: Clang with the x86_64-none-elf target and LLVM's `ld.lld` linker.
 
 ```sh
 make
+make kernel
+# Or directly:
 ./build/gshai --kernel -o build/shay-kernel.elf examples/kernel.shay
 ```
 
