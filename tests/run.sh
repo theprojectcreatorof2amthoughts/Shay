@@ -531,7 +531,7 @@ cat "$TMP/expected-log.txt" "$TMP/expected-log.txt" > "$TMP/expected-appended.tx
 cmp "$TMP/expected-appended.txt" "$TMP/diagnostic.txt" || fail "interpreter log append behavior"
 pass "logit appends without overwriting existing files"
 
-CXX="\${CXX:-c++}" "$GSHAI" -o "$TMP/log-files-app" "$TMP/log-files.shay" || fail "compile log-file program"
+CXX="$CXX" "$GSHAI" -o "$TMP/log-files-app" "$TMP/log-files.shay" || fail "compile log-file program"
 (cd "$TMP" && "$TMP/log-files-app") || fail "compiled log output"
 cat "$TMP/expected-appended.txt" "$TMP/expected-log.txt" > "$TMP/expected-compiled.txt"
 cmp "$TMP/expected-compiled.txt" "$TMP/diagnostic.txt" || fail "compiled multiline log content"
@@ -543,7 +543,8 @@ $logindxnm "debug"
 logit/>"Shay debug entry"
 EOF
 (cd "$TMP" && "$SHAII" "$TMP/log-shl.shay") || fail "interpreter .shl log output"
-grep -q '^Shay debug entry
+grep -q '^Shay debug entry$' "$TMP/debug.shl" || fail ".shl extension selection"
+pass "logindxfl supports alternate extensions such as .shl"
 
 cat > "$TMP/mixed-return.shaii" <<'EOF'
 $declr useme(x, y)
