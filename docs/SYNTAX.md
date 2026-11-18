@@ -14,6 +14,23 @@ insval/>username
 
 The parser accepts string, numeric (including negative), and boolean literals for `brew`. String escapes currently supported are `\\n`, `\\t`, `\\r`, `\\\\`, and `\\"`. Zeccurs files (`.shaz`) are variable-free.
 
+## Log files
+
+Use `$logindxfl` to select the log extension and `$logindxnm` to select the filename. The filename is supplied without its extension; Shay applies the selected extension. If neither setting is supplied, the default file is `shay.log`. Existing log files are appended to rather than overwritten.
+
+```shay
+$logindxfl <.log>
+$logindxnm "test"
+
+logit/>"Something went wrong in LN:5
+instxt-"hi"
+------^
+Unexpected Symbol"
+```
+
+Extensions such as `.log`, `.txt`, and `.shl` are supported. A `logit/>` string may span multiple source lines; its line breaks and indentation are preserved. Each log entry receives a trailing newline when needed. Logging works in both the interpreter and compiled executables, including inside function and conditional bodies.
+
+
 ## Functions
 
 Declare functions with `$declr`, return a value with `forw`, and close the declaration with `finish`:
