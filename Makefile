@@ -24,7 +24,8 @@ FRONTEND_OBJECTS := $(patsubst src/%.cpp,$(BUILD_DIR)/%.o,$(FRONTEND_SOURCES))
 RUNTIME_OBJECT := $(BUILD_DIR)/runtime.o
 INTERPRETER_OBJECT := $(BUILD_DIR)/shaii.o
 COMPILER_OBJECT := $(BUILD_DIR)/gshai.o
-DEPFILES := $(FRONTEND_OBJECTS:.o=.d) $(RUNTIME_OBJECT:.o=.d) $(INTERPRETER_OBJECT:.o=.d) $(COMPILER_OBJECT:.o=.d)
+KERNEL_BACKEND_OBJECT := $(BUILD_DIR)/kernel_backend.o
+DEPFILES := $(FRONTEND_OBJECTS:.o=.d) $(RUNTIME_OBJECT:.o=.d) $(INTERPRETER_OBJECT:.o=.d) $(COMPILER_OBJECT:.o=.d) $(KERNEL_BACKEND_OBJECT:.o=.d)
 
 .PHONY: all build test check run compile executable clean install uninstall debug release help
 all: build
@@ -43,7 +44,7 @@ $(BUILD_DIR)/runtime.o: src/runtime.c src/runtime.h | $(BUILD_DIR)/.dir
 $(INTERPRETER): $(INTERPRETER_OBJECT) $(FRONTEND_OBJECTS) $(RUNTIME_OBJECT)
 	$(CXX) $(LDFLAGS) $^ $(LDLIBS) -o "$@"
 
-$(COMPILER): $(COMPILER_OBJECT) $(FRONTEND_OBJECTS)
+$(COMPILER): $(COMPILER_OBJECT) $(KERNEL_BACKEND_OBJECT) $(FRONTEND_OBJECTS)
 	$(CXX) $(LDFLAGS) $^ $(LDLIBS) -o "$@"
 
 -include $(DEPFILES)
