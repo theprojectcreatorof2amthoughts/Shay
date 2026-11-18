@@ -1,4 +1,4 @@
-instxt-"Hello, world from Shay!"
+instxt/>"Hello, world from Shay!"
 brew language = "Shay"
-instxt-"Language:"
-insval-language
+instxt/>"Language:"
+insval/>language
