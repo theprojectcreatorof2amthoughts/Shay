@@ -87,8 +87,9 @@ $declr useme(x, y)
 finish
 EOF
 CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/input-global-function-app" "$TMP/input-global-function.shay" || fail "compile imported function using later inpvarforw global"
-out=$(printf '32\\n' | "$TMP/input-global-function-app") || fail "run imported function using later inpvarforw global"
-printf '%s\\n' "$out" | grep -q '^Error!
+out=$(printf '32\n' | "$TMP/input-global-function-app") || fail "run imported function using later inpvarforw global"
+printf '%s\n' "$out" | grep -q '^Error!$' || fail "later inpvarforw global was not visible inside imported function"
+pass "imported functions can reference globals declared after their import"
 cat > "$TMP/lexer-parser.shay" <<'EOF'
 brew greeting = "Line 1\nLine 2"
 brew debt = -42
