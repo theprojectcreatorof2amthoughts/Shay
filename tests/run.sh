@@ -263,6 +263,7 @@ cat > "$TMP/logical-conditions.shay" <<'EOF'
 brew x = 20
 brew y = 10
 brew z = 5
+brew invalid_number = "not numeric"
 ifit x > y andit y > z
     instxt-"AND works"
 exec
@@ -278,10 +279,10 @@ exec
 ifit x < y andit y > z
     instxt-"This must not appear"
 exec
-ifit x > y orit missing_value > 0
+ifit x > y orit invalid_number > 0
     instxt-"Short-circuit OR works"
 exec
-ifit x < y andit missing_value > 0
+ifit x < y andit invalid_number > 0
     instxt-"This must not appear either"
 exec
 ifit x < y
