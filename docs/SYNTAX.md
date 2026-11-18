@@ -28,7 +28,7 @@ Functions can be declared in `.shay` programs and `.shaii` libraries. A function
 
 ## Conditions and logical operators
 
-Use `ifit` to begin a conditional block and `exec` to close it. Numeric comparisons support `>`, `<`, `>=`, `<=`, `==`, and `!=`. Combine comparisons with Shay's logical operators:
+Use `ifit` to begin a conditional block and `exec` to close it. Numeric comparisons support `>`, `<`, `>=`, `<=`, `==`, and `!=`. A single `=` is also accepted as an equality shorthand. Combine comparisons with Shay's logical operators:
 
 - `andit` — both conditions must be true.
 - `orit` — at least one condition must be true.

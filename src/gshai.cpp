@@ -199,13 +199,14 @@ std::string cpp_condition(const std::string&raw){
  if(condition.size()>=5&&condition.compare(0,5,"notit")==0&&
     (condition.size()==5||std::isspace(static_cast<unsigned char>(condition[5]))))
   return "!("+cpp_condition(condition.substr(5))+")";
- const std::string operators[]={">=","<=","==","!=",">","<"};
+ const std::string operators[]={">=","<=","==","!=",">","<","="};
  for(const auto&op:operators){
   int depth=0;
   for(std::size_t i=0;i+op.size()<=condition.size();++i){
    if(condition[i]=='('){++depth;continue;}if(condition[i]==')'){--depth;continue;}
    if(depth==0&&condition.compare(i,op.size(),op)==0)
-    return "("+cpp_expression(condition.substr(0,i))+" "+op+" "+cpp_expression(condition.substr(i+op.size()))+")";
+    const std::string cpp_op=op=="="?"==":op;
+    return "("+cpp_expression(condition.substr(0,i))+" "+cpp_op+" "+cpp_expression(condition.substr(i+op.size()))+")";
   }
  }
  return cpp_expression(condition);

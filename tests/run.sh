@@ -385,6 +385,7 @@ $declr useme(x, y)
     ifit x*y = 34
         !#useme
     exec
+    instxt-"Function continued after marking failure"
 finish
 EOF
 cat > "$TMP/explicit-function-failure.shay" <<'EOF'
@@ -397,12 +398,14 @@ instxt-"This must not appear"
 EOF
 if "$SHAII" "$TMP/explicit-function-failure.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpreter explicit function failure exit status"; fi
 grep -q '^Error!$' "$TMP/out" || fail "interpreter explicit function failure was not visible to caller"
+grep -q 'Function continued after marking failure' "$TMP/out" || fail "interpreter stopped function execution after marker"
 if grep -q 'This must not appear' "$TMP/out"; then fail "interpreter continued after explicit function failure"; fi
 pass "interpreter propagates an explicit !#function failure to its caller"
 
 CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/explicit-function-failure-app" "$TMP/explicit-function-failure.shay" || fail "compile explicit function failure"
 if "$TMP/explicit-function-failure-app" >"$TMP/out" 2>"$TMP/err"; then fail "compiler explicit function failure exit status"; fi
 grep -q '^Error!$' "$TMP/out" || fail "compiler explicit function failure was not visible to caller"
+grep -q 'Function continued after marking failure' "$TMP/out" || fail "compiler stopped function execution after marker"
 if grep -q 'This must not appear' "$TMP/out"; then fail "compiler continued after explicit function failure"; fi
 pass "compiler propagates an explicit !#function failure to its caller"
 
