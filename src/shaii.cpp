@@ -24,6 +24,9 @@ struct Context{
  std::unordered_set<std::string> loaded,active;
  std::vector<Diagnostic> diagnostics;
  bool check_only=false;
+ std::unordered_map<std::string,std::string> failures;
+ std::unordered_set<std::string> handled_failures;
+ bool exit_requested=false;
 };
 using NumberScope=std::unordered_map<std::string,double>;
 void diagnose(Context&ctx,const fs::path&file,std::size_t line,const std::string&message){ctx.diagnostics.push_back({file,line,message});}
@@ -31,56 +34,89 @@ bool evaluate(const std::string&source,const NumberScope&values,double&result,st
  shay::NumericExpression expression(source,values);return expression.evaluate(result,error);
 }
 std::string number_text(double value){std::ostringstream out;out<<std::setprecision(15)<<value;return out.str();}
-void execute_statements(const std::vector<shay::Statement>&statements,Context&ctx,const fs::path&file,NumberScope&scope);
-void call_function(const shay::Statement&call,Context&ctx,const fs::path&file,NumberScope&callerScope){
- auto found=ctx.functions.find(call.name);
- if(found==ctx.functions.end()){diagnose(ctx,file,call.line,"unknown function '"+call.name+"'");return;}
- const auto&fn=found->second;
- if(call.arguments.size()!=fn.parameters.size()){
-  diagnose(ctx,file,call.line,"function '"+call.name+"' expects "+std::to_string(fn.parameters.size())+" argument(s), got "+std::to_string(call.arguments.size()));return;
+bool evaluate_condition(const std::string&source,const NumberScope&scope,Context&ctx,bool&result,std::string&error){
+ auto trim=[](const std::string&value){const auto first=value.find_first_not_of(" \t\r\n");if(first==std::string::npos)return std::string();const auto last=value.find_last_not_of(" \t\r\n");return value.substr(first,last-first+1);};
+ const std::string condition=trim(source);
+ if(condition.rfind("!#",0)==0){
+  const std::string name=trim(condition.substr(2));
+  if(name.empty()){error="expected a function name after '!#'";return false;}
+  result=ctx.failures.count(name)!=0;
+  if(result)ctx.handled_failures.insert(name);
+  return true;
  }
+ return shay::evaluate_condition(condition,scope,result,error);
+}
+bool execute_statements(const std::vector<shay::Statement>&statements,Context&ctx,const fs::path&file,NumberScope&scope,std::string&failure);
+bool call_function(const shay::Statement&call,Context&ctx,const fs::path&file,NumberScope&callerScope){
+ auto fail=[&](const std::string&reason){ctx.failures[call.name]=reason;return false;};
+ auto found=ctx.functions.find(call.name);
+ if(found==ctx.functions.end())return fail("unknown function '"+call.name+"'");
+ const auto&fn=found->second;
+ if(call.arguments.size()!=fn.parameters.size())
+  return fail("function '"+call.name+"' expects "+std::to_string(fn.parameters.size())+" argument(s), got "+std::to_string(call.arguments.size()));
  NumberScope local=callerScope;
  for(std::size_t i=0;i<call.arguments.size();++i){
   double value=0;std::string error;
-  if(!evaluate(call.arguments[i],callerScope,value,error)){diagnose(ctx,file,call.line,"invalid argument "+std::to_string(i+1)+" for '"+call.name+"': "+error);return;}
+  if(!evaluate(call.arguments[i],callerScope,value,error))
+   return fail("invalid argument "+std::to_string(i+1)+" for '"+call.name+"': "+error);
   local[fn.parameters[i]]=value;
  }
  if(fn.has_return){
   double result=0;std::string error;
-  if(!evaluate(fn.value,local,result,error)){diagnose(ctx,file,fn.line,"invalid return expression in '"+call.name+"': "+error);return;}
+  if(!evaluate(fn.value,local,result,error))
+   return fail("invalid return expression in '"+call.name+"': "+error);
   if(!ctx.check_only)shay_runtime_write((number_text(result)+"\n").c_str());
  }else{
-  execute_statements(fn.body,ctx,file,local);
+  std::string reason;
+  if(!execute_statements(fn.body,ctx,file,local,reason))return fail(reason);
  }
+ ctx.failures.erase(call.name);
+ ctx.handled_failures.erase(call.name);
+ return true;
 }
-void execute_statements(const std::vector<shay::Statement>&statements,Context&ctx,const fs::path&file,NumberScope&scope){
+bool execute_statements(const std::vector<shay::Statement>&statements,Context&ctx,const fs::path&file,NumberScope&scope,std::string&failure){
+ bool success=true;
  for(const auto&s:statements){
+  if(ctx.exit_requested)break;
   switch(s.kind){
    case shay::StatementKind::OutputText:
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
     break;
+   case shay::StatementKind::OutputTextExit:
+    if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
+    ctx.exit_requested=true;
+    break;
+   case shay::StatementKind::OutputTextExit:
+    if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
+    ctx.exit_requested=true;
+    failure="program terminated by instxtexit";
+    return false;
    case shay::StatementKind::OutputValue:{
     auto number=scope.find(s.name);
     if(number!=scope.end()){if(!ctx.check_only)shay_runtime_write((number_text(number->second)+"\n").c_str());break;}
     auto value=ctx.values.find(s.name);
     if(value!=ctx.values.end()){if(!ctx.check_only)shay_runtime_write((value->second+"\n").c_str());}
-    else diagnose(ctx,file,s.line,"unknown variable '"+s.name+"'");
+    else{failure="unknown variable '"+s.name+"'";success=false;}
     break;
    }
    case shay::StatementKind::If:{
     bool condition=false;std::string error;
-    if(!shay::evaluate_condition(s.condition,scope,condition,error)){diagnose(ctx,file,s.line,"invalid ifit condition: "+error);break;}
-    if(condition)execute_statements(s.body,ctx,file,scope);else execute_statements(s.else_body,ctx,file,scope);
+    if(!evaluate_condition(s.condition,scope,ctx,condition,error)){failure="invalid ifit condition: "+error;success=false;break;}
+    std::string nestedFailure;
+    const bool nestedOk=condition?execute_statements(s.body,ctx,file,scope,nestedFailure):execute_statements(s.else_body,ctx,file,scope,nestedFailure);
+    if(!nestedOk&&!ctx.exit_requested){failure=nestedFailure;success=false;}
     break;
    }
    case shay::StatementKind::OutputCall:
-    call_function(s,ctx,file,scope);
+    if(!call_function(s,ctx,file,scope)){failure=ctx.failures[s.name];success=false;}
     break;
    default:
-    diagnose(ctx,file,s.line,"statement is not supported inside a function body");
+    failure="statement is not supported inside a function body";
+    success=false;
     break;
   }
  }
+ return success&&!ctx.exit_requested;
 }
 void execute_file(const fs::path&input,Context&ctx){
  std::error_code ec;const fs::path canonical=fs::weakly_canonical(input,ec);const std::string key=(ec?input:canonical).string();
@@ -114,8 +150,8 @@ void execute_file(const fs::path&input,Context&ctx){
     break;
    case shay::StatementKind::If:{
     bool condition=false;std::string error;
-    if(!shay::evaluate_condition(s.condition,ctx.numbers,condition,error)){diagnose(ctx,input,s.line,"invalid ifit condition: "+error);break;}
-    {auto scope=ctx.numbers;if(condition)execute_statements(s.body,ctx,input,scope);else execute_statements(s.else_body,ctx,input,scope);}
+    if(!evaluate_condition(s.condition,ctx.numbers,ctx,condition,error)){diagnose(ctx,input,s.line,"invalid ifit condition: "+error);break;}
+    {auto scope=ctx.numbers;{std::string ignored;if(condition)execute_statements(s.body,ctx,input,scope,ignored);else execute_statements(s.else_body,ctx,input,scope,ignored);}}
     break;
    }
    case shay::StatementKind::OutputText:
@@ -147,6 +183,8 @@ int main(int argc,char**argv){
  }
  if(source.empty()){std::cerr<<"shaii: no input file (try --help)\n";return 2;}
  Context context;context.check_only=check;execute_file(source,context);
+ if(context.exit_requested)return 1;
+ for(const auto&failure:context.failures)if(!context.handled_failures.count(failure.first)){std::cerr<<"shaii: function '"<<failure.first<<"' failed: "<<failure.second<<'\n';return 1;}
  if(!context.diagnostics.empty()){for(const auto&d:context.diagnostics)std::cerr<<d.file.string()<<':'<<d.line<<": error: "<<d.message<<'\n';return 1;}
  if(check)std::cout<<"shaii: "<<source.string()<<": no errors\n";
  return 0;
