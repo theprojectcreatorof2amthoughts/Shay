@@ -99,6 +99,7 @@ void load_file(const fs::path&input,BuildContext&ctx){
    if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'brew' is not allowed");continue;}
    if(!ctx.variables.insert(s.name).second){diagnose(ctx,input,s.line,"variable '"+s.name+"' is already declared");continue;}
   }else if(s.kind==shay::StatementKind::InputVariable){
+   if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'inpvarforw' is not allowed");continue;}
    // First use declares the variable; later uses intentionally reuse it.
    ctx.variables.insert(s.name);
   }else if(s.kind==shay::StatementKind::DeclareFunction){
