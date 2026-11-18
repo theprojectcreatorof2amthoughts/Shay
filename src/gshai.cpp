@@ -3,6 +3,7 @@
 #include "lexer.hpp"
 #include "parser.hpp"
 #include <chrono>
+#include <cctype>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
