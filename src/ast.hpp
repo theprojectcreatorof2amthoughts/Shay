@@ -10,7 +10,7 @@ struct Statement {
     std::size_t line = 1;
     std::string name, value, condition;
     std::vector<std::string> parameters, arguments;
-    std::vector<Statement> body;
+    std::vector<Statement> body, else_body;
     bool has_return = false;
     bool external_import = false;
 };
