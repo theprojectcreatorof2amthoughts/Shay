@@ -1,0 +1,21 @@
+# Shay syntax highlighting vocabulary
+# One exact token per line. YSEdit downloads this file from the Shay repository.
+# Add new language keywords here; do not edit YSEdit's keyword table.
+$declr
+$shaiiport
+$shazport
+brew
+ifit
+elseit
+exec
+finish
+forw
+instxt
+instxtexit
+insval
+inpvarforw
+andit
+orit
+notit
+true
+false
