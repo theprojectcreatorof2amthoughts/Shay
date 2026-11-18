@@ -228,6 +228,7 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
    case shay::StatementKind::OutputCall:{
     auto fn=ctx.functions.find(s.name);
     if(fn==ctx.functions.end())break;
+    out<<indent<<"shay_handled_failures.erase("<<cpp_string(s.name)<<");\n";
     out<<indent<<"try {\n";
     if(fn->second.has_return)out<<indent<<" { std::ostringstream shay_nested_call; shay_nested_call<<std::setprecision(15)<<";
     out<<indent<<(fn->second.has_return?"  ":" ")<<"shay_fn_"<<s.name<<"(values";
@@ -287,6 +288,7 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
     out<<" shay_runtime_write((values["<<cpp_string(s.name)<<"] + "<<cpp_string("\n")<<").c_str());\n";break;
    case shay::StatementKind::OutputCall:{
     auto fn=ctx.functions.find(s.name);if(fn==ctx.functions.end())break;
+    out<<" shay_handled_failures.erase("<<cpp_string(s.name)<<");\n";
     out<<" try {\n";
     if(fn->second.has_return)out<<"  { std::ostringstream shay_call_output; shay_call_output<<std::setprecision(15)<<";
     out<<(fn->second.has_return?"   ":"  ")<<"shay_fn_"<<s.name<<"(values";
