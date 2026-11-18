@@ -278,10 +278,16 @@ exec
 ifit x < y andit y > z
     instxt-"This must not appear"
 exec
+ifit x > y orit missing_value > 0
+    instxt-"Short-circuit OR works"
+exec
+ifit x < y andit missing_value > 0
+    instxt-"This must not appear either"
+exec
 EOF
 "$SHAII" --check "$TMP/logical-conditions.shay" >/dev/null || fail "logical condition syntax check"
 out=$("$SHAII" "$TMP/logical-conditions.shay") || fail "interpreter logical conditions"
-for expected in "AND works" "OR works" "NOT works" "Grouped logic works"; do
+for expected in "AND works" "OR works" "NOT works" "Grouped logic works" "Short-circuit OR works"; do
     printf '%s\n' "$out" | grep -q "$expected" || fail "interpreter $expected"
 done
 if printf '%s\n' "$out" | grep -q 'must not appear'; then fail "interpreter logical false branch"; fi
