@@ -101,6 +101,18 @@ Program Parser::parse(){
      if(valid)valid=consume(TokenKind::Symbol,"]",program.errors,"expected ']' after the filename");
     }
     if(valid)statement.value=filename;
+   }else if(match(TokenKind::Identifier,"logindxfl")){
+    statement.kind=StatementKind::LogFileExtension;
+    valid=consume(TokenKind::Symbol,"<",program.errors,"expected '<' before the log file extension");
+    if(valid)valid=consume(TokenKind::Symbol,".",program.errors,"expected an extension beginning with '.'");
+    if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected a file extension after '.'");
+    if(valid){statement.value="."+previous().text;
+     if(statement.value.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-")!=std::string::npos){error(program.errors,"invalid log file extension");valid=false;}}
+    if(valid)valid=consume(TokenKind::Symbol,">",program.errors,"expected '>' after the log file extension");
+   }else if(match(TokenKind::Identifier,"logindxnm")){
+    statement.kind=StatementKind::LogFileName;
+    valid=consume(TokenKind::String,"",program.errors,"expected a quoted log filename after '$logindxnm'");
+    if(valid){statement.value=previous().text;if(statement.value.empty()){error(program.errors,"log filename cannot be empty");valid=false;}}
    }else if(match(TokenKind::Identifier,"declr")){
     statement.kind=StatementKind::DeclareFunction;
     valid=consume(TokenKind::Identifier,"",program.errors,"expected a function name after '$declr");
@@ -170,6 +182,11 @@ Program Parser::parse(){
    statement.kind=StatementKind::ReturnValue;
    statement.value=collect_expression(tokens_,current_,"",valid);
    if(statement.value.empty()){error(program.errors,"'forw' requires a return expression");valid=false;}
+  }else if(match(TokenKind::Identifier,"logit")){
+   statement.kind=StatementKind::LogText;
+   valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'logit'");
+   if(valid)valid=consume(TokenKind::String,"",program.errors,"expected quoted log text after 'logit/>'");
+   if(valid)statement.value=previous().text;
   }else if(match(TokenKind::Identifier,"instxt")){
    statement.kind=StatementKind::OutputText;valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'instxt'");
    if(valid)valid=consume(TokenKind::String,"",program.errors,"expected quoted text after 'instxt/>'");
