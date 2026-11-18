@@ -333,7 +333,7 @@ printf '%s\n' "$out" | grep -q 'Execution continued' || fail "interpreter contin
 if printf '%s\n' "$out" | grep -q 'The useme call succeeded'; then fail "interpreter !# selected success branch"; fi
 pass "interpreter tracks a specific function call with !#"
 
-CXX="\${CXX:-c++}" "$GSHAI" -o "$TMP/error-conditions-app" "$TMP/error-conditions.shay" || fail "compile operation-specific error condition"
+CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/error-conditions-app" "$TMP/error-conditions.shay" || fail "compile operation-specific error condition"
 out=$("$TMP/error-conditions-app") || fail "compiled operation-specific error condition"
 printf '%s\n' "$out" | grep -q 'The useme call failed' || fail "compiler !# failure branch"
 printf '%s\n' "$out" | grep -q 'Execution continued' || fail "compiler continues after handled failure"
@@ -354,7 +354,7 @@ grep -q '^Error!
 if grep -q 'This must not appear' "$TMP/out"; then fail "interpreter continued after instxtexit"; fi
 pass "interpreter instxtexit prints and terminates"
 
-CXX="\${CXX:-c++}" "$GSHAI" -o "$TMP/error-exit-app" "$TMP/error-exit.shay" || fail "compile instxtexit program"
+CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/error-exit-app" "$TMP/error-exit.shay" || fail "compile instxtexit program"
 if "$TMP/error-exit-app" >"$TMP/out" 2>"$TMP/err"; then fail "compiler instxtexit exit status"; fi
 grep -q '^Error!
  "$TMP/out" || fail "compiler instxtexit message"
