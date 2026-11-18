@@ -134,8 +134,8 @@ void load_file(const fs::path&input,BuildContext&ctx){
   }else if(s.kind==shay::StatementKind::ReturnValue){
    diagnose(ctx,input,s.line,"'forw' is only valid inside a function");
   }
-  if(s.kind==shay::StatementKind::LogText&&(!ctx.log_file_name_set||!ctx.log_file_extension_set))
-   diagnose(ctx,input,s.line,"'logit/>' requires both '$logindxfl' and '$logindxnm' to be declared before use");
+  if(s.kind==shay::StatementKind::LogText&&(!ctx.log_file_name_set&&!ctx.log_file_extension_set))
+   diagnose(ctx,input,s.line,"'logit/>' requires '$logindxfl' or '$logindxnm' to be configured before use");
   ctx.statements.push_back(s);
  }
  ctx.active.erase(key);ctx.loaded.insert(key);
