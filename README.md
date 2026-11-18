@@ -5,7 +5,7 @@ Shay is an independent hybrid programming language with a C11 runtime and a C++2
 - **`gshai`** — the Shay compiler. It creates native executables or relocatable `.sho` object files.
 - **`shaii`** — the Shay interpreter. It runs Shay source files and provides syntax-check mode.
 
-Shay has its own original grammar and vocabulary, including `brew` for variable declarations and `instxt-"..."` for text output.
+Shay has its own original grammar and vocabulary, including `brew` for variable declarations and `instxt/>"..."` for text output.
 
 ## File formats
 
@@ -47,36 +47,36 @@ Bundled modules include math, units, ASCII codes, text fragments, symbols, geome
 ```shay
 $shaiiport [math.shaii]
 $shaiiport [text.shaii]
-insval-math_pi
-insval-text_space
+insval/>math_pi
+insval/>text_space
 ```
 
 ## Initial syntax
 
 ```shay
-instxt-"Hello, world!"
+instxt/>"Hello, world!"
 brew username = "Alex"
-insval-username
+insval/>username
 
 brew age = 20
 ifit age >= 18 andit notit age == 21
-    instxt-"Adult"
+    instxt/>"Adult"
 elseit
-    instxt-"Not an eligible adult"
+    instxt/>"Not an eligible adult"
 exec
 ```
 
-The current implementation supports string output, literal variable declarations, line-based input with `inpvarforw-name`, variable output, imported functions, numeric-returning functions, void functions with statement bodies, numeric comparisons, and logical condition operators (`andit`, `orit`, and `notit`). Parentheses group logical conditions, with precedence `notit` then `andit` then `orit`. It also supports `ifit` blocks inside functions, function calls, imports, duplicate-import protection, circular-import detection, and source-located diagnostics. A function may use `forw expression` for a numeric return, or contain statements followed by `finish` for a void function.
+The current implementation supports string output, literal variable declarations, line-based input with `inpvarforw/>name`, variable output, imported functions, numeric-returning functions, void functions with statement bodies, numeric comparisons, and logical condition operators (`andit`, `orit`, and `notit`). Parentheses group logical conditions, with precedence `notit` then `andit` then `orit`. It also supports `ifit` blocks inside functions, function calls, imports, duplicate-import protection, circular-import detection, and source-located diagnostics. A function may use `forw expression` for a numeric return, or contain statements followed by `finish` for a void function.
 
 ### Read input into a variable
 
-`inpvarforw-name` reads one complete line from standard input. It creates `name` if it has not been declared yet; if `name` already exists, it replaces its previous value. Input is stored as text, including spaces, and can be used with `insval-name` afterward.
+`inpvarforw/>name` reads one complete line from standard input. It creates `name` if it has not been declared yet; if `name` already exists, it replaces its previous value. Input is stored as text, including spaces, and can be used with `insval/>name` afterward.
 
 ```shay
-instxt-"What's your name?"
-inpvarforw-name
-instxt-"Hello,"
-insval-name
+instxt/>"What's your name?"
+inpvarforw/>name
+instxt/>"Hello,"
+insval/>name
 ```
 
 The interpreter and compiled executables both read from standard input. `shaii --check` does not wait for input. The first implementation supports `inpvarforw` at the top level of a program.
