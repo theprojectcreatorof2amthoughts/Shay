@@ -41,7 +41,7 @@ bool evaluate(const std::string&source,const NumberScope&values,double&result,st
 }
 std::string number_text(double value){std::ostringstream out;out<<std::setprecision(15)<<value;return out.str();}
 fs::path configured_log_path(const Context&ctx){fs::path path(ctx.log_file_name);path.replace_extension(ctx.log_file_extension);return path;}
-bool log_configuration_ready(const Context&ctx){return ctx.log_file_name_set&&ctx.log_file_extension_set;}
+bool log_configuration_ready(const Context&ctx){return ctx.log_file_name_set||ctx.log_file_extension_set;}
 bool append_log(const Context&ctx,const std::string&message){
  std::ofstream stream(configured_log_path(ctx),std::ios::binary|std::ios::app);
  if(!stream)return false;
@@ -122,7 +122,7 @@ bool execute_statements(const std::vector<shay::Statement>&statements,Context&ct
     if(!ctx.check_only)shay_runtime_write((s.value+"\n").c_str());
     break;
    case shay::StatementKind::LogText:
-    if(!log_configuration_ready(ctx)){failure="'logit/>' requires both '$logindxfl' and '$logindxnm' to be declared before use";success=false;}
+    if(!log_configuration_ready(ctx)){failure="'logit/>' requires '$logindxfl' or '$logindxnm' to be configured before use";success=false;}
     else if(!ctx.check_only&&!append_log(ctx,s.value)){failure="cannot write log file '"+configured_log_path(ctx).string()+"'";success=false;}
     break;
    case shay::StatementKind::OutputTextExit:
