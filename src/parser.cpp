@@ -36,7 +36,7 @@ Program Parser::parse(){
   const auto line=peek().line;Statement statement;statement.line=line;bool valid=true;bool skipCurrentLine=true;
   if(match(TokenKind::Identifier,"ifit")){
    statement.kind=StatementKind::If;
-   while(!atEnd()&&peek().kind!=TokenKind::Newline){statement.condition+=peek().text;++current_;}
+   while(!atEnd()&&peek().kind!=TokenKind::Newline){statement.condition+=peek().text;statement.condition.push_back(' ');++current_;}
    if(statement.condition.empty()){error(program.errors,"ifit requires a condition");valid=false;}
    if(peek().kind==TokenKind::Newline)++current_;
    std::vector<Token> bodyTokens;bool foundExec=false;int ifDepth=1;

@@ -3,6 +3,7 @@
 #include "lexer.hpp"
 #include "parser.hpp"
 #include <chrono>
+#include <cctype>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -35,7 +36,7 @@ std::unordered_set<std::string> expression_names(const std::string&source){
  return names;
 }
 void validate_expression_names(BuildContext&ctx,const fs::path&file,std::size_t line,const std::string&source,const std::unordered_set<std::string>&locals,const std::string&label){
- for(const auto&name:expression_names(source))if(!ctx.variables.count(name)&&!locals.count(name)&&name!="true"&&name!="false")
+ for(const auto&name:expression_names(source))if(!ctx.variables.count(name)&&!locals.count(name)&&name!="true"&&name!="false"&&name!="andit"&&name!="orit"&&name!="notit")
   diagnose(ctx,file,line,label+" references unknown variable '"+name+"'");
 }
 void validate_body(BuildContext&ctx,const fs::path&file,const std::vector<shay::Statement>&body,const std::unordered_set<std::string>&locals,const std::string&bodyLabel){
@@ -103,9 +104,54 @@ void load_file(const fs::path&input,BuildContext&ctx){
 std::string cpp_string(const std::string&value){
  std::ostringstream out;out<<'"';for(unsigned char c:value){switch(c){case '\\':out<<"\\\\";break;case '"':out<<"\\\"";break;case '\n':out<<"\\n";break;case '\r':out<<"\\r";break;case '\t':out<<"\\t";break;default:if(c<32||c>=127){const char octal[]="01234567";out<<"\\"<<octal[(c>>6)&7]<<octal[(c>>3)&7]<<octal[c&7];}else out<<static_cast<char>(c);}}out<<'"';return out.str();
 }
-std::string cpp_condition(const std::string&condition){
- std::regex identifier(R"([A-Za-z_][A-Za-z0-9_]*)");std::string out;std::sregex_iterator it(condition.begin(),condition.end(),identifier),end;std::size_t last=0;
- for(;it!=end;++it){const auto&m=*it;out+=condition.substr(last,static_cast<std::size_t>(m.position())-last);const std::string name=m.str();out+="std::stod(values["+cpp_string(name)+"])";last=static_cast<std::size_t>(m.position()+m.length());}
+std::string cpp_condition(const std::string&raw){
+ auto trim=[](const std::string&s){
+  std::size_t first=0,last=s.size();
+  while(first<last&&std::isspace(static_cast<unsigned char>(s[first])))++first;
+  while(last>first&&std::isspace(static_cast<unsigned char>(s[last-1])))--last;
+  return s.substr(first,last-first);
+ };
+ std::string condition=trim(raw);
+ auto wraps=[](const std::string&s){
+  if(s.size()<2||s.front()!='('||s.back()!=')')return false;
+  int depth=0;
+  for(std::size_t i=0;i<s.size();++i){
+   if(s[i]=='(')++depth;else if(s[i]==')')--depth;
+   if(depth==0&&i+1<s.size())return false;
+   if(depth<0)return false;
+  }
+  return depth==0;
+ };
+ while(wraps(condition))condition=trim(condition.substr(1,condition.size()-2));
+ auto split=[&](const std::string&word){
+  int depth=0;
+  for(std::size_t i=0;i+word.size()<=condition.size();++i){
+   if(condition[i]=='('){++depth;continue;}
+   if(condition[i]==')'){--depth;continue;}
+   if(depth==0&&condition.compare(i,word.size(),word)==0){
+    const bool left=i==0||std::isspace(static_cast<unsigned char>(condition[i-1]));
+    const auto end=i+word.size();
+    const bool right=end==condition.size()||std::isspace(static_cast<unsigned char>(condition[end]));
+    if(left&&right)return i;
+   }
+  }
+  return std::string::npos;
+ };
+ auto pos=split("orit");
+ if(pos!=std::string::npos)return "("+cpp_condition(condition.substr(0,pos))+" || "+cpp_condition(condition.substr(pos+4))+")";
+ pos=split("andit");
+ if(pos!=std::string::npos)return "("+cpp_condition(condition.substr(0,pos))+" && "+cpp_condition(condition.substr(pos+5))+")";
+ if(condition.size()>=5&&condition.compare(0,5,"notit")==0&&
+    (condition.size()==5||std::isspace(static_cast<unsigned char>(condition[5]))))
+  return "!("+cpp_condition(condition.substr(5))+")";
+ std::regex identifier(R"([A-Za-z_][A-Za-z0-9_]*)");
+ std::string out;std::sregex_iterator it(condition.begin(),condition.end(),identifier),end;std::size_t last=0;
+ for(;it!=end;++it){
+  const auto&m=*it;
+  out+=condition.substr(last,static_cast<std::size_t>(m.position())-last);
+  out+="std::stod(values["+cpp_string(m.str())+"])";
+  last=static_cast<std::size_t>(m.position()+m.length());
+ }
  out+=condition.substr(last);return out;
 }
 #ifndef _WIN32
