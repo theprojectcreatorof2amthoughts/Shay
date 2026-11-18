@@ -454,3 +454,27 @@ printf '%s\n' "$out" | grep -q '^30$' || fail "compiler mixed function return va
 printf '%s\n' "$out" | grep -q '^Failure detected$' || fail "compiler mixed function failure path"
 if printf '%s\n' "$out" | grep -q '^34$'; then fail "compiler returned value on marked failure"; fi
 pass "compiler supports output, conditional failure, and explicit returns in one function"
+
+# Freestanding x86_64 kernel output is optional when the host lacks LLVM tools.
+if command -v clang >/dev/null 2>&1 && command -v ld.lld >/dev/null 2>&1 && command -v readelf >/dev/null 2>&1; then
+    "$GSHAI" --kernel -o "$TMP/shay-kernel.elf" "$ROOT/examples/kernel.shay" || fail "freestanding kernel compilation"
+    test -s "$TMP/shay-kernel.elf" || fail "missing kernel ELF"
+    readelf -h "$TMP/shay-kernel.elf" | grep -q 'Advanced Micro Devices X86-64' || fail "kernel ELF architecture"
+    readelf -h "$TMP/shay-kernel.elf" | grep -q 'Entry point address' || fail "kernel ELF entry point"
+    readelf -l "$TMP/shay-kernel.elf" | grep -q 'LOAD' || fail "kernel ELF load segment"
+    readelf -S "$TMP/shay-kernel.elf" | grep -q '.limine_requests' || fail "Limine request section"
+    if readelf -l "$TMP/shay-kernel.elf" | grep -q 'INTERP'; then fail "kernel unexpectedly has an interpreter"; fi
+    pass "gshai emits a freestanding x86_64 Limine ELF kernel"
+
+    cat > "$TMP/unsupported-kernel.shay" <<'EOF'
+brew value = 1
+EOF
+    if "$GSHAI" --kernel -o "$TMP/unsupported-kernel.elf" "$TMP/unsupported-kernel.shay" >"$TMP/out" 2>"$TMP/err"; then
+        fail "kernel backend accepted a hosted variable declaration"
+    fi
+    grep -q 'supports only top-level instxt statements' "$TMP/err" || fail "kernel subset diagnostic"
+    test ! -e "$TMP/unsupported-kernel.elf" || fail "kernel backend emitted output for unsupported syntax"
+    pass "kernel backend rejects unsupported hosted Shay features"
+else
+    printf '%s\\n' 'SKIP: freestanding kernel tests (need clang, ld.lld, and readelf)'
+fi
