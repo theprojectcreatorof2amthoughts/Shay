@@ -407,6 +407,8 @@ void print_diagnostics(const BuildContext&ctx){
   }
  }
 }
+} // namespace
+
 int main(int argc,char**argv){
  bool warn_all=false,warn_extra=false;std::string optimization="2";
  std::vector<std::string> positional;
