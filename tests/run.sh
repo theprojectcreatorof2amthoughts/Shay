@@ -649,7 +649,7 @@ $logindxfl cmd
 $logindxnm nmin
 logit/>"Variable-selected log output"
 EOF
-out=$(printf '.shl\\nmy-custom-log\\n' | "$SHAII" "$TMP/log-variable-settings.shay") || fail "interpreter variable log settings"
+(cd "$TMP" && printf '.shl\\nmy-custom-log\\n' | "$SHAII" "$TMP/log-variable-settings.shay") || fail "interpreter variable log settings"
 test -f "$TMP/my-custom-log.shl" || fail "interpreter variable-selected log path"
 grep -q '^Variable-selected log output
 
