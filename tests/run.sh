@@ -627,4 +627,22 @@ pass "gshai derives an executable name when linking a .sho without an explicit o
 
 
 printf '\nAll Shay toolchain tests passed.\n'
+
+cat > "$TMP/object-link-second.shay" <<'EOF'
+instxt/>"Second object contributes code"
+EOF
+"$GSHAI" -ob "$TMP/object-link-second.sho" "$TMP/object-link-second.shay" || fail "compile second source into .sho"
+"$GSHAI" -o "$TMP/multi-object-app" "$TMP/object-link.sho" "$TMP/object-link-second.sho" || fail "link multiple .sho objects"
+out=$("$TMP/multi-object-app") || fail "run executable linked from multiple .sho objects"
+printf '%s\n' "$out" > "$TMP/multi-object-actual.txt"
+printf 'Linked directly from a .sho object\nSecond object contributes code\n' > "$TMP/multi-object-expected.txt"
+cmp "$TMP/multi-object-expected.txt" "$TMP/multi-object-actual.txt" || fail "multi-object execution order and output"
+pass "gshai links multiple .sho objects and executes their code in input order"
+
+if "$GSHAI" -o "$TMP/multi-object-no-output.sho" "$TMP/object-link.sho" "$TMP/object-link-second.sho" >"$TMP/out" 2>"$TMP/err"; then
+    fail "multi-object link without explicit output"
+fi
+grep -q "multiple .sho inputs require an explicit output" "$TMP/err" || fail "multi-object output-path diagnostic"
+pass "gshai requires an explicit output path for multiple .sho inputs"
+
 printf '\nAll Shay toolchain tests passed.\n'
