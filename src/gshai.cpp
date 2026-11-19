@@ -372,15 +372,15 @@ int main(int argc,char**argv){
  }
  if(positional.size()==1&&positional[0]=="--version"){std::cout<<"gshai 0.4.0 (Shay compiler)\n";return 0;}
  if(positional.size()==1&&(positional[0]=="--help"||positional[0]=="-h")){
-  std::cout<<"Usage:\n  gshai [Shay flags] -ob [output.sho] program.shay|program.shaz   Compile a native object\n  gshai [Shay flags] -o  [output]     program.shay|program.shaz   Compile a runnable executable\n  gshai --version\n\n"
-           <<"-ob emits .sho object files; -o links a standalone executable.\n"
+  std::cout<<"Usage:\n  gshai [Shay flags] -ob [output.sho] program.shay|program.shaz   Compile a native object\n  gshai [Shay flags] -o  [output]     program.shay|program.shaz   Compile and link an executable\n  gshai [Shay flags] -o  [output]     program.sho                 Link an existing object\n  gshai --version\n\n"
+           <<"-ob emits .sho object files; -o compiles source or links an existing .sho.\n"
            <<"Shay-native compiler flags (may appear anywhere):\n"
            <<"  --shaywall    Enable all common native compiler warnings (-Wall)\n"
            <<"  --shaywextra  Enable additional native compiler warnings (-Wextra)\n"
            <<"  --shayo0      Disable optimization (-O0)\n"
            <<"  --shayo1      Enable level 1 optimization (-O1)\n"
            <<"  --shayo2      Enable level 2 optimization (-O2; default)\n"
-           <<"  --shayo3      Enable level 3 optimization (-O3)\n";
+           <<"  --shayo3      Enable aggressive optimization (-O3)\n";
   return 0;
  }
  if(positional.size()<2||positional.size()>3){std::cerr<<"gshai: expected -ob or -o and an input file (try --help)\n";return 2;}
