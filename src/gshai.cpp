@@ -372,24 +372,59 @@ int main(int argc,char**argv){
  }
  if(positional.size()==1&&positional[0]=="--version"){std::cout<<"gshai 0.4.0 (Shay compiler)\n";return 0;}
  if(positional.size()==1&&(positional[0]=="--help"||positional[0]=="-h")){
-  std::cout<<"Usage:\n  gshai [Shay flags] -ob [output.sho] program.shay|program.shaz   Compile a native object\n  gshai [Shay flags] -o  [output]     program.shay|program.shaz   Compile a runnable executable\n  gshai --version\n\n"
-           <<"-ob emits .sho object files; -o links a standalone executable.\n"
+  std::cout<<"Usage:\n  gshai [Shay flags] -ob [output.sho] program.shay|program.shaz   Compile a native object\n  gshai [Shay flags] -o  [output]     program.shay|program.shaz   Compile and link an executable\n  gshai [Shay flags] -o  [output]     program.sho                 Link an existing object\n  gshai --version\n\n"
+           <<"-ob emits .sho object files; -o compiles source or links an existing .sho.\n"
            <<"Shay-native compiler flags (may appear anywhere):\n"
            <<"  --shaywall    Enable all common native compiler warnings (-Wall)\n"
            <<"  --shaywextra  Enable additional native compiler warnings (-Wextra)\n"
            <<"  --shayo0      Disable optimization (-O0)\n"
            <<"  --shayo1      Enable level 1 optimization (-O1)\n"
            <<"  --shayo2      Enable level 2 optimization (-O2; default)\n"
-           <<"  --shayo3      Enable level 3 optimization (-O3)\n";
+           <<"  --shayo3      Enable aggressive optimization (-O3)\n";
   return 0;
  }
- if(positional.size()<2||positional.size()>3){std::cerr<<"gshai: expected -ob or -o and a .shay input (try --help)\n";return 2;}
+ if(positional.size()<2||positional.size()>3){std::cerr<<"gshai: expected -ob or -o and an input file (try --help)\n";return 2;}
  const std::string mode=positional[0];if(mode!="-ob"&&mode!="-o"){std::cerr<<"gshai: unknown output mode: "<<mode<<'\n';return 2;}
  const bool object_mode=mode=="-ob";fs::path output,input;
  if(positional.size()==2)input=positional[1];else{output=positional[1];input=positional[2];}
- if(input.extension()!=".shay"&&input.extension()!=".shaz"){std::cerr<<"gshai: input must be a .shay or .shaz file\n";return 2;}
- if(output.empty()){output=input.parent_path()/input.stem();if(object_mode)output+=".sho";}
- else if(object_mode&&output.extension()!=".sho"){std::cerr<<"gshai: -ob output must use the .sho extension\n";return 2;}
+ const bool link_mode=input.extension()==".sho";
+ if(link_mode){
+  if(object_mode){std::cerr<<"gshai: -ob requires a .shay or .shaz source file; use -o to link .sho files\\n";return 2;}
+  if(output.empty())output=input.parent_path()/input.stem();
+ }else{
+  if(input.extension()!=".shay"&&input.extension()!=".shaz"){std::cerr<<"gshai: input must be a .shay, .shaz, or (with -o) .sho file\\n";return 2;}
+  if(output.empty()){output=input.parent_path()/input.stem();if(object_mode)output+=".sho";}
+  else if(object_mode&&output.extension()!=".sho"){std::cerr<<"gshai: -ob output must use the .sho extension\\n";return 2;}
+ }
+ if(link_mode){
+  const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();
+  const fs::path wrapper=fs::temp_directory_path()/("shay-link-"+std::to_string(stamp)+".cpp");
+  {std::ofstream out(wrapper,std::ios::binary);if(!out){std::cerr<<"gshai: cannot write temporary linker entry point\n";return 1;}
+   out<<"extern \"C\" int shay_program_entry();\nint main(){return shay_program_entry();}\n";}
+  const char*configured=std::getenv("CXX");const std::string cxx=configured&&*configured?configured:"c++";
+  int status=0;
+#ifdef _WIN32
+  std::vector<std::string> arguments={cxx,"-std=c++20","-O"+optimization};
+  if(warn_all)arguments.push_back("-Wall");
+  if(warn_extra)arguments.push_back("-Wextra");
+  arguments.push_back(input.string());arguments.push_back(wrapper.string());
+  arguments.push_back("-o");arguments.push_back(output.string());
+  std::vector<const char*> compiler_argv;compiler_argv.reserve(arguments.size()+1);
+  for(const auto&argument:arguments)compiler_argv.push_back(argument.c_str());
+  compiler_argv.push_back(nullptr);
+  status=static_cast<int>(_spawnvp(_P_WAIT,cxx.c_str(),compiler_argv.data()));
+#else
+  std::string command=shell_quote(cxx)+" -std=c++20 -O"+optimization+" ";
+  if(warn_all)command+="-Wall ";
+  if(warn_extra)command+="-Wextra ";
+  command+=shell_quote(input.string())+" "+shell_quote(wrapper.string())+" -o "+shell_quote(output.string());
+  status=std::system(command.c_str());
+#endif
+  std::error_code ignored;fs::remove(wrapper,ignored);
+  if(status!=0){fs::remove(output,ignored);std::cerr<<"gshai: native linker failed\n";return 1;}
+  std::cout<<"gshai: linked executable "<<output.string()<<" from "<<input.string()<<'\n';return 0;
+ }
+
  BuildContext context;load_file(input,context);
  for(const auto&entry:context.pending_function_validation){
   const auto&file=entry.first;const auto&s=entry.second;
