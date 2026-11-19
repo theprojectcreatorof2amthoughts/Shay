@@ -324,6 +324,16 @@ grep -q "function argument references unknown variable 'unknown_argument'" "$TMP
 test ! -e "$TMP/must-not-exist" || fail "compiler emitted output despite preflight errors"
 pass "gshai preflight reports multiple semantic errors and blocks output"
 
+cat > "$TMP/source-location.shay" <<'EOF'
+brew first = 10
+insval/>missing_value
+EOF
+if "$GSHAI" -o "$TMP/source-location-app" "$TMP/source-location.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted invalid source-location test"; fi
+grep -q "insval/>missing_value" "$TMP/err" || fail "compiler diagnostic source line"
+grep -q "~~~~~\^" "$TMP/err" || fail "compiler diagnostic caret underline"
+pass "gshai diagnostics display the source line and pinpoint the offending identifier"
+
+
 
 cat > "$TMP/function-body.shaii" <<'EOF'
 $declr useme(x, y)
