@@ -544,7 +544,7 @@ int main(int argc,char**argv){
  for(const auto&s:context.statements)
   if((s.kind==shay::StatementKind::LogFileExtension||s.kind==shay::StatementKind::LogFileName)&&s.dynamic_value&&!context.variables.count(s.name))
    diagnose(context,input,s.line,"log configuration references unknown variable '"+s.name+"'");
- if(warn_all)warn_about_unused_variables(context);
+ if(warn_all||warn_extra)warn_about_unused_variables(context);
  if(!context.diagnostics.empty()){
   print_diagnostics(context);
   for(const auto&diagnostic:context.diagnostics)if(!diagnostic.warning)return 1;
