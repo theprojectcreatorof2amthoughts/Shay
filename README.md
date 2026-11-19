@@ -81,6 +81,23 @@ insval/>name
 
 The interpreter and compiled executables both read from standard input. `shaii --check` does not wait for input. The first implementation supports `inpvarforw` at the top level of a program.
 
+### Configure log files
+
+`$logindxfl` and `$logindxnm` accept either their original literal form or the name of a variable. Variable values are resolved when the program runs, so they can be filled by `inpvarforw/>`:
+
+```shay
+instxt/>"Log extension (for example .shl):"
+inpvarforw/>cmd
+instxt/>"Name of file:"
+inpvarforw/>nmin
+
+$logindxfl cmd
+$logindxnm nmin
+logit/>"This goes into the selected file"
+```
+
+The literal forms remain supported: `$logindxfl <.shl>` and `$logindxnm "my-log"`. The extension must begin with a dot and contain only letters, digits, dots, underscores, or hyphens; the filename cannot be empty. The selected filename's existing extension is replaced by the selected extension.
+
 ## Build
 
 Requirements: a C11 compiler, a C++20 compiler, GNU Make or CMake 3.20+.

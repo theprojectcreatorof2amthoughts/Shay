@@ -102,8 +102,8 @@ void load_file(const fs::path&input,BuildContext&ctx){
    if(fs::path(s.value).extension()!=required){diagnose(ctx,input,s.line,std::string("$")+(library?"shaiiport":"shazport")+" requires a "+required+" file");continue;}
    load_file(shay::resolve_import(input,s.value,library&&!s.external_import),ctx);continue;
   }
-  if(s.kind==shay::StatementKind::LogFileExtension){ctx.log_file_extension=s.value;ctx.log_file_extension_set=true;continue;}
-  if(s.kind==shay::StatementKind::LogFileName){ctx.log_file_name=s.value;ctx.log_file_name_set=true;continue;}
+  if(s.kind==shay::StatementKind::LogFileExtension){if(!s.dynamic_value)ctx.log_file_extension=s.value;ctx.log_file_extension_set=true;ctx.statements.push_back(s);continue;}
+  if(s.kind==shay::StatementKind::LogFileName){if(!s.dynamic_value)ctx.log_file_name=s.value;ctx.log_file_name_set=true;ctx.statements.push_back(s);continue;}
   if(s.kind==shay::StatementKind::Declare){
    if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'brew' is not allowed");continue;}
    if(!ctx.variables.insert(s.name).second){diagnose(ctx,input,s.line,"variable '"+s.name+"' is already declared");continue;}
@@ -294,10 +294,10 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
        "static double shay_number(const std::unordered_map<std::string,std::string>& values,const std::string& name){auto it=values.find(name);if(it==values.end())throw std::runtime_error(\"unknown numeric value '\"+name+\"'\");std::size_t used=0;double value=std::stod(it->second,&used);if(used!=it->second.size())throw std::runtime_error(\"value '\"+name+\"' is not numeric\");return value;}\n"
        "static double shay_div(double left,double right){if(right==0.0)throw std::runtime_error(\"division by zero\");return left/right;}\n"
        "static void shay_runtime_write(const char* text) { if(text){std::fputs(text,stdout);std::fflush(stdout);} }\n";
- fs::path logPath(ctx.log_file_name);
- logPath.replace_extension(ctx.log_file_extension);
- out<<"static const std::string shay_log_path = "<<cpp_string(logPath.string())<<";\n"
-    "static void shay_log(const std::string& message){std::ofstream stream(shay_log_path,std::ios::binary|std::ios::app);if(!stream)throw std::runtime_error(\"cannot open Shay log file: \"+shay_log_path);stream.write(message.data(),static_cast<std::streamsize>(message.size()));if(message.empty()||message.back()!='\\n')stream.put('\\n');if(!stream)throw std::runtime_error(\"cannot write Shay log file: \"+shay_log_path);}\n";
+ out<<"static std::string shay_log_name = "<<cpp_string(ctx.log_file_name)<<";\n"
+    "static std::string shay_log_extension = "<<cpp_string(ctx.log_file_extension)<<";\n"
+    "static std::string shay_log_path(){std::string path=shay_log_name;auto slash=path.find_last_of(\"/\\\\\");auto dot=path.find_last_of('.');if(dot!=std::string::npos&&(slash==std::string::npos||dot>slash))path.erase(dot);return path+shay_log_extension;}\n"
+    "static void shay_log(const std::string& message){const std::string path=shay_log_path();std::ofstream stream(path,std::ios::binary|std::ios::app);if(!stream)throw std::runtime_error(\"cannot open Shay log file: \"+path);stream.write(message.data(),static_cast<std::streamsize>(message.size()));if(message.empty()||message.back()!='\\n')stream.put('\\n');if(!stream)throw std::runtime_error(\"cannot write Shay log file: \"+path);}\n";
  for(const auto&s:ctx.statements)if(s.kind==shay::StatementKind::DeclareFunction){
   out<<"static "<<(s.has_return?"double":"void")<<" shay_fn_"<<s.name<<"(std::unordered_map<std::string,std::string>& global_values";
   for(const auto&p:s.parameters)out<<", double "<<p;
@@ -320,6 +320,14 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
   switch(s.kind){
    case shay::StatementKind::InputVariable:
     out<<" std::getline(std::cin, values["<<cpp_string(s.name)<<"]);\n";break;
+   case shay::StatementKind::LogFileExtension:
+    if(s.dynamic_value)out<<" { auto it=values.find("<<cpp_string(s.name)<<"); if(it==values.end())throw std::runtime_error(std::string("<<cpp_string("unknown log extension variable '")<<")+"<<cpp_string(s.name)<<"+"<<cpp_string("'")<<"); shay_log_extension=it->second; }\n";
+    else out<<" shay_log_extension="<<cpp_string(s.value)<<";\n";
+    out<<" if(shay_log_extension.empty()||shay_log_extension[0]!='.'||shay_log_extension.find_first_not_of(\".abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-\")!=std::string::npos)throw std::runtime_error(\"invalid log file extension\");\n";break;
+   case shay::StatementKind::LogFileName:
+    if(s.dynamic_value)out<<" { auto it=values.find("<<cpp_string(s.name)<<"); if(it==values.end())throw std::runtime_error(std::string("<<cpp_string("unknown log filename variable '")<<")+"<<cpp_string(s.name)<<"+"<<cpp_string("'")<<"); shay_log_name=it->second; }\n";
+    else out<<" shay_log_name="<<cpp_string(s.value)<<";\n";
+    out<<" if(shay_log_name.empty())throw std::runtime_error(\"log filename cannot be empty\");\n";break;
    case shay::StatementKind::Declare:{
     std::string value=s.value;if(!value.empty()&&value.front()==StringMarker)value.erase(value.begin());
     out<<" values["<<cpp_string(s.name)<<"] = "<<cpp_string(value)<<";\n";break;
@@ -458,6 +466,9 @@ int main(int argc,char**argv){
   if(s.has_return)validate_expression_names(context,file,s.line,s.value,parameters,"function '"+s.name+"' return expression");
   validate_body(context,file,s.body,parameters,"function body",s.name);
  }
+ for(const auto&s:context.statements)
+  if((s.kind==shay::StatementKind::LogFileExtension||s.kind==shay::StatementKind::LogFileName)&&s.dynamic_value&&!context.variables.count(s.name))
+   diagnose(context,input,s.line,"log configuration references unknown variable '"+s.name+"'");
  if(!context.diagnostics.empty()){print_diagnostics(context);return 1;}
  const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();const fs::path temp=fs::temp_directory_path()/("shay-build-"+std::to_string(stamp)+".cpp");
  if(!write_translation(context,temp,!object_mode,object_mode?object_entry_symbol(output):"shay_program_entry")){std::cerr<<"gshai: cannot write temporary translation unit\n";return 1;}

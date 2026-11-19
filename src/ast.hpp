@@ -12,6 +12,7 @@ struct Statement {
     std::vector<std::string> parameters, arguments;
     std::vector<Statement> body, else_body;
     bool has_return = false;
+    bool dynamic_value = false;
     bool external_import = false;
 };
 struct ParseError { std::size_t line; std::string message; };
