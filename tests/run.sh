@@ -14,6 +14,20 @@ fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
 pass "shaii interpreter version"
 "$GSHAI" --version | grep -q 'gshai' || fail "compiler version"
 pass "gshai compiler version"
+
+cat > "$TMP/unused-variable.shay" <<'EOF'
+brew unused_result = "unused"
+instxt/>"Compiler still succeeds"
+EOF
+"$GSHAI" --shaywall -o "$TMP/unused-variable-app" "$TMP/unused-variable.shay" >"$TMP/out" 2>"$TMP/err" || fail "unused-variable warning stopped compilation"
+grep -q ": warning: variable 'unused_result' is never used" "$TMP/err" || fail "Shay unused-variable warning"
+grep -q 'brew unused_result = "unused"' "$TMP/err" || fail "unused-variable source line"
+grep -q '~~~~~~~~~~~~^' "$TMP/err" || fail "unused-variable caret underline"
+if grep -q 'unused function' "$TMP/err"; then fail "generated C++ warnings were not suppressed"; fi
+out=$("$TMP/unused-variable-app") || fail "run program with Shay warning"
+printf '%s\n' "$out" | grep -q 'Compiler still succeeds' || fail "warning changed generated program behavior"
+pass "Shay reports unused variables with source carets without leaking native C++ warnings"
+
 "$SHAII" --check "$ROOT/examples/hello.shay" >/dev/null || fail "hello check"
 pass "interpreter syntax check"
 out=$("$SHAII" "$ROOT/examples/hello.shay")
