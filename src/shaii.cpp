@@ -190,14 +190,20 @@ void execute_file(const fs::path&input,Context&ctx){
     else{ctx.values[s.name]=s.value;try{std::size_t used=0;double value=std::stod(s.value,&used);if(used==s.value.size())ctx.numbers[s.name]=value;else ctx.numbers.erase(s.name);}catch(...){ctx.numbers.erase(s.name);}}
     break;
    }
-   case shay::StatementKind::LogFileExtension:
-    ctx.log_file_extension=s.value;
-    ctx.log_file_extension_set=true;
-    break;
-   case shay::StatementKind::LogFileName:
-    ctx.log_file_name=s.value;
-    ctx.log_file_name_set=true;
-    break;
+   case shay::StatementKind::LogFileExtension:{
+    auto value=s.dynamic_value?ctx.values.find(s.name):ctx.values.end();
+    if(s.dynamic_value&&value==ctx.values.end()){diagnose(ctx,input,s.line,"unknown log extension variable '"+s.name+"'");break;}
+    ctx.log_file_extension=s.dynamic_value?value->second:s.value;
+    if(ctx.log_file_extension.empty()||ctx.log_file_extension[0]!='.'||ctx.log_file_extension.find_first_not_of(".abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-")!=std::string::npos){diagnose(ctx,input,s.line,"invalid log file extension");break;}
+    ctx.log_file_extension_set=true;break;
+   }
+   case shay::StatementKind::LogFileName:{
+    auto value=s.dynamic_value?ctx.values.find(s.name):ctx.values.end();
+    if(s.dynamic_value&&value==ctx.values.end()){diagnose(ctx,input,s.line,"unknown log filename variable '"+s.name+"'");break;}
+    ctx.log_file_name=s.dynamic_value?value->second:s.value;
+    if(ctx.log_file_name.empty()){diagnose(ctx,input,s.line,"log filename cannot be empty");break;}
+    ctx.log_file_name_set=true;break;
+   }
    case shay::StatementKind::DeclareFunction:
     if(ctx.functions.count(s.name))diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");
     else ctx.functions.emplace(s.name,s);
