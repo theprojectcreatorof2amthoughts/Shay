@@ -140,6 +140,11 @@ void load_file(const fs::path&input,BuildContext&ctx){
  }
  ctx.active.erase(key);ctx.loaded.insert(key);
 }
+std::string object_entry_symbol(const fs::path&object){
+ std::string symbol="shay_program_entry_";
+ for(unsigned char c:object.stem().string())symbol+=std::isalnum(c)?static_cast<char>(c):'_';
+ return symbol;
+}
 std::string cpp_string(const std::string&value){
  std::ostringstream out;out<<'"';for(unsigned char c:value){switch(c){case '\\':out<<"\\\\";break;case '"':out<<"\\\"";break;case '\n':out<<"\\n";break;case '\r':out<<"\\r";break;case '\t':out<<"\\t";break;default:if(c<32||c>=127){const char octal[]="01234567";out<<"\\"<<octal[(c>>6)&7]<<octal[(c>>3)&7]<<octal[c&7];}else out<<static_cast<char>(c);}}out<<'"';return out.str();
 }
@@ -279,7 +284,7 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
   }
  }
 }
-bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main){
+bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,const std::string&entry_symbol){
  std::ofstream out(path,std::ios::binary);if(!out)return false;
  out<<"#include <cstdio>\n#include <exception>\n#include <fstream>\n#include <iomanip>\n#include <iostream>\n#include <sstream>\n#include <stdexcept>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n"
        "struct ShayExit {};\n"
@@ -288,7 +293,7 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
        "static bool shay_failed(const std::string& name){auto it=shay_failures.find(name);if(it==shay_failures.end())return false;shay_handled_failures.insert(name);return true;}\n"
        "static double shay_number(const std::unordered_map<std::string,std::string>& values,const std::string& name){auto it=values.find(name);if(it==values.end())throw std::runtime_error(\"unknown numeric value '\"+name+\"'\");std::size_t used=0;double value=std::stod(it->second,&used);if(used!=it->second.size())throw std::runtime_error(\"value '\"+name+\"' is not numeric\");return value;}\n"
        "static double shay_div(double left,double right){if(right==0.0)throw std::runtime_error(\"division by zero\");return left/right;}\n"
-       "extern \"C\" void shay_runtime_write(const char* text) { if(text){std::fputs(text,stdout);std::fflush(stdout);} }\n";
+       "static void shay_runtime_write(const char* text) { if(text){std::fputs(text,stdout);std::fflush(stdout);} }\n";
  fs::path logPath(ctx.log_file_name);
  logPath.replace_extension(ctx.log_file_extension);
  out<<"static const std::string shay_log_path = "<<cpp_string(logPath.string())<<";\n"
@@ -310,7 +315,7 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
   }
   out<<"}\n";
  }
- out<<"extern \"C\" int shay_program_entry() {\n try {\n std::unordered_map<std::string,std::string> values;\n";
+ out<<"extern \"C\" int "<<entry_symbol<<"() {\n try {\n std::unordered_map<std::string,std::string> values;\n";
  for(const auto&s:ctx.statements){
   switch(s.kind){
    case shay::StatementKind::InputVariable:
@@ -352,6 +357,11 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
  out<<" for(const auto& failure : shay_failures) if(!shay_handled_failures.count(failure.first)){std::fprintf(stderr,\"Shay function '%s' failed: %s\\n\",failure.first.c_str(),failure.second.c_str());return 1;}\n"
        " return 0;\n } catch(const ShayExit&) { return 1; }\n"
        " catch(const std::exception& error) { std::fprintf(stderr,\"Shay runtime error: %s\\n\",error.what()); return 1; }\n}\n";
+ if(!add_main&&entry_symbol!="shay_program_entry")
+  out<<"#if defined(__GNUC__) || defined(__clang__)\n"
+        "extern \"C\" int shay_program_entry() __attribute__((weak));\n"
+        "extern \"C\" int shay_program_entry(){return "<<entry_symbol<<"();}\n"
+        "#endif\n";
  if(add_main)out<<"int main(){return shay_program_entry();}\n";
  return static_cast<bool>(out);
 }
@@ -372,8 +382,8 @@ int main(int argc,char**argv){
  }
  if(positional.size()==1&&positional[0]=="--version"){std::cout<<"gshai 0.4.0 (Shay compiler)\n";return 0;}
  if(positional.size()==1&&(positional[0]=="--help"||positional[0]=="-h")){
-  std::cout<<"Usage:\n  gshai [Shay flags] -ob [output.sho] program.shay|program.shaz   Compile a native object\n  gshai [Shay flags] -o  [output]     program.shay|program.shaz   Compile and link an executable\n  gshai [Shay flags] -o  [output]     program.sho                 Link an existing object\n  gshai --version\n\n"
-           <<"-ob emits .sho object files; -o compiles source or links an existing .sho.\n"
+  std::cout<<"Usage:\n  gshai [Shay flags] -ob [output.sho] program.shay|program.shaz   Compile a native object\n  gshai [Shay flags] -o  [output]     program.shay|program.shaz   Compile and link an executable\n  gshai [Shay flags] -o  [output]     program.sho [more.sho ...]   Link existing objects\n  gshai --version\n\n"
+           <<"-ob emits .sho object files; -o compiles source or links one or more .sho objects in order.\n"
            <<"Shay-native compiler flags (may appear anywhere):\n"
            <<"  --shaywall    Enable all common native compiler warnings (-Wall)\n"
            <<"  --shaywextra  Enable additional native compiler warnings (-Wextra)\n"
@@ -383,32 +393,47 @@ int main(int argc,char**argv){
            <<"  --shayo3      Enable aggressive optimization (-O3)\n";
   return 0;
  }
- if(positional.size()<2||positional.size()>3){std::cerr<<"gshai: expected -ob or -o and an input file (try --help)\n";return 2;}
+ if(positional.size()<2){std::cerr<<"gshai: expected -ob or -o and an input file (try --help)\n";return 2;}
  const std::string mode=positional[0];if(mode!="-ob"&&mode!="-o"){std::cerr<<"gshai: unknown output mode: "<<mode<<'\n';return 2;}
- const bool object_mode=mode=="-ob";fs::path output,input;
- if(positional.size()==2)input=positional[1];else{output=positional[1];input=positional[2];}
- const bool link_mode=input.extension()==".sho";
+ const bool object_mode=mode=="-ob";
+ fs::path output;std::vector<fs::path> inputs;
+ if(positional.size()==2)inputs.emplace_back(positional[1]);
+ else{output=positional[1];for(std::size_t i=2;i<positional.size();++i)inputs.emplace_back(positional[i]);}
+ if(inputs.empty()){std::cerr<<"gshai: no input files provided\n";return 2;}
+ const bool link_mode=inputs.front().extension()==".sho";
  if(link_mode){
-  if(object_mode){std::cerr<<"gshai: -ob requires a .shay or .shaz source file; use -o to link .sho files\\n";return 2;}
-  if(output.empty())output=input.parent_path()/input.stem();
+  if(object_mode){std::cerr<<"gshai: -ob requires a .shay or .shaz source file; use -o to link .sho files\n";return 2;}
+  for(const auto&input:inputs)if(input.extension()!=".sho"){std::cerr<<"gshai: cannot mix .sho objects with source files in one link\n";return 2;}
+  if(output.empty()){
+   if(inputs.size()!=1){std::cerr<<"gshai: multiple .sho inputs require an explicit output path\n";return 2;}
+   output=inputs.front().parent_path()/inputs.front().stem();
+  }
+  std::unordered_set<std::string> symbols;
+  for(const auto&input:inputs)if(!symbols.insert(object_entry_symbol(input)).second){std::cerr<<"gshai: object files have colliding entry names (same filename stem)\n";return 2;}
  }else{
-  if(input.extension()!=".shay"&&input.extension()!=".shaz"){std::cerr<<"gshai: input must be a .shay, .shaz, or (with -o) .sho file\\n";return 2;}
+  if(inputs.size()!=1){std::cerr<<"gshai: source compilation accepts exactly one .shay or .shaz input\n";return 2;}
+  const fs::path&input=inputs.front();
+  if(input.extension()!=".shay"&&input.extension()!=".shaz"){std::cerr<<"gshai: input must be a .shay, .shaz, or (with -o) .sho file\n";return 2;}
   if(output.empty()){output=input.parent_path()/input.stem();if(object_mode)output+=".sho";}
-  else if(object_mode&&output.extension()!=".sho"){std::cerr<<"gshai: -ob output must use the .sho extension\\n";return 2;}
+  else if(object_mode&&output.extension()!=".sho"){std::cerr<<"gshai: -ob output must use the .sho extension\n";return 2;}
  }
  if(link_mode){
   const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();
   const fs::path wrapper=fs::temp_directory_path()/("shay-link-"+std::to_string(stamp)+".cpp");
   {std::ofstream out(wrapper,std::ios::binary);if(!out){std::cerr<<"gshai: cannot write temporary linker entry point\n";return 1;}
-   out<<"extern \"C\" int shay_program_entry();\nint main(){return shay_program_entry();}\n";}
+   for(const auto&input:inputs)out<<"extern \"C\" int "<<object_entry_symbol(input)<<"();\n";
+   out<<"int main(){\n";
+   for(const auto&input:inputs)out<<" if(int result="<<object_entry_symbol(input)<<"();result!=0)return result;\n";
+   out<<" return 0;\n}\n";
+  }
   const char*configured=std::getenv("CXX");const std::string cxx=configured&&*configured?configured:"c++";
   int status=0;
 #ifdef _WIN32
   std::vector<std::string> arguments={cxx,"-std=c++20","-O"+optimization};
   if(warn_all)arguments.push_back("-Wall");
   if(warn_extra)arguments.push_back("-Wextra");
-  arguments.push_back(input.string());arguments.push_back(wrapper.string());
-  arguments.push_back("-o");arguments.push_back(output.string());
+  for(const auto&input:inputs)arguments.push_back(input.string());
+  arguments.push_back(wrapper.string());arguments.push_back("-o");arguments.push_back(output.string());
   std::vector<const char*> compiler_argv;compiler_argv.reserve(arguments.size()+1);
   for(const auto&argument:arguments)compiler_argv.push_back(argument.c_str());
   compiler_argv.push_back(nullptr);
@@ -417,14 +442,15 @@ int main(int argc,char**argv){
   std::string command=shell_quote(cxx)+" -std=c++20 -O"+optimization+" ";
   if(warn_all)command+="-Wall ";
   if(warn_extra)command+="-Wextra ";
-  command+=shell_quote(input.string())+" "+shell_quote(wrapper.string())+" -o "+shell_quote(output.string());
+  for(const auto&input:inputs)command+=shell_quote(input.string())+" ";
+  command+=shell_quote(wrapper.string())+" -o "+shell_quote(output.string());
   status=std::system(command.c_str());
 #endif
   std::error_code ignored;fs::remove(wrapper,ignored);
   if(status!=0){fs::remove(output,ignored);std::cerr<<"gshai: native linker failed\n";return 1;}
-  std::cout<<"gshai: linked executable "<<output.string()<<" from "<<input.string()<<'\n';return 0;
+  std::cout<<"gshai: linked executable "<<output.string()<<" from "<<inputs.size()<<" .sho object(s)\n";return 0;
  }
-
+ const fs::path&input=inputs.front();
  BuildContext context;load_file(input,context);
  for(const auto&entry:context.pending_function_validation){
   const auto&file=entry.first;const auto&s=entry.second;
@@ -434,7 +460,7 @@ int main(int argc,char**argv){
  }
  if(!context.diagnostics.empty()){print_diagnostics(context);return 1;}
  const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();const fs::path temp=fs::temp_directory_path()/("shay-build-"+std::to_string(stamp)+".cpp");
- if(!write_translation(context,temp,!object_mode)){std::cerr<<"gshai: cannot write temporary translation unit\n";return 1;}
+ if(!write_translation(context,temp,!object_mode,object_mode?object_entry_symbol(output):"shay_program_entry")){std::cerr<<"gshai: cannot write temporary translation unit\n";return 1;}
  const char*configured=std::getenv("CXX");const std::string cxx=configured&&*configured?configured:"c++";
  int status=0;
 #ifdef _WIN32
