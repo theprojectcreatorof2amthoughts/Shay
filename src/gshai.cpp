@@ -296,7 +296,7 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
        "static void shay_runtime_write(const char* text) { if(text){std::fputs(text,stdout);std::fflush(stdout);} }\n";
  out<<"static std::string shay_log_name = "<<cpp_string(ctx.log_file_name)<<";\n"
     "static std::string shay_log_extension = "<<cpp_string(ctx.log_file_extension)<<";\n"
-    "static std::string shay_log_path(){std::string path=shay_log_name;auto slash=path.find_last_of(\\\"/\\\\\\\");auto dot=path.find_last_of('.');if(dot!=std::string::npos&&(slash==std::string::npos||dot>slash))path.erase(dot);return path+shay_log_extension;}\n"
+    "static std::string shay_log_path(){std::string path=shay_log_name;auto slash=path.find_last_of(\"/\\\\\");auto dot=path.find_last_of('.');if(dot!=std::string::npos&&(slash==std::string::npos||dot>slash))path.erase(dot);return path+shay_log_extension;}\n"
     "static void shay_log(const std::string& message){const std::string path=shay_log_path();std::ofstream stream(path,std::ios::binary|std::ios::app);if(!stream)throw std::runtime_error(\"cannot open Shay log file: \"+path);stream.write(message.data(),static_cast<std::streamsize>(message.size()));if(message.empty()||message.back()!='\\n')stream.put('\\n');if(!stream)throw std::runtime_error(\"cannot write Shay log file: \"+path);}\n";
  for(const auto&s:ctx.statements)if(s.kind==shay::StatementKind::DeclareFunction){
   out<<"static "<<(s.has_return?"double":"void")<<" shay_fn_"<<s.name<<"(std::unordered_map<std::string,std::string>& global_values";
@@ -321,13 +321,13 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
    case shay::StatementKind::InputVariable:
     out<<" std::getline(std::cin, values["<<cpp_string(s.name)<<"]);\n";break;
    case shay::StatementKind::LogFileExtension:
-    if(s.dynamic_value)out<<" { auto it=values.find("<<cpp_string(s.name)<<"); if(it==values.end())throw std::runtime_error(\\"unknown log extension variable '"<<cpp_string(s.name)<<"'\\"); shay_log_extension=it->second; }\n";
+    if(s.dynamic_value)out<<" { auto it=values.find("<<cpp_string(s.name)<<"); if(it==values.end())throw std::runtime_error(\"unknown log extension variable '"<<cpp_string(s.name)<<"'\"); shay_log_extension=it->second; }\n";
     else out<<" shay_log_extension="<<cpp_string(s.value)<<";\n";
-    out<<" if(shay_log_extension.empty()||shay_log_extension[0]!='.'||shay_log_extension.find_first_not_of(\\".abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-\\")!=std::string::npos)throw std::runtime_error(\\"invalid log file extension\\");\n";break;
+    out<<" if(shay_log_extension.empty()||shay_log_extension[0]!='.'||shay_log_extension.find_first_not_of(\".abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-\")!=std::string::npos)throw std::runtime_error(\"invalid log file extension\");\n";break;
    case shay::StatementKind::LogFileName:
-    if(s.dynamic_value)out<<" { auto it=values.find("<<cpp_string(s.name)<<"); if(it==values.end())throw std::runtime_error(\\"unknown log filename variable '"<<cpp_string(s.name)<<"'\\"); shay_log_name=it->second; }\n";
+    if(s.dynamic_value)out<<" { auto it=values.find("<<cpp_string(s.name)<<"); if(it==values.end())throw std::runtime_error(\"unknown log filename variable '"<<cpp_string(s.name)<<"'\"); shay_log_name=it->second; }\n";
     else out<<" shay_log_name="<<cpp_string(s.value)<<";\n";
-    out<<" if(shay_log_name.empty())throw std::runtime_error(\\"log filename cannot be empty\\");\n";break;
+    out<<" if(shay_log_name.empty())throw std::runtime_error(\"log filename cannot be empty\");\n";break;
    case shay::StatementKind::Declare:{
     std::string value=s.value;if(!value.empty()&&value.front()==StringMarker)value.erase(value.begin());
     out<<" values["<<cpp_string(s.name)<<"] = "<<cpp_string(value)<<";\n";break;
