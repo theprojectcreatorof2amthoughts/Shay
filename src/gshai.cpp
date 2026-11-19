@@ -359,8 +359,8 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
        " catch(const std::exception& error) { std::fprintf(stderr,\"Shay runtime error: %s\\n\",error.what()); return 1; }\n}\n";
  if(!add_main&&entry_symbol!="shay_program_entry")
   out<<"#if defined(__GNUC__) || defined(__clang__)\n"
-        "extern \\"C\\" int shay_program_entry() __attribute__((weak));\n"
-        "extern \\"C\\" int shay_program_entry(){return "<<entry_symbol<<"();}\n"
+        "extern \"C\" int shay_program_entry() __attribute__((weak));\n"
+        "extern \"C\" int shay_program_entry(){return "<<entry_symbol<<"();}\n"
         "#endif\n";
  if(add_main)out<<"int main(){return shay_program_entry();}\n";
  return static_cast<bool>(out);
