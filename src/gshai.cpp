@@ -319,7 +319,7 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
  out<<"static std::string shay_log_name = "<<cpp_string(ctx.log_file_name)<<";\n"
     "static std::string shay_log_extension = "<<cpp_string(ctx.log_file_extension)<<";\n"
     "static std::string shay_log_path(){std::string path=shay_log_name;auto slash=path.find_last_of(\"/\\\\\");auto dot=path.find_last_of('.');if(dot!=std::string::npos&&(slash==std::string::npos||dot>slash))path.erase(dot);return path+shay_log_extension;}\n"
-    "static void shay_log(const std::string& message){const std::string path=shay_log_path();std::ofstream stream(path,std::ios::binary|std::ios::app);if(!stream)throw std::runtime_error(\"cannot open Shay log file: \"+path);stream.write(message.data(),static_cast<std::streamsize>(message.size()));if(message.empty()||message.back()!='\\n')stream.put('\\n');if(!stream)throw std::runtime_error(\"cannot write Shay log file: \"+path);}\n";
+    "static void shay_log(const std::string& message){const std::string path=shay_log_path();std::ofstream stream(path,std::ios::binary|std::ios::app);if(!stream)throw std::runtime_error(\"cannot open Shay log file: \"+path);stream.write(message.data(),static_cast<std::streamsize>(message.size()));if(message.empty()||message.back()!='\n')stream.put('\n');if(!stream)throw std::runtime_error(\"cannot write Shay log file: \"+path);}\n";
  for(const auto&s:ctx.statements)if(s.kind==shay::StatementKind::DeclareFunction){
   out<<"static "<<(s.has_return?"double":"void")<<" shay_fn_"<<s.name<<"(std::unordered_map<std::string,std::string>& global_values";
   for(const auto&p:s.parameters)out<<", double "<<p;
@@ -397,13 +397,13 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
 }
 void print_diagnostics(const BuildContext&ctx){
  for(const auto&d:ctx.diagnostics){
-  std::cerr<<d.file.string()<<": error: "<<d.message<<'\\n';
+  std::cerr<<d.file.string()<<": error: "<<d.message<<'\n';
   if(!d.source_line.empty()){
-   std::cerr<<"    "<<d.source_line<<'\\n'<<"    ";
+   std::cerr<<"    "<<d.source_line<<'\n'<<"    ";
    for(std::size_t i=1;i<d.column;++i)std::cerr<<' ';
    const std::size_t width=d.length?d.length:1;
    for(std::size_t i=1;i<width;++i)std::cerr<<'~';
-   std::cerr<<'^'<<'\\n';
+   std::cerr<<'^'<<'\n';
   }
  }
 }
