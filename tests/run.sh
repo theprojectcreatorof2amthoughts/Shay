@@ -19,7 +19,7 @@ cat > "$TMP/unused-variable.shay" <<'EOF'
 brew unused_result = "unused"
 instxt/>"Compiler still succeeds"
 EOF
-"$GSHAI" --shaywall -o "$TMP/unused-variable-app" "$TMP/unused-variable.shay" >"$TMP/out" 2>"$TMP/err" || fail "unused-variable warning stopped compilation"
+$GSHAI" --shaywall --shaywextra -o "$TMP/unused-variable-app" "$TMP/unused-variable.shay" >"$TMP/out" 2>"$TMP/err" || fail "unused-variable warning stopped compilation"
 grep -q ": warning: variable 'unused_result' is never used" "$TMP/err" || fail "Shay unused-variable warning"
 grep -q 'brew unused_result = "unused"' "$TMP/err" || fail "unused-variable source line"
 grep -q '~~~~~~~~~~~~^' "$TMP/err" || fail "unused-variable caret underline"
