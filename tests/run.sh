@@ -609,4 +609,22 @@ pass "interpreter supports output, conditional failure, and explicit returns in 
 CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/mixed-return-app" "$TMP/mixed-return.shay" || fail "compile mixed function return"
 out=$("$TMP/mixed-return-app") || fail "run compiled mixed function return"
 
+
+cat > "$TMP/object-link.shay" <<'EOF'
+instxt/>"Linked directly from a .sho object"
+EOF
+"$GSHAI" -ob "$TMP/object-link.sho" "$TMP/object-link.shay" || fail "compile source into linkable .sho"
+"$GSHAI" -o "$TMP/object-link-app" "$TMP/object-link.sho" || fail "link existing .sho into executable"
+out=$("$TMP/object-link-app") || fail "run executable linked from .sho"
+printf '%s\n' "$out" | grep -q '^Linked directly from a .sho object
+ || fail "linked .sho executable output"
+pass "gshai links an existing .sho object into a standalone executable"
+
+"$GSHAI" -o "$TMP/object-link.sho" || fail "default output name when linking .sho"
+test -x "$TMP/object-link" || fail "default .sho link output is executable"
+out=$("$TMP/object-link") || fail "run default .sho-linked executable"
+printf '%s\n' "$out" | grep -q '^Linked directly from a .sho object
+ || fail "default .sho-linked executable output"
+pass "gshai derives an executable name when linking a .sho without an explicit output"
+
 printf '\nAll Shay toolchain tests passed.\n'
