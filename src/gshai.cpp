@@ -23,9 +23,10 @@
 namespace fs=std::filesystem;
 namespace {
 constexpr char StringMarker='\x01';
-struct Diagnostic{fs::path file;std::size_t line;std::string message;std::string source_line;std::size_t column=1;std::size_t length=1;};
+struct Diagnostic{fs::path file;std::size_t line;std::string message;std::string source_line;std::size_t column=1;std::size_t length=1;bool warning=false;};
 struct BuildContext{
  std::unordered_set<std::string>loaded,active,variables;
+ std::vector<std::pair<fs::path,shay::Statement>>variable_declarations;
  std::unordered_map<std::string,shay::Statement>functions;
  std::vector<std::pair<fs::path,shay::Statement>>pending_function_validation;
  std::vector<Diagnostic>diagnostics;
@@ -36,8 +37,8 @@ struct BuildContext{
  bool log_file_name_set=false;
  bool log_file_extension_set=false;
 };
-void diagnose(BuildContext&ctx,const fs::path&file,std::size_t line,const std::string&message){
- Diagnostic diagnostic;diagnostic.file=file;diagnostic.line=line;diagnostic.message=message;
+void diagnose(BuildContext&ctx,const fs::path&file,std::size_t line,const std::string&message,bool warning=false){
+ Diagnostic diagnostic;diagnostic.file=file;diagnostic.line=line;diagnostic.message=message;diagnostic.warning=warning;
  auto source=ctx.source_lines.find(file.string());
  if(source!=ctx.source_lines.end()&&line>0&&line<=source->second.size()){
   diagnostic.source_line=source->second[line-1];
@@ -57,6 +58,47 @@ std::unordered_set<std::string> expression_names(const std::string&source){
  std::unordered_set<std::string> names;const std::regex identifier(R"([A-Za-z_][A-Za-z0-9_]*)");
  for(std::sregex_iterator it(source.begin(),source.end(),identifier),end;it!=end;++it)names.insert(it->str());
  return names;
+}
+
+void collect_expression_uses(const std::string&source,const BuildContext&ctx,const std::unordered_set<std::string>&locals,std::unordered_set<std::string>&used){
+ for(const auto&name:expression_names(source))if(ctx.variables.count(name)&&!locals.count(name))used.insert(name);
+}
+void collect_statement_uses(const shay::Statement&s,const BuildContext&ctx,const std::unordered_set<std::string>&locals,std::unordered_set<std::string>&used){
+ switch(s.kind){
+  case shay::StatementKind::OutputValue:
+   if(ctx.variables.count(s.name)&&!locals.count(s.name))used.insert(s.name);
+   break;
+  case shay::StatementKind::OutputCall:
+   for(const auto&arg:s.arguments)collect_expression_uses(arg,ctx,locals,used);
+   break;
+  case shay::StatementKind::ReturnValue:
+   collect_expression_uses(s.value,ctx,locals,used);
+   break;
+  case shay::StatementKind::If:
+   collect_expression_uses(s.condition,ctx,locals,used);
+   for(const auto&child:s.body)collect_statement_uses(child,ctx,locals,used);
+   for(const auto&child:s.else_body)collect_statement_uses(child,ctx,locals,used);
+   break;
+  case shay::StatementKind::LogFileExtension:
+  case shay::StatementKind::LogFileName:
+   if(s.dynamic_value&&ctx.variables.count(s.name)&&!locals.count(s.name))used.insert(s.name);
+   break;
+  case shay::StatementKind::DeclareFunction:{
+   std::unordered_set<std::string>function_locals(s.parameters.begin(),s.parameters.end());
+   if(s.has_return)collect_expression_uses(s.value,ctx,function_locals,used);
+   for(const auto&child:s.body)collect_statement_uses(child,ctx,function_locals,used);
+   break;
+  }
+  default:break;
+ }
+}
+void warn_about_unused_variables(BuildContext&ctx){
+ std::unordered_set<std::string>used;
+ const std::unordered_set<std::string>no_locals;
+ for(const auto&s:ctx.statements)collect_statement_uses(s,ctx,no_locals,used);
+ for(const auto&declaration:ctx.variable_declarations)
+  if(!used.count(declaration.second.name))
+   diagnose(ctx,declaration.first,declaration.second.line,"variable '"+declaration.second.name+"' is never used",true);
 }
 void validate_expression_names(BuildContext&ctx,const fs::path&file,std::size_t line,const std::string&source,const std::unordered_set<std::string>&locals,const std::string&label){
  for(const auto&name:expression_names(source))if(!ctx.variables.count(name)&&!locals.count(name)&&name!="true"&&name!="false"&&name!="andit"&&name!="orit"&&name!="notit")
@@ -129,10 +171,11 @@ void load_file(const fs::path&input,BuildContext&ctx){
   if(s.kind==shay::StatementKind::Declare){
    if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'brew' is not allowed");continue;}
    if(!ctx.variables.insert(s.name).second){diagnose(ctx,input,s.line,"variable '"+s.name+"' is already declared");continue;}
+   ctx.variable_declarations.emplace_back(input,s);
   }else if(s.kind==shay::StatementKind::InputVariable){
    if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'inpvarforw' is not allowed");continue;}
    // First use declares the variable; later uses intentionally reuse it.
-   ctx.variables.insert(s.name);
+   if(ctx.variables.insert(s.name).second)ctx.variable_declarations.emplace_back(input,s);
   }else if(s.kind==shay::StatementKind::DeclareFunction){
    if(ctx.functions.count(s.name)){diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");continue;}
    ctx.functions.emplace(s.name,s);
@@ -397,7 +440,7 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
 }
 void print_diagnostics(const BuildContext&ctx){
  for(const auto&d:ctx.diagnostics){
-  std::cerr<<d.file.string()<<": error: "<<d.message<<'\n';
+  std::cerr<<d.file.string()<<(d.warning?": warning: ":": error: ")<<d.message<<'\n';
   if(!d.source_line.empty()){
    std::cerr<<"    "<<d.source_line<<'\n'<<"    ";
    for(std::size_t i=1;i<d.column;++i)std::cerr<<' ';
@@ -426,9 +469,9 @@ int main(int argc,char**argv){
  if(positional.size()==1&&(positional[0]=="--help"||positional[0]=="-h")){
   std::cout<<"Usage:\n  gshai [Shay flags] -ob [output.sho] program.shay|program.shaz   Compile a native object\n  gshai [Shay flags] -o  [output]     program.shay|program.shaz   Compile and link an executable\n  gshai [Shay flags] -o  [output]     program.sho [more.sho ...]   Link existing objects\n  gshai --version\n\n"
            <<"-ob emits .sho object files; -o compiles source or links one or more .sho objects in order.\n"
-           <<"Shay-native compiler flags (may appear anywhere):\n"
-           <<"  --shaywall    Enable all common native compiler warnings (-Wall)\n"
-           <<"  --shaywextra  Enable additional native compiler warnings (-Wextra)\n"
+           <<"Shay compiler flags (may appear anywhere):\n"
+           <<"  --shaywall    Enable common Shay warnings, including unused variables\n"
+           <<"  --shaywextra  Enable additional Shay warnings\n"
            <<"  --shayo0      Disable optimization (-O0)\n"
            <<"  --shayo1      Enable level 1 optimization (-O1)\n"
            <<"  --shayo2      Enable level 2 optimization (-O2; default)\n"
@@ -472,8 +515,7 @@ int main(int argc,char**argv){
   int status=0;
 #ifdef _WIN32
   std::vector<std::string> arguments={cxx,"-std=c++20","-O"+optimization};
-  if(warn_all)arguments.push_back("-Wall");
-  if(warn_extra)arguments.push_back("-Wextra");
+  arguments.push_back("-w");
   for(const auto&input:inputs)arguments.push_back(input.string());
   arguments.push_back(wrapper.string());arguments.push_back("-o");arguments.push_back(output.string());
   std::vector<const char*> compiler_argv;compiler_argv.reserve(arguments.size()+1);
@@ -482,8 +524,7 @@ int main(int argc,char**argv){
   status=static_cast<int>(_spawnvp(_P_WAIT,cxx.c_str(),compiler_argv.data()));
 #else
   std::string command=shell_quote(cxx)+" -std=c++20 -O"+optimization+" ";
-  if(warn_all)command+="-Wall ";
-  if(warn_extra)command+="-Wextra ";
+  command+="-w ";
   for(const auto&input:inputs)command+=shell_quote(input.string())+" ";
   command+=shell_quote(wrapper.string())+" -o "+shell_quote(output.string());
   status=std::system(command.c_str());
@@ -503,15 +544,18 @@ int main(int argc,char**argv){
  for(const auto&s:context.statements)
   if((s.kind==shay::StatementKind::LogFileExtension||s.kind==shay::StatementKind::LogFileName)&&s.dynamic_value&&!context.variables.count(s.name))
    diagnose(context,input,s.line,"log configuration references unknown variable '"+s.name+"'");
- if(!context.diagnostics.empty()){print_diagnostics(context);return 1;}
+ if(warn_all)warn_about_unused_variables(context);
+ if(!context.diagnostics.empty()){
+  print_diagnostics(context);
+  for(const auto&diagnostic:context.diagnostics)if(!diagnostic.warning)return 1;
+ }
  const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();const fs::path temp=fs::temp_directory_path()/("shay-build-"+std::to_string(stamp)+".cpp");
  if(!write_translation(context,temp,!object_mode,object_mode?object_entry_symbol(output):"shay_program_entry")){std::cerr<<"gshai: cannot write temporary translation unit\n";return 1;}
  const char*configured=std::getenv("CXX");const std::string cxx=configured&&*configured?configured:"c++";
  int status=0;
 #ifdef _WIN32
  std::vector<std::string> arguments={cxx,"-std=c++20","-O"+optimization};
- if(warn_all)arguments.push_back("-Wall");
- if(warn_extra)arguments.push_back("-Wextra");
+ arguments.push_back("-w");
  if(object_mode)arguments.push_back("-c");
  arguments.push_back(temp.string());
  arguments.push_back("-o");
@@ -522,8 +566,7 @@ int main(int argc,char**argv){
  status=static_cast<int>(_spawnvp(_P_WAIT,cxx.c_str(),compiler_argv.data()));
 #else
  std::string command=shell_quote(cxx)+" -std=c++20 -O"+optimization+" ";
- if(warn_all)command+="-Wall ";
- if(warn_extra)command+="-Wextra ";
+ command+="-w ";
  command+=(object_mode?"-c ":"")+shell_quote(temp.string())+" -o "+shell_quote(output.string());
  status=std::system(command.c_str());
 #endif
