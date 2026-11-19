@@ -399,8 +399,8 @@ int main(int argc,char**argv){
  if(link_mode){
   const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();
   const fs::path wrapper=fs::temp_directory_path()/("shay-link-"+std::to_string(stamp)+".cpp");
-  {std::ofstream out(wrapper,std::ios::binary);if(!out){std::cerr<<"gshai: cannot write temporary linker entry point\\n";return 1;}
-   out<<"extern \\"C\\" int shay_program_entry();\\nint main(){return shay_program_entry();}\\n";}
+  {std::ofstream out(wrapper,std::ios::binary);if(!out){std::cerr<<"gshai: cannot write temporary linker entry point\n";return 1;}
+   out<<"extern \"C\" int shay_program_entry();\nint main(){return shay_program_entry();}\n";}
   const char*configured=std::getenv("CXX");const std::string cxx=configured&&*configured?configured:"c++";
   int status=0;
 #ifdef _WIN32
@@ -421,8 +421,8 @@ int main(int argc,char**argv){
   status=std::system(command.c_str());
 #endif
   std::error_code ignored;fs::remove(wrapper,ignored);
-  if(status!=0){fs::remove(output,ignored);std::cerr<<"gshai: native linker failed\\n";return 1;}
-  std::cout<<"gshai: linked executable "<<output.string()<<" from "<<input.string()<<'\\n';return 0;
+  if(status!=0){fs::remove(output,ignored);std::cerr<<"gshai: native linker failed\n";return 1;}
+  std::cout<<"gshai: linked executable "<<output.string()<<" from "<<input.string()<<'\n';return 0;
  }
 
  BuildContext context;load_file(input,context);
