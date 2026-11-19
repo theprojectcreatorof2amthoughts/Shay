@@ -23,19 +23,36 @@
 namespace fs=std::filesystem;
 namespace {
 constexpr char StringMarker='\x01';
-struct Diagnostic{fs::path file;std::size_t line;std::string message;};
+struct Diagnostic{fs::path file;std::size_t line;std::string message;std::string source_line;std::size_t column=1;std::size_t length=1;};
 struct BuildContext{
  std::unordered_set<std::string>loaded,active,variables;
  std::unordered_map<std::string,shay::Statement>functions;
  std::vector<std::pair<fs::path,shay::Statement>>pending_function_validation;
  std::vector<Diagnostic>diagnostics;
+ std::unordered_map<std::string,std::vector<std::string>>source_lines;
  std::vector<shay::Statement>statements;
  std::string log_file_name="shay";
  std::string log_file_extension=".log";
  bool log_file_name_set=false;
  bool log_file_extension_set=false;
 };
-void diagnose(BuildContext&ctx,const fs::path&file,std::size_t line,const std::string&message){ctx.diagnostics.push_back({file,line,message});}
+void diagnose(BuildContext&ctx,const fs::path&file,std::size_t line,const std::string&message){
+ Diagnostic diagnostic;diagnostic.file=file;diagnostic.line=line;diagnostic.message=message;
+ auto source=ctx.source_lines.find(file.string());
+ if(source!=ctx.source_lines.end()&&line>0&&line<=source->second.size()){
+  diagnostic.source_line=source->second[line-1];
+  const auto first=message.find('\'');
+  if(first!=std::string::npos){
+   const auto last=message.find('\'',first+1);
+   if(last!=std::string::npos&&last>first+1){
+    const std::string target=message.substr(first+1,last-first-1);
+    const auto at=diagnostic.source_line.find(target);
+    if(at!=std::string::npos){diagnostic.column=at+1;diagnostic.length=target.size();}
+   }
+  }
+ }
+ ctx.diagnostics.push_back(std::move(diagnostic));
+}
 std::unordered_set<std::string> expression_names(const std::string&source){
  std::unordered_set<std::string> names;const std::regex identifier(R"([A-Za-z_][A-Za-z0-9_]*)");
  for(std::sregex_iterator it(source.begin(),source.end(),identifier),end;it!=end;++it)names.insert(it->str());
@@ -91,6 +108,11 @@ void load_file(const fs::path&input,BuildContext&ctx){
  if(extension!=".shay"&&extension!=".shaz"&&extension!=".shaii"){diagnose(ctx,input,1,"unsupported file extension (expected .shay, .shaz, or .shaii)");return;}
  std::ifstream stream(input,std::ios::binary);if(!stream){diagnose(ctx,input,1,"cannot open source file");return;}
  const std::string source((std::istreambuf_iterator<char>(stream)),std::istreambuf_iterator<char>());
+ {
+  std::istringstream lines(source);std::string text;
+  auto&stored=ctx.source_lines[input.string()];
+  while(std::getline(lines,text))stored.push_back(text);
+ }
  shay::Lexer lexer(source);const auto tokens=lexer.scan();shay::Parser parser(tokens);const shay::Program program=parser.parse();
  for(const auto&e:lexer.errors())diagnose(ctx,input,e.line,e.message);
  for(const auto&e:program.errors)diagnose(ctx,input,e.line,e.message);
@@ -373,7 +395,17 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
  if(add_main)out<<"int main(){return shay_program_entry();}\n";
  return static_cast<bool>(out);
 }
-void print_diagnostics(const BuildContext&ctx){for(const auto&d:ctx.diagnostics)std::cerr<<d.file.string()<<':'<<d.line<<": error: "<<d.message<<'\n';}
+void print_diagnostics(const BuildContext&ctx){
+ for(const auto&d:ctx.diagnostics){
+  std::cerr<<d.file.string()<<": error: "<<d.message<<'\\n';
+  if(!d.source_line.empty()){
+   std::cerr<<"    "<<d.source_line<<'\\n'<<"    ";
+   for(std::size_t i=1;i<d.column;++i)std::cerr<<' ';
+   const std::size_t width=d.length?d.length:1;
+   for(std::size_t i=1;i<width;++i)std::cerr<<'~';
+   std::cerr<<'^'<<'\\n';
+  }
+ }
 }
 int main(int argc,char**argv){
  bool warn_all=false,warn_extra=false;std::string optimization="2";
