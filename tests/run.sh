@@ -639,6 +639,38 @@ printf 'Linked directly from a .sho object\nSecond object contributes code\n' > 
 cmp "$TMP/multi-object-expected.txt" "$TMP/multi-object-actual.txt" || fail "multi-object execution order and output"
 pass "gshai links multiple .sho objects and executes their code in input order"
 
+
+cat > "$TMP/log-variable-settings.shay" <<'EOF'
+instxt/>"Log extension (.shl):"
+inpvarforw/>cmd
+instxt/>"Log filename:"
+inpvarforw/>nmin
+$logindxfl cmd
+$logindxnm nmin
+logit/>"Variable-selected log output"
+EOF
+out=$(printf '.shl\\nmy-custom-log\\n' | "$SHAII" "$TMP/log-variable-settings.shay") || fail "interpreter variable log settings"
+test -f "$TMP/my-custom-log.shl" || fail "interpreter variable-selected log path"
+grep -q '^Variable-selected log output
+
+printf '\nAll Shay toolchain tests passed.\n'
+ "$TMP/my-custom-log.shl" || fail "interpreter variable-selected log content"
+"$GSHAI" -o "$TMP/log-variable-settings-app" "$TMP/log-variable-settings.shay" || fail "compile variable log settings"
+(cd "$TMP" && printf '.txt\\ncompiled-custom-log\\n' | "$TMP/log-variable-settings-app") || fail "run compiled variable log settings"
+test -f "$TMP/compiled-custom-log.txt" || fail "compiled variable-selected log path"
+grep -q '^Variable-selected log output
+
+printf '\nAll Shay toolchain tests passed.\n'
+ "$TMP/compiled-custom-log.txt" || fail "compiled variable-selected log content"
+pass "logindxfl and logindxnm accept runtime variables in the interpreter and compiler"
+
+cat > "$TMP/log-unknown-variable.shay" <<'EOF'
+$logindxnm missing_name
+EOF
+if "$GSHAI" -o "$TMP/log-unknown-variable" "$TMP/log-unknown-variable.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted unknown log configuration variable"; fi
+grep -q "log configuration references unknown variable 'missing_name'" "$TMP/err" || fail "unknown log variable diagnostic"
+pass "compiler validates variables used by log configuration directives"
+
 printf '\nAll Shay toolchain tests passed.\n'
 
 printf '\nAll Shay toolchain tests passed.\n'
