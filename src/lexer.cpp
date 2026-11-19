@@ -17,7 +17,7 @@ std::vector<Token> Lexer::scan() {
   const auto startLine=line_,startColumn=column_;
   if(c=='"'){
    take();std::string value;bool closed=false;
-   while(peek()!='\0'&&peek()!='\n'){
+   while(peek()!='\0'){
     char ch=take();if(ch=='"'){closed=true;break;}
     if(ch=='\\'){const char escaped=take();switch(escaped){
      case 'n':value.push_back('\n');break;case 't':value.push_back('\t');break;case 'r':value.push_back('\r');break;

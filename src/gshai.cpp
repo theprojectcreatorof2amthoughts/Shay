@@ -30,6 +30,10 @@ struct BuildContext{
  std::vector<std::pair<fs::path,shay::Statement>>pending_function_validation;
  std::vector<Diagnostic>diagnostics;
  std::vector<shay::Statement>statements;
+ std::string log_file_name="shay";
+ std::string log_file_extension=".log";
+ bool log_file_name_set=false;
+ bool log_file_extension_set=false;
 };
 void diagnose(BuildContext&ctx,const fs::path&file,std::size_t line,const std::string&message){ctx.diagnostics.push_back({file,line,message});}
 std::unordered_set<std::string> expression_names(const std::string&source){
@@ -73,7 +77,9 @@ void validate_body(BuildContext&ctx,const fs::path&file,const std::vector<shay::
    else if(s.arguments.size()!=fn->second.parameters.size())
     diagnose(ctx,file,s.line,"function '"+s.name+"' expects "+std::to_string(fn->second.parameters.size())+" argument(s), got "+std::to_string(s.arguments.size()));
    for(const auto&arg:s.arguments)validate_expression_names(ctx,file,s.line,arg,locals,"function argument");
-  }else if(s.kind!=shay::StatementKind::OutputText&&s.kind!=shay::StatementKind::OutputTextExit){
+  }else if(s.kind==shay::StatementKind::LogText&&(!ctx.log_file_name_set&&!ctx.log_file_extension_set)){
+   diagnose(ctx,file,s.line,"'logit/>' requires '$logindxfl' or '$logindxnm' to be configured before use");
+  }else if(s.kind!=shay::StatementKind::OutputText&&s.kind!=shay::StatementKind::OutputTextExit&&s.kind!=shay::StatementKind::LogText){
    diagnose(ctx,file,s.line,"unsupported statement inside function body");
   }
  }
@@ -96,6 +102,8 @@ void load_file(const fs::path&input,BuildContext&ctx){
    if(fs::path(s.value).extension()!=required){diagnose(ctx,input,s.line,std::string("$")+(library?"shaiiport":"shazport")+" requires a "+required+" file");continue;}
    load_file(shay::resolve_import(input,s.value,library&&!s.external_import),ctx);continue;
   }
+  if(s.kind==shay::StatementKind::LogFileExtension){ctx.log_file_extension=s.value;ctx.log_file_extension_set=true;continue;}
+  if(s.kind==shay::StatementKind::LogFileName){ctx.log_file_name=s.value;ctx.log_file_name_set=true;continue;}
   if(s.kind==shay::StatementKind::Declare){
    if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'brew' is not allowed");continue;}
    if(!ctx.variables.insert(s.name).second){diagnose(ctx,input,s.line,"variable '"+s.name+"' is already declared");continue;}
@@ -126,6 +134,8 @@ void load_file(const fs::path&input,BuildContext&ctx){
   }else if(s.kind==shay::StatementKind::ReturnValue){
    diagnose(ctx,input,s.line,"'forw' is only valid inside a function");
   }
+  if(s.kind==shay::StatementKind::LogText&&(!ctx.log_file_name_set&&!ctx.log_file_extension_set))
+   diagnose(ctx,input,s.line,"'logit/>' requires '$logindxfl' or '$logindxnm' to be configured before use");
   ctx.statements.push_back(s);
  }
  ctx.active.erase(key);ctx.loaded.insert(key);
@@ -239,6 +249,8 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
     out<<indent<<"return ("<<cpp_expression(s.value)<<");\n";break;
    case shay::StatementKind::OutputText:
     out<<indent<<"shay_runtime_write("<<cpp_string(s.value+"\n")<<");\n";break;
+   case shay::StatementKind::LogText:
+    out<<indent<<"shay_log("<<cpp_string(s.value)<<");\n";break;
    case shay::StatementKind::OutputTextExit:
     out<<indent<<"shay_runtime_write("<<cpp_string(s.value+"\n")<<"); throw ShayExit{};\n";break;
    case shay::StatementKind::OutputValue:
@@ -269,7 +281,7 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
 }
 bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main){
  std::ofstream out(path,std::ios::binary);if(!out)return false;
- out<<"#include <cstdio>\n#include <exception>\n#include <iomanip>\n#include <iostream>\n#include <sstream>\n#include <stdexcept>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n"
+ out<<"#include <cstdio>\n#include <exception>\n#include <fstream>\n#include <iomanip>\n#include <iostream>\n#include <sstream>\n#include <stdexcept>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n"
        "struct ShayExit {};\n"
        "static std::unordered_map<std::string,std::string> shay_failures;\n"
        "static std::unordered_set<std::string> shay_handled_failures;\n"
@@ -277,6 +289,10 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
        "static double shay_number(const std::unordered_map<std::string,std::string>& values,const std::string& name){auto it=values.find(name);if(it==values.end())throw std::runtime_error(\"unknown numeric value '\"+name+\"'\");std::size_t used=0;double value=std::stod(it->second,&used);if(used!=it->second.size())throw std::runtime_error(\"value '\"+name+\"' is not numeric\");return value;}\n"
        "static double shay_div(double left,double right){if(right==0.0)throw std::runtime_error(\"division by zero\");return left/right;}\n"
        "extern \"C\" void shay_runtime_write(const char* text) { if(text){std::fputs(text,stdout);std::fflush(stdout);} }\n";
+ fs::path logPath(ctx.log_file_name);
+ logPath.replace_extension(ctx.log_file_extension);
+ out<<"static const std::string shay_log_path = "<<cpp_string(logPath.string())<<";\n"
+    "static void shay_log(const std::string& message){std::ofstream stream(shay_log_path,std::ios::binary|std::ios::app);if(!stream)throw std::runtime_error(\"cannot open Shay log file: \"+shay_log_path);stream.write(message.data(),static_cast<std::streamsize>(message.size()));if(message.empty()||message.back()!='\\n')stream.put('\\n');if(!stream)throw std::runtime_error(\"cannot write Shay log file: \"+shay_log_path);}\n";
  for(const auto&s:ctx.statements)if(s.kind==shay::StatementKind::DeclareFunction){
   out<<"static "<<(s.has_return?"double":"void")<<" shay_fn_"<<s.name<<"(std::unordered_map<std::string,std::string>& global_values";
   for(const auto&p:s.parameters)out<<", double "<<p;
@@ -311,6 +327,8 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main)
     out<<"\n";break;
    case shay::StatementKind::OutputText:
     out<<" shay_runtime_write("<<cpp_string(s.value+"\n")<<");\n";break;
+   case shay::StatementKind::LogText:
+    out<<" shay_log("<<cpp_string(s.value)<<");\n";break;
    case shay::StatementKind::OutputTextExit:
     out<<" shay_runtime_write("<<cpp_string(s.value+"\n")<<"); throw ShayExit{};\n";break;
    case shay::StatementKind::OutputValue:
