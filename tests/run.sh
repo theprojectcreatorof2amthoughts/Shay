@@ -330,7 +330,7 @@ insval/>missing_value
 EOF
 if "$GSHAI" -o "$TMP/source-location-app" "$TMP/source-location.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted invalid source-location test"; fi
 grep -q "insval/>missing_value" "$TMP/err" || fail "compiler diagnostic source line"
-grep -q "~~~~~\^" "$TMP/err" || fail "compiler diagnostic caret underline"
+grep -q "~~~~~~~~~~~~\^" "$TMP/err" || fail "compiler diagnostic caret underline"
 pass "gshai diagnostics display the source line and pinpoint the offending identifier"
 
 
