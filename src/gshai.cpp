@@ -321,11 +321,11 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
    case shay::StatementKind::InputVariable:
     out<<" std::getline(std::cin, values["<<cpp_string(s.name)<<"]);\n";break;
    case shay::StatementKind::LogFileExtension:
-    if(s.dynamic_value)out<<" { auto it=values.find("<<cpp_string(s.name)<<"); if(it==values.end())throw std::runtime_error(\"unknown log extension variable '"<<cpp_string(s.name)<<"'\"); shay_log_extension=it->second; }\n";
+    if(s.dynamic_value)out<<" { auto it=values.find("<<cpp_string(s.name)<<"); if(it==values.end())throw std::runtime_error(std::string("<<cpp_string("unknown log extension variable '")<<")+"<<cpp_string(s.name)<<"+"<<cpp_string("'")<<"); shay_log_extension=it->second; }\n";
     else out<<" shay_log_extension="<<cpp_string(s.value)<<";\n";
     out<<" if(shay_log_extension.empty()||shay_log_extension[0]!='.'||shay_log_extension.find_first_not_of(\".abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-\")!=std::string::npos)throw std::runtime_error(\"invalid log file extension\");\n";break;
    case shay::StatementKind::LogFileName:
-    if(s.dynamic_value)out<<" { auto it=values.find("<<cpp_string(s.name)<<"); if(it==values.end())throw std::runtime_error(\"unknown log filename variable '"<<cpp_string(s.name)<<"'\"); shay_log_name=it->second; }\n";
+    if(s.dynamic_value)out<<" { auto it=values.find("<<cpp_string(s.name)<<"); if(it==values.end())throw std::runtime_error(std::string("<<cpp_string("unknown log filename variable '")<<")+"<<cpp_string(s.name)<<"+"<<cpp_string("'")<<"); shay_log_name=it->second; }\n";
     else out<<" shay_log_name="<<cpp_string(s.value)<<";\n";
     out<<" if(shay_log_name.empty())throw std::runtime_error(\"log filename cannot be empty\");\n";break;
    case shay::StatementKind::Declare:{
