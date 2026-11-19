@@ -543,7 +543,11 @@ $logindxnm "debug"
 logit/>"Shay debug entry"
 EOF
 (cd "$TMP" && "$SHAII" "$TMP/log-shl.shay") || fail "interpreter .shl log output"
-grep -q '^Shay debug entry
+grep -q '^Shay debug entry$' "$TMP/debug.shl" || fail ".shl extension selection"
+pass "logindxfl supports alternate extensions such as .shl"
+
+cat > "$TMP/log-missing-both.shay" <<'EOF'
+logit/>"This must fail"
 EOF
 if "$SHAII" "$TMP/log-missing-both.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpreter accepted logit without configuration"; fi
 grep -q "requires" "$TMP/err" || fail "missing log configuration interpreter diagnostic"
