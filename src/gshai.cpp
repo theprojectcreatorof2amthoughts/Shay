@@ -28,6 +28,7 @@ struct BuildContext{
  std::unordered_set<std::string>loaded,active,variables;
  std::vector<std::pair<fs::path,shay::Statement>>variable_declarations;
  std::unordered_map<std::string,shay::Statement>functions;
+ std::unordered_map<std::string,std::vector<std::string>>classes;
  std::vector<std::pair<fs::path,shay::Statement>>pending_function_validation;
  std::vector<Diagnostic>diagnostics;
  std::unordered_map<std::string,std::vector<std::string>>source_lines;
@@ -136,6 +137,12 @@ void validate_body(BuildContext&ctx,const fs::path&file,const std::vector<shay::
    else if(s.arguments.size()!=fn->second.parameters.size())
     diagnose(ctx,file,s.line,"function '"+s.name+"' expects "+std::to_string(fn->second.parameters.size())+" argument(s), got "+std::to_string(s.arguments.size()));
    for(const auto&arg:s.arguments)validate_expression_names(ctx,file,s.line,arg,locals,"function argument");
+  }else if(s.kind==shay::StatementKind::DoFunction){
+   auto fn=ctx.functions.find(s.name);
+   if(fn==ctx.functions.end())diagnose(ctx,file,s.line,"unknown function '"+s.name+"' inside "+bodyLabel);
+   else if(!fn->second.parameters.empty())diagnose(ctx,file,s.line,"dofunc only calls functions declared without parameters");
+  }else if(s.kind==shay::StatementKind::ExecuteClass){
+   if(!ctx.classes.count(s.name))diagnose(ctx,file,s.line,"unknown class '"+s.name+"' inside "+bodyLabel);
   }else if(s.kind==shay::StatementKind::LogText&&(!ctx.log_file_name_set&&!ctx.log_file_extension_set)){
    diagnose(ctx,file,s.line,"'logit/>' requires '$logindxfl' or '$logindxnm' to be configured before use");
   }else if(s.kind!=shay::StatementKind::OutputText&&s.kind!=shay::StatementKind::OutputTextExit&&s.kind!=shay::StatementKind::LogText){
@@ -177,11 +184,29 @@ void load_file(const fs::path&input,BuildContext&ctx){
    // First use declares the variable; later uses intentionally reuse it.
    if(ctx.variables.insert(s.name).second)ctx.variable_declarations.emplace_back(input,s);
   }else if(s.kind==shay::StatementKind::DeclareFunction){
+   if(extension!=".shaii"){diagnose(ctx,input,s.line,"'$declr' is only allowed in .shaii files");continue;}
    if(ctx.functions.count(s.name)){diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");continue;}
    ctx.functions.emplace(s.name,s);
-   // Validate function bodies after the complete import graph is loaded so
-   // functions can reference globals declared later in the importing .shay.
    ctx.pending_function_validation.emplace_back(input,s);
+  }else if(s.kind==shay::StatementKind::DeclareClass){
+   if(extension!=".shaii"){diagnose(ctx,input,s.line,"'$classfunc' is only allowed in .shaii files");continue;}
+   if(ctx.classes.count(s.name)){diagnose(ctx,input,s.line,"class '"+s.name+"' is already declared");continue;}
+   std::vector<std::string> methods;bool valid=true;
+   for(const auto&method:s.body){
+    if(ctx.functions.count(method.name)){diagnose(ctx,input,method.line,"method or function '"+method.name+"' is already declared");valid=false;continue;}
+    shay::Statement function=method;function.kind=shay::StatementKind::DeclareFunction;
+    ctx.functions.emplace(function.name,function);
+    ctx.pending_function_validation.emplace_back(input,function);
+    ctx.statements.push_back(function);
+    methods.push_back(function.name);
+   }
+   if(valid)ctx.classes.emplace(s.name,std::move(methods));
+  }else if(s.kind==shay::StatementKind::DoFunction){
+   auto fn=ctx.functions.find(s.name);
+   if(fn==ctx.functions.end())diagnose(ctx,input,s.line,"unknown function '"+s.name+"'");
+   else if(!fn->second.parameters.empty())diagnose(ctx,input,s.line,"dofunc only calls functions declared without parameters");
+  }else if(s.kind==shay::StatementKind::ExecuteClass){
+   if(!ctx.classes.count(s.name))diagnose(ctx,input,s.line,"unknown class '"+s.name+"'");
   }else if(s.kind==shay::StatementKind::If){
    validate_condition_names(ctx,input,s.line,s.condition,{},"ifit condition");
    validate_body(ctx,input,s.body,{},"ifit block");
