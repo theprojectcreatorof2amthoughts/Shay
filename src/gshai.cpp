@@ -373,14 +373,21 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
    case shay::StatementKind::DoFunction:{
     auto fn=ctx.functions.find(s.name);if(fn==ctx.functions.end())break;
     out<<indent<<"shay_failures.erase("<<cpp_string(s.name)<<"); shay_handled_failures.erase("<<cpp_string(s.name)<<");\n";
-    out<<indent<<"try { shay_fn_"<<s.name<<"(values); } catch(const std::exception& shay_error) { shay_failures["<<cpp_string(s.name)<<"]=shay_error.what(); throw; }\n";
+     if(fn->second.has_return)
+      out<<indent<<"try { { std::ostringstream shay_call_output; shay_call_output<<std::setprecision(15)<<shay_fn_"<<s.name<<"(values)<<"<<cpp_string("\n")<<"; shay_runtime_write(shay_call_output.str().c_str()); } } catch(const std::exception& shay_error) { shay_failures["<<cpp_string(s.name)<<"]=shay_error.what(); throw; }\n";
+     else
+      out<<indent<<"try { shay_fn_"<<s.name<<"(values); } catch(const std::exception& shay_error) { shay_failures["<<cpp_string(s.name)<<"]=shay_error.what(); throw; }\n";
     break;
    }
    case shay::StatementKind::ExecuteClass:{
     auto klass=ctx.classes.find(s.name);if(klass==ctx.classes.end())break;
     for(const auto&method:klass->second){
      out<<indent<<"shay_failures.erase("<<cpp_string(method)<<"); shay_handled_failures.erase("<<cpp_string(method)<<");\n";
-     out<<indent<<"try { shay_fn_"<<method<<"(values); } catch(const std::exception& shay_error) { shay_failures["<<cpp_string(method)<<"]=shay_error.what(); throw; }\n";
+      auto fn=ctx.functions.find(method);
+      if(fn!=ctx.functions.end()&&fn->second.has_return)
+       out<<indent<<"try { { std::ostringstream shay_call_output; shay_call_output<<std::setprecision(15)<<shay_fn_"<<method<<"(values)<<"<<cpp_string("\n")<<"; shay_runtime_write(shay_call_output.str().c_str()); } } catch(const std::exception& shay_error) { shay_failures["<<cpp_string(method)<<"]=shay_error.what(); throw; }\n";
+      else
+       out<<indent<<"try { shay_fn_"<<method<<"(values); } catch(const std::exception& shay_error) { shay_failures["<<cpp_string(method)<<"]=shay_error.what(); throw; }\n";
     }
     break;
    }
@@ -466,14 +473,21 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
    case shay::StatementKind::DoFunction:{
     auto fn=ctx.functions.find(s.name);if(fn==ctx.functions.end())break;
     out<<" shay_failures.erase("<<cpp_string(s.name)<<"); shay_handled_failures.erase("<<cpp_string(s.name)<<");\n";
-    out<<" try { shay_fn_"<<s.name<<"(values); } catch(const std::exception& shay_error) { shay_failures["<<cpp_string(s.name)<<"]=shay_error.what(); }\n";
+     if(fn->second.has_return)
+      out<<" try { { std::ostringstream shay_call_output; shay_call_output<<std::setprecision(15)<<shay_fn_"<<s.name<<"(values)<<"<<cpp_string("\n")<<"; shay_runtime_write(shay_call_output.str().c_str()); } } catch(const std::exception& shay_error) { shay_failures["<<cpp_string(s.name)<<"]=shay_error.what(); }\n";
+     else
+      out<<" try { shay_fn_"<<s.name<<"(values); } catch(const std::exception& shay_error) { shay_failures["<<cpp_string(s.name)<<"]=shay_error.what(); }\n";
     break;
    }
    case shay::StatementKind::ExecuteClass:{
     auto klass=ctx.classes.find(s.name);if(klass==ctx.classes.end())break;
     for(const auto&method:klass->second){
      out<<" shay_failures.erase("<<cpp_string(method)<<"); shay_handled_failures.erase("<<cpp_string(method)<<");\n";
-     out<<" try { shay_fn_"<<method<<"(values); } catch(const std::exception& shay_error) { shay_failures["<<cpp_string(method)<<"]=shay_error.what(); }\n";
+      auto fn=ctx.functions.find(method);
+      if(fn!=ctx.functions.end()&&fn->second.has_return)
+       out<<" try { { std::ostringstream shay_call_output; shay_call_output<<std::setprecision(15)<<shay_fn_"<<method<<"(values)<<"<<cpp_string("\n")<<"; shay_runtime_write(shay_call_output.str().c_str()); } } catch(const std::exception& shay_error) { shay_failures["<<cpp_string(method)<<"]=shay_error.what(); }\n";
+      else
+       out<<" try { shay_fn_"<<method<<"(values); } catch(const std::exception& shay_error) { shay_failures["<<cpp_string(method)<<"]=shay_error.what(); }\n";
     }
     break;
    }
