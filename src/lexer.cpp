@@ -13,7 +13,7 @@ std::vector<Token> Lexer::scan() {
   if(c==' '||c=='\t'||c=='\r'){take();continue;}
   if(c=='\n'){const auto l=line_,col=column_;take();tokens.push_back({TokenKind::Newline,"\n",l,col});continue;}
   if(c=='!'&&peek(1)=='#'){take();take();tokens.push_back({TokenKind::Symbol,"!#",line_,column_-2});continue;}
-  if(c=='#'&&peek(1)=='#'){while(peek()!='\0'&&peek()!='\n')take();continue;}
+  if(c=='#'&&(peek(1)=='#'||peek(1)=='%')){while(peek()!='\0'&&peek()!='\n')take();continue;}
   const auto startLine=line_,startColumn=column_;
   if(c=='"'){
    take();std::string value;bool closed=false;
