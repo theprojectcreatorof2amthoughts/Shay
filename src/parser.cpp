@@ -216,70 +216,11 @@ Program Parser::parse(){
      for(const auto&e:nestedProgram.errors)program.errors.push_back(e);
     }
     if(valid&&peek().kind!=TokenKind::Newline&&!atEnd()){error(program.errors,"unexpected token after 'finish'");valid=false;}
-   }else{error(program.errors,"expected shaiiport, shazport, declr, classfunc, or doclass after '
+   }else{error(program.errors,"expected shaiiport, shazport, declr, classfunc, or doclass after '$'");valid=false;}
   }else if(match(TokenKind::Identifier,"dofunc")){
    statement.kind=StatementKind::DoFunction;
    valid=consume(TokenKind::Identifier,"",program.errors,"expected a function name after 'dofunc'");
    if(valid)statement.name=previous().text;
-  }else if(match(TokenKind::Identifier,"brew")){
-   statement.kind=StatementKind::Declare;
-   valid=consume(TokenKind::Identifier,"",program.errors,"expected a variable name after 'brew'");
-   if(valid)statement.name=previous().text;
-   if(valid)valid=consume(TokenKind::Symbol,"=",program.errors,"expected '=' after variable name");
-   if(valid){
-    if(match(TokenKind::String))statement.value=std::string(1,static_cast<char>(1))+previous().text;
-    else if(match(TokenKind::Number)||match(TokenKind::Identifier,"true")||match(TokenKind::Identifier,"false"))statement.value=previous().text;
-    else if(match(TokenKind::Symbol,"-")){if(match(TokenKind::Number))statement.value="-"+previous().text;else{error(program.errors,"expected digits after unary '-'");valid=false;}}
-    else{error(program.errors,"expected a string, number, or boolean literal");valid=false;}
-   }
-  }else if(match(TokenKind::Identifier,"inpvarforw")){
-   statement.kind=StatementKind::InputVariable;
-   valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'inpvarforw'");
-   if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected a variable name after 'inpvarforw/>'");
-   if(valid)statement.name=previous().text;
-  }else if(match(TokenKind::Identifier,"forw")){
-   statement.kind=StatementKind::ReturnValue;
-   statement.value=collect_expression(tokens_,current_,"",valid);
-   if(statement.value.empty()){error(program.errors,"'forw' requires a return expression");valid=false;}
-  }else if(match(TokenKind::Identifier,"logit")){
-   statement.kind=StatementKind::LogText;
-   valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'logit'");
-   if(valid)valid=consume(TokenKind::String,"",program.errors,"expected quoted log text after 'logit/>'");
-   if(valid)statement.value=previous().text;
-  }else if(match(TokenKind::Identifier,"instxt")){
-   statement.kind=StatementKind::OutputText;valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'instxt'");
-   if(valid)valid=consume(TokenKind::String,"",program.errors,"expected quoted text after 'instxt/>'");
-   if(valid)statement.value=previous().text;
-  }else if(match(TokenKind::Identifier,"instxtexit")){
-   statement.kind=StatementKind::OutputTextExit;valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'instxtexit'");
-   if(valid)valid=consume(TokenKind::String,"",program.errors,"expected quoted text after 'instxtexit/>'");
-   if(valid)statement.value=previous().text;
-  }else if(match(TokenKind::Identifier,"insval")){
-   statement.kind=StatementKind::OutputValue;valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'insval'");
-   if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected a variable or function name after 'insval/>'");
-   if(valid)statement.name=previous().text;
-   if(valid&&match(TokenKind::Symbol,"(")){
-    statement.kind=StatementKind::OutputCall;
-    if(!(peek().kind==TokenKind::Symbol&&peek().text==")")){
-     while(valid){
-      auto arg=collect_expression(tokens_,current_,",",valid);
-      if(!valid||arg.empty()){error(program.errors,"expected a function argument expression");valid=false;break;}
-      statement.arguments.push_back(arg);
-      if(match(TokenKind::Symbol,","))continue;
-      break;
-     }
-    }
-    if(valid)valid=consume(TokenKind::Symbol,")",program.errors,"expected ')' after function arguments");
-   }
-  }else{error(program.errors,"unrecognized Shay statement");valid=false;}
-  if(skipCurrentLine&&!atEnd()&&peek().kind!=TokenKind::Newline){error(program.errors,"unexpected token after statement");valid=false;}
-  if(valid)program.statements.push_back(statement);
-  if(skipCurrentLine)skipLine();
- }
- return program;
-}
-}
-");valid=false;}
   }else if(match(TokenKind::Identifier,"brew")){
    statement.kind=StatementKind::Declare;
    valid=consume(TokenKind::Identifier,"",program.errors,"expected a variable name after 'brew'");
