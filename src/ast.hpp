@@ -9,7 +9,7 @@ struct Statement {
     StatementKind kind = StatementKind::Invalid;
     std::size_t line = 1;
     std::string name, value, condition;
-    std::vector<std::string> parameters, arguments;
+    std::vector<std::string> parameters, arguments, output_names;
     std::vector<Statement> body, else_body;
     bool has_return = false;
     bool dynamic_value = false;

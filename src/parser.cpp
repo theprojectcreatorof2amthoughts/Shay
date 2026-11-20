@@ -257,9 +257,10 @@ Program Parser::parse(){
   }else if(match(TokenKind::Identifier,"insval")){
    statement.kind=StatementKind::OutputValue;valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'insval'");
    if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected a variable or function name after 'insval/>'");
-   if(valid)statement.name=previous().text;
+   if(valid){statement.name=previous().text;statement.output_names.push_back(statement.name);}
    if(valid&&match(TokenKind::Symbol,"(")){
     statement.kind=StatementKind::OutputCall;
+    statement.output_names.clear();
     if(!(peek().kind==TokenKind::Symbol&&peek().text==")")){
      while(valid){
       auto arg=collect_expression(tokens_,current_,",",valid);
@@ -270,6 +271,21 @@ Program Parser::parse(){
      }
     }
     if(valid)valid=consume(TokenKind::Symbol,")",program.errors,"expected ')' after function arguments");
+   }else if(valid){
+    while(match(TokenKind::Symbol,",")){
+     if(statement.output_names.size()>=10){
+      error(program.errors,"insval/> supports a maximum of 10 variables");
+      valid=false;
+      skipLine();
+      skipCurrentLine=false;
+      break;
+     }
+     if(!consume(TokenKind::Identifier,"",program.errors,"expected a variable name after ','")){
+      valid=false;
+      break;
+     }
+     statement.output_names.push_back(previous().text);
+    }
    }
   }else{error(program.errors,"unrecognized Shay statement");valid=false;}
   if(skipCurrentLine&&!atEnd()&&peek().kind!=TokenKind::Newline){error(program.errors,"unexpected token after statement");valid=false;}
