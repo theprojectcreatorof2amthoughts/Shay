@@ -35,6 +35,65 @@ printf '%s\n' "$out" | grep -q 'Hello, world from Shay!' || fail "interpreter te
 printf '%s\n' "$out" | grep -q 'Shay' || fail "interpreter variable output"
 pass "interpreter execution"
 
+cat > "$TMP/multi-output.shay" <<'EOF'
+brew first = "First"
+brew second = "Second"
+brew third = "Third"
+insval/>first, second, third
+EOF
+expected=$(printf 'First\nSecond\nThird')
+out=$("$SHAII" "$TMP/multi-output.shay") || fail "interpreter multiple-variable output"
+[ "$out" = "$expected" ] || fail "interpreter multiple-variable output order"
+pass "insval/> outputs multiple variables in order in the interpreter"
+
+CXX="${CXX:-c++}" "$GSHAI" --shaywall --shaywextra -o "$TMP/multi-output-app" "$TMP/multi-output.shay" >"$TMP/out" 2>"$TMP/err" || fail "compile multiple-variable output"
+if grep -q "variable 'first' is never used\|variable 'second' is never used\|variable 'third' is never used" "$TMP/err"; then fail "multiple-variable output was not counted as variable use"; fi
+out=$("$TMP/multi-output-app") || fail "run compiled multiple-variable output"
+[ "$out" = "$expected" ] || fail "compiled multiple-variable output order"
+pass "gshai compiles multiple-variable output and tracks all variables as used"
+
+cat > "$TMP/multi-output-ten.shay" <<'EOF'
+brew v1 = "1"
+brew v2 = "2"
+brew v3 = "3"
+brew v4 = "4"
+brew v5 = "5"
+brew v6 = "6"
+brew v7 = "7"
+brew v8 = "8"
+brew v9 = "9"
+brew v10 = "10"
+insval/>v1, v2, v3, v4, v5, v6, v7, v8, v9, v10
+EOF
+expected=$(printf '1\n2\n3\n4\n5\n6\n7\n8\n9\n10')
+out=$("$SHAII" "$TMP/multi-output-ten.shay") || fail "interpreter ten-variable output"
+[ "$out" = "$expected" ] || fail "interpreter ten-variable output"
+CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/multi-output-ten-app" "$TMP/multi-output-ten.shay" || fail "compile ten-variable output"
+out=$("$TMP/multi-output-ten-app") || fail "run compiled ten-variable output"
+[ "$out" = "$expected" ] || fail "compiled ten-variable output"
+pass "insval/> accepts and outputs the maximum of 10 variables"
+
+cat > "$TMP/multi-output-eleven.shay" <<'EOF'
+brew v1 = "1"
+brew v2 = "2"
+brew v3 = "3"
+brew v4 = "4"
+brew v5 = "5"
+brew v6 = "6"
+brew v7 = "7"
+brew v8 = "8"
+brew v9 = "9"
+brew v10 = "10"
+brew v11 = "11"
+insval/>v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11
+EOF
+if "$SHAII" --check "$TMP/multi-output-eleven.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpreter accepted eleven-variable output"; fi
+grep -q "insval/> supports a maximum of 10 variables" "$TMP/err" || fail "eleven-variable parser diagnostic"
+if "$GSHAI" -o "$TMP/multi-output-eleven-app" "$TMP/multi-output-eleven.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted eleven-variable output"; fi
+grep -q "insval/> supports a maximum of 10 variables" "$TMP/err" || fail "compiler eleven-variable parser diagnostic"
+pass "insval/> rejects more than 10 variables with a clear diagnostic"
+
+
 # The new self-closing operator is mandatory for these three statements.
 for legacy in "instxt-\"old syntax\"" "instxtexit-\"old syntax\"" "insval-name" "inpvarforw-name"; do
     case "$legacy" in
