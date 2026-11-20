@@ -52,6 +52,25 @@ out=$("$TMP/multi-output-app") || fail "run compiled multiple-variable output"
 [ "$out" = "$expected" ] || fail "compiled multiple-variable output order"
 pass "gshai compiles multiple-variable output and tracks all variables as used"
 
+cat > "$TMP/multi-output-function.shaii" <<'EOF'
+$declr output_pair()
+    insval/>first, second
+finish
+EOF
+cat > "$TMP/multi-output-function.shay" <<'EOF'
+$shaiiport [multi-output-function.shaii]
+brew first = "Function first"
+brew second = "Function second"
+dofunc output_pair
+EOF
+expected=$(printf 'Function first\nFunction second')
+out=$("$SHAII" "$TMP/multi-output-function.shay") || fail "interpreter multiple-variable output inside function"
+[ "$out" = "$expected" ] || fail "interpreter multiple-variable function output"
+CXX="${CXX:-c++}" "$GSHAI" -o "$TMP/multi-output-function-app" "$TMP/multi-output-function.shay" || fail "compile multiple-variable function output"
+out=$("$TMP/multi-output-function-app") || fail "run compiled multiple-variable function output"
+[ "$out" = "$expected" ] || fail "compiled multiple-variable function output"
+pass "insval/> supports multiple variables inside function bodies"
+
 cat > "$TMP/multi-output-ten.shay" <<'EOF'
 brew v1 = "1"
 brew v2 = "2"
