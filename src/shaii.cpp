@@ -229,11 +229,12 @@ void execute_file(const fs::path&input,Context&ctx){
     if(extension!=".shaii"){diagnose(ctx,input,s.line,"'$classfunc' is only allowed in .shaii files");break;}
     if(ctx.classes.count(s.name)){diagnose(ctx,input,s.line,"class '"+s.name+"' is already declared");break;}
     std::vector<std::string> methods;bool valid=true;
-    for(const auto&method:s.body){
-     if(ctx.functions.count(method.name)){diagnose(ctx,input,method.line,"method or function '"+method.name+"' is already declared");valid=false;continue;}
-     ctx.functions.emplace(method.name,method);methods.push_back(method.name);
+    for(const auto&method:s.body)
+     if(ctx.functions.count(method.name)){diagnose(ctx,input,method.line,"method or function '"+method.name+"' is already declared");valid=false;}
+    if(valid){
+     for(const auto&method:s.body){ctx.functions.emplace(method.name,method);methods.push_back(method.name);}
+     ctx.classes.emplace(s.name,std::move(methods));
     }
-    if(valid)ctx.classes.emplace(s.name,std::move(methods));
     break;
    }
    case shay::StatementKind::DoFunction:{
