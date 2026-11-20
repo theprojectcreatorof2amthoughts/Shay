@@ -221,12 +221,8 @@ void load_file(const fs::path&input,BuildContext&ctx){
    validate_body(ctx,input,s.body,{},"ifit block");
    validate_body(ctx,input,s.else_body,{},"elseit block");
   }else if(s.kind==shay::StatementKind::OutputValue){
-   if(s.output_names.empty()){
-    if(!ctx.variables.count(s.name))diagnose(ctx,input,s.line,"unknown variable '"+s.name+"'");
-   }else{
-    for(const auto&name:s.output_names)
-     if(!ctx.variables.count(name))diagnose(ctx,input,s.line,"unknown variable '"+name+"'");
-   }
+   for(const auto&name:s.output_names)
+    if(!ctx.variables.count(name))diagnose(ctx,input,s.line,"unknown variable '"+name+"'");
   }else if(s.kind==shay::StatementKind::OutputCall){
    auto fn=ctx.functions.find(s.name);
    if(fn==ctx.functions.end())diagnose(ctx,input,s.line,"unknown function '"+s.name+"'");
