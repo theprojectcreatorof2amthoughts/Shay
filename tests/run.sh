@@ -742,7 +742,7 @@ $declr forbidden()
     instxt/>"This must not run"
 finish
 EOF
-if "$SHAII" --check "$TMP/illegal-declr.shay" >"$TMP/out" 2>"$TMP/err"; then fail "$declr was accepted in .shay"; fi
+if "$SHAII" --check "$TMP/illegal-declr.shay" >"$TMP/out" 2>"$TMP/err"; then fail "\$declr was accepted in .shay"; fi
 grep -q "'$declr' is only allowed in .shaii files" "$TMP/err" || fail "declr file-type restriction diagnostic"
 if "$GSHAI" -o "$TMP/illegal-declr" "$TMP/illegal-declr.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted $declr in .shay"; fi
 grep -q "'$declr' is only allowed in .shaii files" "$TMP/err" || fail "compiler declr file-type restriction diagnostic"
