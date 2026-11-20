@@ -467,12 +467,10 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
     out<<" shay_log("<<cpp_string(s.value)<<");\n";break;
    case shay::StatementKind::OutputTextExit:
     out<<" shay_runtime_write("<<cpp_string(s.value+"\n")<<"); throw ShayExit{};\n";break;
-   case shay::StatementKind::OutputValue:{
-    const auto&names=s.output_names.empty()?std::vector<std::string>{s.name}:s.output_names;
-    for(const auto&name:names)
+   case shay::StatementKind::OutputValue:
+    for(const auto&name:s.output_names)
      out<<" shay_runtime_write((values["<<cpp_string(name)<<"] + "<<cpp_string("\n")<<").c_str());\n";
     break;
-   }
    case shay::StatementKind::OutputCall:{
     auto fn=ctx.functions.find(s.name);if(fn==ctx.functions.end())break;
     out<<" shay_failures.erase("<<cpp_string(s.name)<<"); shay_handled_failures.erase("<<cpp_string(s.name)<<");\n";
