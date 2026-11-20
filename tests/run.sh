@@ -218,6 +218,19 @@ if "$SHAII" --check "$TMP/bad-syntax.shay" >"$TMP/out" 2>"$TMP/err"; then fail "
 grep -q 'expected a string, number, or boolean literal' "$TMP/err" || fail "parser diagnostic"
 grep -q 'unterminated string literal' "$TMP/err" || fail "lexer diagnostic"
 pass "lexer and parser diagnostics"
+if "$GSHAI" -o "$TMP/bad-syntax-app" "$TMP/bad-syntax.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted malformed syntax"; fi
+grep -q "bad-syntax.shay:1:13: error:" "$TMP/err" || fail "compiler parser error column"
+grep -q "bad-syntax.shay:2:9: error: unterminated string literal" "$TMP/err" || fail "compiler lexer error column"
+pass "gshai preserves exact parser and lexer error columns"
+# Force colors for deterministic assertions, even when CI captures stderr.
+if CLICOLOR_FORCE=1 "$GSHAI" -o "$TMP/bad-syntax-colored-app" "$TMP/bad-syntax.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted malformed syntax with forced colors"; fi
+esc=$(printf '\033')
+grep -q "${esc}\\[1;36m" "$TMP/err" || fail "diagnostic source location color"
+grep -q "${esc}\\[1;31merror${esc}\\[0m" "$TMP/err" || fail "diagnostic error color"
+grep -q "${esc}\\[1;31m\\^" "$TMP/err" || fail "diagnostic error caret color"
+if NO_COLOR=1 CLICOLOR_FORCE=1 "$GSHAI" -o "$TMP/bad-syntax-no-color-app" "$TMP/bad-syntax.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted malformed syntax with NO_COLOR"; fi
+if grep -q "$esc" "$TMP/err"; then fail "NO_COLOR did not disable diagnostic colors"; fi
+pass "gshai colors errors and source locations and honors NO_COLOR"
 
 cat > "$TMP/task.shaz" <<'EOF'
 instxt/>"Zeccurs task ran"
@@ -424,6 +437,21 @@ if "$GSHAI" -o "$TMP/source-location-app" "$TMP/source-location.shay" >"$TMP/out
 grep -q "insval/>missing_value" "$TMP/err" || fail "compiler diagnostic source line"
 grep -q "~~~~~~~~~~~~\^" "$TMP/err" || fail "compiler diagnostic caret underline"
 pass "gshai diagnostics display the source line and pinpoint the offending identifier"
+grep -q "source-location.shay:2:9: error:" "$TMP/err" || fail "compiler diagnostic line and column"
+
+cat > "$TMP/warning-location.shay" <<'EOF'
+brew unused_value = "not used"
+instxt/>"done"
+EOF
+if "$GSHAI" --shaywall -o "$TMP/warning-location-app" "$TMP/warning-location.shay" >"$TMP/out" 2>"$TMP/err"; then :; else fail "compile unused-variable warning location test"; fi
+grep -q "warning-location.shay:1:6: warning: variable 'unused_value' is never used" "$TMP/err" || fail "warning diagnostic line and column"
+grep -q "brew unused_value" "$TMP/err" || fail "warning diagnostic source statement"
+pass "gshai warnings display line and column and point to the declared variable"
+if CLICOLOR_FORCE=1 "$GSHAI" --shaywall -o "$TMP/warning-colored-app" "$TMP/warning-location.shay" >"$TMP/out" 2>"$TMP/err"; then :; else fail "compile warning color test"; fi
+esc=$(printf '\033')
+grep -q "${esc}\\[1;33mwarning${esc}\\[0m" "$TMP/err" || fail "diagnostic warning color"
+pass "gshai highlights warnings in yellow"
+
 
 
 

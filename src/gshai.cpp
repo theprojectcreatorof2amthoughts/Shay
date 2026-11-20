@@ -4,12 +4,16 @@
 #include "parser.hpp"
 #include <chrono>
 #include <cctype>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #ifdef _WIN32
+#include <io.h>
 #include <process.h>
+#else
+#include <unistd.h>
 #endif
 #include <iostream>
 #include <iterator>
@@ -38,18 +42,25 @@ struct BuildContext{
  bool log_file_name_set=false;
  bool log_file_extension_set=false;
 };
-void diagnose(BuildContext&ctx,const fs::path&file,std::size_t line,const std::string&message,bool warning=false){
+void diagnose(BuildContext&ctx,const fs::path&file,std::size_t line,const std::string&message,bool warning=false,std::size_t column=0){
  Diagnostic diagnostic;diagnostic.file=file;diagnostic.line=line;diagnostic.message=message;diagnostic.warning=warning;
  auto source=ctx.source_lines.find(file.string());
  if(source!=ctx.source_lines.end()&&line>0&&line<=source->second.size()){
   diagnostic.source_line=source->second[line-1];
-  const auto first=message.find('\'');
-  if(first!=std::string::npos){
-   const auto last=message.find('\'',first+1);
-   if(last!=std::string::npos&&last>first+1){
-    const std::string target=message.substr(first+1,last-first-1);
-    const auto at=diagnostic.source_line.find(target);
-    if(at!=std::string::npos){diagnostic.column=at+1;diagnostic.length=target.size();}
+  if(column)diagnostic.column=column;
+  else{
+   const auto first=message.find('\'');
+   if(first!=std::string::npos){
+    const auto last=message.find('\'',first+1);
+    if(last!=std::string::npos&&last>first+1){
+     const std::string target=message.substr(first+1,last-first-1);
+     const auto at=diagnostic.source_line.find(target);
+     if(at!=std::string::npos){diagnostic.column=at+1;diagnostic.length=target.size();}
+    }
+   }
+   if(diagnostic.column==1){
+    const auto firstCode=diagnostic.source_line.find_first_not_of(" \t\r");
+    if(firstCode!=std::string::npos)diagnostic.column=firstCode+1;
    }
   }
  }
@@ -165,8 +176,8 @@ void load_file(const fs::path&input,BuildContext&ctx){
   while(std::getline(lines,text))stored.push_back(text);
  }
  shay::Lexer lexer(source);const auto tokens=lexer.scan();shay::Parser parser(tokens);const shay::Program program=parser.parse();
- for(const auto&e:lexer.errors())diagnose(ctx,input,e.line,e.message);
- for(const auto&e:program.errors)diagnose(ctx,input,e.line,e.message);
+ for(const auto&e:lexer.errors())diagnose(ctx,input,e.line,e.message,false,e.column);
+ for(const auto&e:program.errors)diagnose(ctx,input,e.line,e.message,false,e.column);
  ctx.active.insert(key);
  for(const auto&s:program.statements){
   if(s.kind==shay::StatementKind::ImportLibrary||s.kind==shay::StatementKind::ImportTask){
@@ -519,15 +530,41 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
  if(add_main)out<<"int main(){return shay_program_entry();}\n";
  return static_cast<bool>(out);
 }
+bool diagnostics_color_enabled(){
+ const char*no_color=std::getenv("NO_COLOR");
+ if(no_color&&*no_color)return false;
+ const char*clicolor=std::getenv("CLICOLOR");
+ if(clicolor&&std::string(clicolor)=="0")return false;
+ const char*term=std::getenv("TERM");
+ if(term&&std::string(term)=="dumb")return false;
+ const char*force=std::getenv("CLICOLOR_FORCE");
+ if(force&&*force&&std::string(force)!="0")return true;
+#ifdef _WIN32
+ return _isatty(_fileno(stderr))!=0;
+#else
+ return isatty(fileno(stderr))!=0;
+#endif
+}
 void print_diagnostics(const BuildContext&ctx){
+ const bool color=diagnostics_color_enabled();
+ constexpr const char*reset="\033[0m";
+ constexpr const char*location_color="\033[1;36m";
+ constexpr const char*warning_color="\033[1;33m";
+ constexpr const char*error_color="\033[1;31m";
  for(const auto&d:ctx.diagnostics){
-  std::cerr<<d.file.string()<<(d.warning?": warning: ":": error: ")<<d.message<<'\n';
+  const char*severity_color=d.warning?warning_color:error_color;
+  std::cerr<<(color?location_color:"")<<d.file.string()<<':'<<d.line<<':'<<d.column
+           <<(color?reset:"")<<": "
+           <<(color?severity_color:"")<<(d.warning?"warning":"error")
+           <<(color?reset:"")<<": "<<d.message<<'\n';
   if(!d.source_line.empty()){
    std::cerr<<"    "<<d.source_line<<'\n'<<"    ";
-   for(std::size_t i=1;i<d.column;++i)std::cerr<<' ';
+   for(std::size_t i=0;i+1<d.column&&i<d.source_line.size();++i)
+    std::cerr<<(d.source_line[i]=='\t'?'\t':' ');
    const std::size_t width=d.length?d.length:1;
+   if(color)std::cerr<<severity_color;
    for(std::size_t i=1;i<width;++i)std::cerr<<'~';
-   std::cerr<<'^'<<'\n';
+   std::cerr<<'^'<<(color?reset:"")<<'\n';
   }
  }
 }

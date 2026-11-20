@@ -9,7 +9,7 @@ const Token &Parser::previous() const{return tokens_[current_-1];}
 bool Parser::atEnd() const{return peek().kind==TokenKind::End;}
 bool Parser::match(TokenKind kind,const std::string &text){if(peek().kind!=kind||(!text.empty()&&peek().text!=text))return false;++current_;return true;}
 void Parser::skipLine(){while(!atEnd()&&peek().kind!=TokenKind::Newline)++current_;if(peek().kind==TokenKind::Newline)++current_;}
-void Parser::error(std::vector<ParseError>&errors,const std::string&message){errors.push_back({peek().line,message});}
+void Parser::error(std::vector<ParseError>&errors,const std::string&message){errors.push_back({peek().line,peek().column,message});}
 bool Parser::consume(TokenKind kind,const std::string&text,std::vector<ParseError>&errors,const std::string&message){if(match(kind,text))return true;error(errors,message);return false;}
 namespace {
 bool expression_token(const Token&t){
