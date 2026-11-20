@@ -15,7 +15,7 @@ struct Statement {
     bool dynamic_value = false;
     bool external_import = false;
 };
-struct ParseError { std::size_t line; std::string message; };
+struct ParseError { std::size_t line; std::size_t column; std::string message; };
 struct Program { std::vector<Statement> statements; std::vector<ParseError> errors; };
 }
 #endif
