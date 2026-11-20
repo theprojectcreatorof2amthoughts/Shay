@@ -67,7 +67,12 @@ void collect_expression_uses(const std::string&source,const BuildContext&ctx,con
 void collect_statement_uses(const shay::Statement&s,const BuildContext&ctx,const std::unordered_set<std::string>&locals,std::unordered_set<std::string>&used){
  switch(s.kind){
   case shay::StatementKind::OutputValue:
-   if(ctx.variables.count(s.name)&&!locals.count(s.name))used.insert(s.name);
+   if(s.output_names.empty()){
+    if(ctx.variables.count(s.name)&&!locals.count(s.name))used.insert(s.name);
+   }else{
+    for(const auto&name:s.output_names)
+     if(ctx.variables.count(name)&&!locals.count(name))used.insert(name);
+   }
    break;
   case shay::StatementKind::OutputCall:
    for(const auto&arg:s.arguments)collect_expression_uses(arg,ctx,locals,used);
@@ -126,8 +131,14 @@ void validate_body(BuildContext&ctx,const fs::path&file,const std::vector<shay::
    if(function_name.empty())diagnose(ctx,file,s.line,"!#"+s.name+" is only valid inside a function");
    else if(s.name!=function_name)diagnose(ctx,file,s.line,"!#"+s.name+" can only mark the currently executing function '"+function_name+"'");
   }else if(s.kind==shay::StatementKind::OutputValue){
-   if(!ctx.variables.count(s.name)&&!locals.count(s.name))
-    diagnose(ctx,file,s.line,"unknown variable '"+s.name+"' inside "+bodyLabel);
+   if(s.output_names.empty()){
+    if(!ctx.variables.count(s.name)&&!locals.count(s.name))
+     diagnose(ctx,file,s.line,"unknown variable '"+s.name+"' inside "+bodyLabel);
+   }else{
+    for(const auto&name:s.output_names)
+     if(!ctx.variables.count(name)&&!locals.count(name))
+      diagnose(ctx,file,s.line,"unknown variable '"+name+"' inside "+bodyLabel);
+   }
   }else if(s.kind==shay::StatementKind::ReturnValue){
    if(function_name.empty())diagnose(ctx,file,s.line,"'forw' is only valid inside a function");
    else validate_expression_names(ctx,file,s.line,s.value,locals,"function return expression");
@@ -218,8 +229,13 @@ void load_file(const fs::path&input,BuildContext&ctx){
    validate_condition_names(ctx,input,s.line,s.condition,{},"ifit condition");
    validate_body(ctx,input,s.body,{},"ifit block");
    validate_body(ctx,input,s.else_body,{},"elseit block");
-  }else if(s.kind==shay::StatementKind::OutputValue&&!ctx.variables.count(s.name)){
-   diagnose(ctx,input,s.line,"unknown variable '"+s.name+"'");
+  }else if(s.kind==shay::StatementKind::OutputValue){
+   if(s.output_names.empty()){
+    if(!ctx.variables.count(s.name))diagnose(ctx,input,s.line,"unknown variable '"+s.name+"'");
+   }else{
+    for(const auto&name:s.output_names)
+     if(!ctx.variables.count(name))diagnose(ctx,input,s.line,"unknown variable '"+name+"'");
+   }
   }else if(s.kind==shay::StatementKind::OutputCall){
    auto fn=ctx.functions.find(s.name);
    if(fn==ctx.functions.end())diagnose(ctx,input,s.line,"unknown function '"+s.name+"'");
@@ -355,8 +371,12 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
     out<<indent<<"shay_log("<<cpp_string(s.value)<<");\n";break;
    case shay::StatementKind::OutputTextExit:
     out<<indent<<"shay_runtime_write("<<cpp_string(s.value+"\n")<<"); throw ShayExit{};\n";break;
-   case shay::StatementKind::OutputValue:
-    out<<indent<<"shay_runtime_write((values["<<cpp_string(s.name)<<" ] + "<<cpp_string("\n")<<").c_str());\n";break;
+   case shay::StatementKind::OutputValue:{
+    const auto&names=s.output_names.empty()?std::vector<std::string>{s.name}:s.output_names;
+    for(const auto&name:names)
+     out<<indent<<"shay_runtime_write((values["<<cpp_string(name)<<"] + "<<cpp_string("\n")<<").c_str());\n";
+    break;
+   }
    case shay::StatementKind::If:
     out<<indent<<"if ("<<cpp_condition(s.condition)<<") {\n";
     emit_body(out,s.body,ctx,indent+" ",function_name);
@@ -462,8 +482,12 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
     out<<" shay_log("<<cpp_string(s.value)<<");\n";break;
    case shay::StatementKind::OutputTextExit:
     out<<" shay_runtime_write("<<cpp_string(s.value+"\n")<<"); throw ShayExit{};\n";break;
-   case shay::StatementKind::OutputValue:
-    out<<" shay_runtime_write((values["<<cpp_string(s.name)<<"] + "<<cpp_string("\n")<<").c_str());\n";break;
+   case shay::StatementKind::OutputValue:{
+    const auto&names=s.output_names.empty()?std::vector<std::string>{s.name}:s.output_names;
+    for(const auto&name:names)
+     out<<" shay_runtime_write((values["<<cpp_string(name)<<"] + "<<cpp_string("\n")<<").c_str());\n";
+    break;
+   }
    case shay::StatementKind::OutputCall:{
     auto fn=ctx.functions.find(s.name);if(fn==ctx.functions.end())break;
     out<<" shay_failures.erase("<<cpp_string(s.name)<<"); shay_handled_failures.erase("<<cpp_string(s.name)<<");\n";
