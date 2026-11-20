@@ -127,14 +127,9 @@ void validate_body(BuildContext&ctx,const fs::path&file,const std::vector<shay::
    if(function_name.empty())diagnose(ctx,file,s.line,"!#"+s.name+" is only valid inside a function");
    else if(s.name!=function_name)diagnose(ctx,file,s.line,"!#"+s.name+" can only mark the currently executing function '"+function_name+"'");
   }else if(s.kind==shay::StatementKind::OutputValue){
-   if(s.output_names.empty()){
-    if(!ctx.variables.count(s.name)&&!locals.count(s.name))
-     diagnose(ctx,file,s.line,"unknown variable '"+s.name+"' inside "+bodyLabel);
-   }else{
-    for(const auto&name:s.output_names)
-     if(!ctx.variables.count(name)&&!locals.count(name))
-      diagnose(ctx,file,s.line,"unknown variable '"+name+"' inside "+bodyLabel);
-   }
+   for(const auto&name:s.output_names)
+    if(!ctx.variables.count(name)&&!locals.count(name))
+     diagnose(ctx,file,s.line,"unknown variable '"+name+"' inside "+bodyLabel);
   }else if(s.kind==shay::StatementKind::ReturnValue){
    if(function_name.empty())diagnose(ctx,file,s.line,"'forw' is only valid inside a function");
    else validate_expression_names(ctx,file,s.line,s.value,locals,"function return expression");
