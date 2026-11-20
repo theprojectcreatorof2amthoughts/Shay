@@ -70,13 +70,14 @@ The current implementation supports string output, literal variable declarations
 
 ### Read input into a variable
 
-`inpvarforw/>name` reads one complete line from standard input. It creates `name` if it has not been declared yet; if `name` already exists, it replaces its previous value. Input is stored as text, including spaces, and can be used with `insval/>name` afterward.
+`inpvarforw/>name` reads one complete line from standard input. It creates `name` if it has not been declared yet; if `name` already exists, it replaces its previous value. Input is stored as text, including spaces, and can be used with `insval/>name` afterward. A single `insval/>` statement can output up to 10 variables separated by commas; each value is printed on its own line in the order listed. This works at the top level and inside functions or class methods.
 
 ```shay
 instxt/>"What's your name?"
 inpvarforw/>name
 instxt/>"Hello,"
 insval/>name
+insval/>first, second, third
 ```
 
 The interpreter and compiled executables both read from standard input. `shaii --check` does not wait for input. The first implementation supports `inpvarforw` at the top level of a program.
