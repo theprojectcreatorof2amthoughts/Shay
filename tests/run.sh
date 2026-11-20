@@ -447,6 +447,10 @@ if "$GSHAI" --shaywall -o "$TMP/warning-location-app" "$TMP/warning-location.sha
 grep -q "warning-location.shay:1:6: warning: variable 'unused_value' is never used" "$TMP/err" || fail "warning diagnostic line and column"
 grep -q "brew unused_value" "$TMP/err" || fail "warning diagnostic source statement"
 pass "gshai warnings display line and column and point to the declared variable"
+if CLICOLOR_FORCE=1 "$GSHAI" --shaywall -o "$TMP/warning-colored-app" "$TMP/warning-location.shay" >"$TMP/out" 2>"$TMP/err"; then :; else fail "compile warning color test"; fi
+esc=$(printf '\033')
+grep -q "${esc}\\[1;33mwarning${esc}\\[0m" "$TMP/err" || fail "diagnostic warning color"
+pass "gshai highlights warnings in yellow"
 
 
 
