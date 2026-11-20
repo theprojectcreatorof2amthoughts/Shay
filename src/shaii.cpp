@@ -21,6 +21,7 @@ struct Context{
  std::unordered_map<std::string,std::string> values;
  std::unordered_map<std::string,double> numbers;
  std::unordered_map<std::string,shay::Statement> functions;
+ std::unordered_map<std::string,std::vector<std::string>> classes;
  std::unordered_set<std::string> loaded,active;
  std::vector<Diagnostic> diagnostics;
  bool check_only=false;
@@ -97,6 +98,15 @@ bool call_function(const shay::Statement&call,Context&ctx,const fs::path&file,Nu
  }
  return true;
 }
+bool execute_class(const std::string&class_name,Context&ctx,const fs::path&file,NumberScope&scope,std::string&failure){
+ auto found=ctx.classes.find(class_name);
+ if(found==ctx.classes.end()){failure="unknown class '"+class_name+"'";return false;}
+ for(const auto&method_name:found->second){
+  shay::Statement call;call.name=method_name;
+  if(!call_function(call,ctx,file,scope)){failure=ctx.failures[method_name];return false;}
+ }
+ return true;
+}
 bool execute_statements(const std::vector<shay::Statement>&statements,Context&ctx,const fs::path&file,NumberScope&scope,std::string&failure,ReturnFlow*return_flow){
  bool success=true;
  for(const auto&s:statements){
@@ -148,6 +158,12 @@ bool execute_statements(const std::vector<shay::Statement>&statements,Context&ct
    }
    case shay::StatementKind::OutputCall:
     if(!call_function(s,ctx,file,scope)){failure=ctx.failures[s.name];success=false;}
+    break;
+   case shay::StatementKind::DoFunction:
+    {shay::Statement call;call.name=s.name;if(!call_function(call,ctx,file,scope)){failure=ctx.failures[s.name];success=false;}}
+    break;
+   case shay::StatementKind::ExecuteClass:
+    if(!execute_class(s.name,ctx,file,scope,failure))success=false;
     break;
    default:
     failure="statement is not supported inside a function body";
@@ -205,9 +221,35 @@ void execute_file(const fs::path&input,Context&ctx){
     ctx.log_file_name_set=true;break;
    }
    case shay::StatementKind::DeclareFunction:
+    if(extension!=".shaii"){diagnose(ctx,input,s.line,"'$declr' is only allowed in .shaii files");break;}
     if(ctx.functions.count(s.name))diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");
     else ctx.functions.emplace(s.name,s);
     break;
+   case shay::StatementKind::DeclareClass:{
+    if(extension!=".shaii"){diagnose(ctx,input,s.line,"'$classfunc' is only allowed in .shaii files");break;}
+    if(ctx.classes.count(s.name)){diagnose(ctx,input,s.line,"class '"+s.name+"' is already declared");break;}
+    std::vector<std::string> methods;bool valid=true;
+    for(const auto&method:s.body){
+     if(ctx.functions.count(method.name)){diagnose(ctx,input,method.line,"method or function '"+method.name+"' is already declared");valid=false;continue;}
+     ctx.functions.emplace(method.name,method);methods.push_back(method.name);
+    }
+    if(valid)ctx.classes.emplace(s.name,std::move(methods));
+    break;
+   }
+   case shay::StatementKind::DoFunction:{
+    NumberScope scope=ctx.numbers;std::string failure;
+    shay::Statement call;call.name=s.name;
+    if(!ctx.functions.count(s.name))diagnose(ctx,input,s.line,"unknown function '"+s.name+"'");
+    else if(!ctx.functions[s.name].parameters.empty())diagnose(ctx,input,s.line,"dofunc only calls functions declared without parameters");
+    else if(!call_function(call,ctx,input,scope))diagnose(ctx,input,s.line,"function '"+s.name+"' failed: "+ctx.failures[s.name]);
+    break;
+   }
+   case shay::StatementKind::ExecuteClass:{
+    NumberScope scope=ctx.numbers;std::string failure;
+    if(!ctx.classes.count(s.name))diagnose(ctx,input,s.line,"unknown class '"+s.name+"'");
+    else if(!execute_class(s.name,ctx,input,scope,failure))diagnose(ctx,input,s.line,"class '"+s.name+"' failed: "+failure);
+    break;
+   }
    case shay::StatementKind::If:{
     auto validate_log_config=[&](const auto&body,const auto&self)->void{
      for(const auto&nested:body){
