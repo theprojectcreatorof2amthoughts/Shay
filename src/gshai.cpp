@@ -194,15 +194,18 @@ void load_file(const fs::path&input,BuildContext&ctx){
    if(extension!=".shaii"){diagnose(ctx,input,s.line,"'$classfunc' is only allowed in .shaii files");continue;}
    if(ctx.classes.count(s.name)){diagnose(ctx,input,s.line,"class '"+s.name+"' is already declared");continue;}
    std::vector<std::string> methods;bool valid=true;
-   for(const auto&method:s.body){
-    if(ctx.functions.count(method.name)){diagnose(ctx,input,method.line,"method or function '"+method.name+"' is already declared");valid=false;continue;}
-    shay::Statement function=method;function.kind=shay::StatementKind::DeclareFunction;
-    ctx.functions.emplace(function.name,function);
-    ctx.pending_function_validation.emplace_back(input,function);
-    ctx.statements.push_back(function);
-    methods.push_back(function.name);
+   for(const auto&method:s.body)
+    if(ctx.functions.count(method.name)){diagnose(ctx,input,method.line,"method or function '"+method.name+"' is already declared");valid=false;}
+   if(valid){
+    for(const auto&method:s.body){
+     shay::Statement function=method;function.kind=shay::StatementKind::DeclareFunction;
+     ctx.functions.emplace(function.name,function);
+     ctx.pending_function_validation.emplace_back(input,function);
+     ctx.statements.push_back(function);
+     methods.push_back(function.name);
+    }
+    ctx.classes.emplace(s.name,std::move(methods));
    }
-   if(valid)ctx.classes.emplace(s.name,std::move(methods));
   }else if(s.kind==shay::StatementKind::DoFunction){
    auto fn=ctx.functions.find(s.name);
    if(fn==ctx.functions.end())diagnose(ctx,input,s.line,"unknown function '"+s.name+"'");
