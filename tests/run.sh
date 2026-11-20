@@ -424,6 +424,17 @@ if "$GSHAI" -o "$TMP/source-location-app" "$TMP/source-location.shay" >"$TMP/out
 grep -q "insval/>missing_value" "$TMP/err" || fail "compiler diagnostic source line"
 grep -q "~~~~~~~~~~~~\^" "$TMP/err" || fail "compiler diagnostic caret underline"
 pass "gshai diagnostics display the source line and pinpoint the offending identifier"
+grep -q "source-location.shay:2:9: error:" "$TMP/err" || fail "compiler diagnostic line and column"
+
+cat > "$TMP/warning-location.shay" <<'EOF'
+brew unused_value = "not used"
+instxt/>"done"
+EOF
+if "$GSHAI" --shaywall -o "$TMP/warning-location-app" "$TMP/warning-location.shay" >"$TMP/out" 2>"$TMP/err"; then :; else fail "compile unused-variable warning location test"; fi
+grep -q "warning-location.shay:1:6: warning: variable 'unused_value' is never used" "$TMP/err" || fail "warning diagnostic line and column"
+grep -q "brew unused_value" "$TMP/err" || fail "warning diagnostic source statement"
+pass "gshai warnings display line and column and point to the declared variable"
+
 
 
 
