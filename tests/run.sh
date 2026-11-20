@@ -747,6 +747,12 @@ printf '%s\n' "$out" | grep -q "Memory slot created$" || fail "compiled first cl
 printf '%s\n' "$out" | grep -q "Memory slot deleted$" || fail "compiled second class method"
 pass "dofunc works in .shay and .shaii; doclass executes every method in declaration order"
 
+cat > "$TMP/dofunc-arguments.shay" <<'EOF'
+dofunc announce()
+EOF
+if "$SHAII" --check "$TMP/dofunc-arguments.shay" >"$TMP/out" 2>"$TMP/err"; then fail "dofunc accepted arguments"; fi
+pass "dofunc rejects argument syntax"
+
 cat > "$TMP/illegal-declr.shay" <<'EOF'
 $declr forbidden()
     instxt/>"This must not run"
