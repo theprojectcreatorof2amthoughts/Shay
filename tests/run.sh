@@ -222,6 +222,15 @@ if "$GSHAI" -o "$TMP/bad-syntax-app" "$TMP/bad-syntax.shay" >"$TMP/out" 2>"$TMP/
 grep -q "bad-syntax.shay:1:13: error:" "$TMP/err" || fail "compiler parser error column"
 grep -q "bad-syntax.shay:2:9: error: unterminated string literal" "$TMP/err" || fail "compiler lexer error column"
 pass "gshai preserves exact parser and lexer error columns"
+# Force colors for deterministic assertions, even when CI captures stderr.
+if CLICOLOR_FORCE=1 "$GSHAI" -o "$TMP/bad-syntax-colored-app" "$TMP/bad-syntax.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted malformed syntax with forced colors"; fi
+esc=$(printf '\033')
+grep -q "${esc}\\[1;36m" "$TMP/err" || fail "diagnostic source location color"
+grep -q "${esc}\\[1;31merror${esc}\\[0m" "$TMP/err" || fail "diagnostic error color"
+grep -q "${esc}\\[1;31m\\^" "$TMP/err" || fail "diagnostic error caret color"
+if NO_COLOR=1 CLICOLOR_FORCE=1 "$GSHAI" -o "$TMP/bad-syntax-no-color-app" "$TMP/bad-syntax.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted malformed syntax with NO_COLOR"; fi
+if grep -q "$esc" "$TMP/err"; then fail "NO_COLOR did not disable diagnostic colors"; fi
+pass "gshai colors errors and source locations and honors NO_COLOR"
 
 cat > "$TMP/task.shaz" <<'EOF'
 instxt/>"Zeccurs task ran"
