@@ -141,11 +141,22 @@ bool execute_statements(const std::vector<shay::Statement>&statements,Context&ct
     failure="program terminated by instxtexit";
     return false;
    case shay::StatementKind::OutputValue:{
-    auto number=scope.find(s.name);
-    if(number!=scope.end()){if(!ctx.check_only)shay_runtime_write((number_text(number->second)+"\n").c_str());break;}
-    auto value=ctx.values.find(s.name);
-    if(value!=ctx.values.end()){if(!ctx.check_only)shay_runtime_write((value->second+"\n").c_str());}
-    else{failure="unknown variable '"+s.name+"'";success=false;}
+    const auto&names=s.output_names.empty()?std::vector<std::string>{s.name}:s.output_names;
+    for(const auto&name:names){
+     auto number=scope.find(name);
+     if(number!=scope.end()){
+      if(!ctx.check_only)shay_runtime_write((number_text(number->second)+"\n").c_str());
+      continue;
+     }
+     auto value=ctx.values.find(name);
+     if(value!=ctx.values.end()){
+      if(!ctx.check_only)shay_runtime_write((value->second+"\n").c_str());
+     }else{
+      failure="unknown variable '"+name+"'";
+      success=false;
+      break;
+     }
+    }
     break;
    }
    case shay::StatementKind::If:{
@@ -284,9 +295,12 @@ void execute_file(const fs::path&input,Context&ctx){
     ctx.exit_requested=true;
     break;
    case shay::StatementKind::OutputValue:{
-    auto found=ctx.values.find(s.name);
-    if(found==ctx.values.end())diagnose(ctx,input,s.line,"unknown variable '"+s.name+"'");
-    else if(!ctx.check_only)shay_runtime_write((found->second+"\n").c_str());
+    const auto&names=s.output_names.empty()?std::vector<std::string>{s.name}:s.output_names;
+    for(const auto&name:names){
+     auto found=ctx.values.find(name);
+     if(found==ctx.values.end())diagnose(ctx,input,s.line,"unknown variable '"+name+"'");
+     else if(!ctx.check_only)shay_runtime_write((found->second+"\n").c_str());
+    }
     break;
    }
    case shay::StatementKind::OutputCall:{
