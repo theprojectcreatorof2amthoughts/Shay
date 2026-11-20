@@ -236,7 +236,7 @@ std::string object_entry_symbol(const fs::path&object){
  return symbol;
 }
 std::string cpp_string(const std::string&value){
- std::ostringstream out;out<<'"';for(unsigned char c:value){switch(c){case '\\':out<<"\\\\";break;case '"':out<<"\\\"";break;case '\n':out<<"\\n";break;case '\r':out<<"\\r";break;case '\t':out<<"\\t";break;default:if(c<32||c>=127){const char octal[]="01234567";out<<"\\"<<octal[(c>>6)&7]<<octal[(c>>3)&7]<<octal[c&7];}else out<<static_cast<char>(c);}}out<<'"';return out.str();
+ std::ostringstream out;out<<'"';for(unsigned char c:value){switch(c){case '\\':out<<"\\\\";break;case '"':out<<"\\\"";break;case '\n':out<<"\n";break;case '\r':out<<"\\r";break;case '\t':out<<"\\t";break;default:if(c<32||c>=127){const char octal[]="01234567";out<<"\\"<<octal[(c>>6)&7]<<octal[(c>>3)&7]<<octal[c&7];}else out<<static_cast<char>(c);}}out<<'"';return out.str();
 }
 class ExpressionEmitter{
  std::string source;std::size_t at=0;
@@ -372,15 +372,15 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
    }
    case shay::StatementKind::DoFunction:{
     auto fn=ctx.functions.find(s.name);if(fn==ctx.functions.end())break;
-    out<<indent<<"shay_failures.erase("<<cpp_string(s.name)<<"); shay_handled_failures.erase("<<cpp_string(s.name)<<");\\n";
-    out<<indent<<"try { shay_fn_"<<s.name<<"(values); } catch(const std::exception& shay_error) { shay_failures["<<cpp_string(s.name)<<"]=shay_error.what(); throw; }\\n";
+    out<<indent<<"shay_failures.erase("<<cpp_string(s.name)<<"); shay_handled_failures.erase("<<cpp_string(s.name)<<");\n";
+    out<<indent<<"try { shay_fn_"<<s.name<<"(values); } catch(const std::exception& shay_error) { shay_failures["<<cpp_string(s.name)<<"]=shay_error.what(); throw; }\n";
     break;
    }
    case shay::StatementKind::ExecuteClass:{
     auto klass=ctx.classes.find(s.name);if(klass==ctx.classes.end())break;
     for(const auto&method:klass->second){
-     out<<indent<<"shay_failures.erase("<<cpp_string(method)<<"); shay_handled_failures.erase("<<cpp_string(method)<<");\\n";
-     out<<indent<<"try { shay_fn_"<<method<<"(values); } catch(const std::exception& shay_error) { shay_failures["<<cpp_string(method)<<"]=shay_error.what(); throw; }\\n";
+     out<<indent<<"shay_failures.erase("<<cpp_string(method)<<"); shay_handled_failures.erase("<<cpp_string(method)<<");\n";
+     out<<indent<<"try { shay_fn_"<<method<<"(values); } catch(const std::exception& shay_error) { shay_failures["<<cpp_string(method)<<"]=shay_error.what(); throw; }\n";
     }
     break;
    }
@@ -465,15 +465,15 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
    }
    case shay::StatementKind::DoFunction:{
     auto fn=ctx.functions.find(s.name);if(fn==ctx.functions.end())break;
-    out<<" shay_failures.erase("<<cpp_string(s.name)<<"); shay_handled_failures.erase("<<cpp_string(s.name)<<");\\n";
-    out<<" try { shay_fn_"<<s.name<<"(values); } catch(const std::exception& shay_error) { shay_failures["<<cpp_string(s.name)<<"]=shay_error.what(); }\\n";
+    out<<" shay_failures.erase("<<cpp_string(s.name)<<"); shay_handled_failures.erase("<<cpp_string(s.name)<<");\n";
+    out<<" try { shay_fn_"<<s.name<<"(values); } catch(const std::exception& shay_error) { shay_failures["<<cpp_string(s.name)<<"]=shay_error.what(); }\n";
     break;
    }
    case shay::StatementKind::ExecuteClass:{
     auto klass=ctx.classes.find(s.name);if(klass==ctx.classes.end())break;
     for(const auto&method:klass->second){
-     out<<" shay_failures.erase("<<cpp_string(method)<<"); shay_handled_failures.erase("<<cpp_string(method)<<");\\n";
-     out<<" try { shay_fn_"<<method<<"(values); } catch(const std::exception& shay_error) { shay_failures["<<cpp_string(method)<<"]=shay_error.what(); }\\n";
+     out<<" shay_failures.erase("<<cpp_string(method)<<"); shay_handled_failures.erase("<<cpp_string(method)<<");\n";
+     out<<" try { shay_fn_"<<method<<"(values); } catch(const std::exception& shay_error) { shay_failures["<<cpp_string(method)<<"]=shay_error.what(); }\n";
     }
     break;
    }
