@@ -4,12 +4,16 @@
 #include "parser.hpp"
 #include <chrono>
 #include <cctype>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #ifdef _WIN32
+#include <io.h>
 #include <process.h>
+#else
+#include <unistd.h>
 #endif
 #include <iostream>
 #include <iterator>
@@ -526,17 +530,41 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
  if(add_main)out<<"int main(){return shay_program_entry();}\n";
  return static_cast<bool>(out);
 }
+bool diagnostics_color_enabled(){
+ const char*no_color=std::getenv("NO_COLOR");
+ if(no_color&&*no_color)return false;
+ const char*clicolor=std::getenv("CLICOLOR");
+ if(clicolor&&std::string(clicolor)=="0")return false;
+ const char*term=std::getenv("TERM");
+ if(term&&std::string(term)=="dumb")return false;
+ const char*force=std::getenv("CLICOLOR_FORCE");
+ if(force&&*force&&std::string(force)!="0")return true;
+#ifdef _WIN32
+ return _isatty(_fileno(stderr))!=0;
+#else
+ return isatty(fileno(stderr))!=0;
+#endif
+}
 void print_diagnostics(const BuildContext&ctx){
+ const bool color=diagnostics_color_enabled();
+ constexpr const char*reset="\033[0m";
+ constexpr const char*location_color="\033[1;36m";
+ constexpr const char*warning_color="\033[1;33m";
+ constexpr const char*error_color="\033[1;31m";
  for(const auto&d:ctx.diagnostics){
-  std::cerr<<d.file.string()<<':'<<d.line<<':'<<d.column
-           <<(d.warning?": warning: ":": error: ")<<d.message<<'\n';
+  const char*severity_color=d.warning?warning_color:error_color;
+  std::cerr<<(color?location_color:"")<<d.file.string()<<':'<<d.line<<':'<<d.column
+           <<(color?reset:"")<<": "
+           <<(color?severity_color:"")<<(d.warning?"warning":"error")
+           <<(color?reset:"")<<": "<<d.message<<'\n';
   if(!d.source_line.empty()){
    std::cerr<<"    "<<d.source_line<<'\n'<<"    ";
    for(std::size_t i=0;i+1<d.column&&i<d.source_line.size();++i)
     std::cerr<<(d.source_line[i]=='\t'?'\t':' ');
    const std::size_t width=d.length?d.length:1;
+   if(color)std::cerr<<severity_color;
    for(std::size_t i=1;i<width;++i)std::cerr<<'~';
-   std::cerr<<'^'<<'\n';
+   std::cerr<<'^'<<(color?reset:"")<<'\n';
   }
  }
 }
