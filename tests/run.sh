@@ -762,6 +762,6 @@ if "$SHAII" --check "$TMP/illegal-declr.shay" >"$TMP/out" 2>"$TMP/err"; then fai
 grep -q "'\$declr' is only allowed in .shaii files" "$TMP/err" || fail "declr file-type restriction diagnostic"
 if "$GSHAI" -o "$TMP/illegal-declr" "$TMP/illegal-declr.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted \$declr in .shay"; fi
 grep -q "'\$declr' is only allowed in .shaii files" "$TMP/err" || fail "compiler declr file-type restriction diagnostic"
-pass "$declr is restricted to .shaii files"
+pass "\$declr is restricted to .shaii files"
 
 printf '\nAll Shay toolchain tests passed.\n'
