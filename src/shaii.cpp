@@ -141,7 +141,6 @@ bool execute_statements(const std::vector<shay::Statement>&statements,Context&ct
     failure="program terminated by instxtexit";
     return false;
    case shay::StatementKind::OutputValue:{
-    const auto&names=s.output_names.empty()?std::vector<std::string>{s.name}:s.output_names;
     for(const auto&name:names){
      auto number=scope.find(name);
      if(number!=scope.end()){
@@ -295,7 +294,6 @@ void execute_file(const fs::path&input,Context&ctx){
     ctx.exit_requested=true;
     break;
    case shay::StatementKind::OutputValue:{
-    const auto&names=s.output_names.empty()?std::vector<std::string>{s.name}:s.output_names;
     for(const auto&name:names){
      auto found=ctx.values.find(name);
      if(found==ctx.values.end())diagnose(ctx,input,s.line,"unknown variable '"+name+"'");
