@@ -147,6 +147,14 @@ Program Parser::parse(){
      methodTokens.push_back({TokenKind::End,"",peek().line,peek().column});
      Parser methodParser(methodTokens);Program methodProgram=methodParser.parse();
      method.body=std::move(methodProgram.statements);
+     std::function<bool(const std::vector<Statement>&)> method_has_return=[&](const auto&items){
+      for(const auto&item:items){
+       if(item.kind==StatementKind::ReturnValue)return true;
+       if(method_has_return(item.body)||method_has_return(item.else_body))return true;
+      }
+      return false;
+     };
+     method.has_return=method_has_return(method.body);
      for(const auto&e:methodProgram.errors)program.errors.push_back(e);
      statement.body.push_back(std::move(method));
      if(peek().kind!=TokenKind::Newline&&!atEnd()){error(program.errors,"unexpected token after method 'finish'");valid=false;break;}
