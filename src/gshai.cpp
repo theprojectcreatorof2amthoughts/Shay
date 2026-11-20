@@ -138,10 +138,12 @@ void validate_body(BuildContext&ctx,const fs::path&file,const std::vector<shay::
     diagnose(ctx,file,s.line,"function '"+s.name+"' expects "+std::to_string(fn->second.parameters.size())+" argument(s), got "+std::to_string(s.arguments.size()));
    for(const auto&arg:s.arguments)validate_expression_names(ctx,file,s.line,arg,locals,"function argument");
   }else if(s.kind==shay::StatementKind::DoFunction){
+   if(extension==".shaz"){diagnose(ctx,input,s.line,"'dofunc' is not allowed in .shaz files");continue;}
    auto fn=ctx.functions.find(s.name);
    if(fn==ctx.functions.end())diagnose(ctx,file,s.line,"unknown function '"+s.name+"' inside "+bodyLabel);
    else if(!fn->second.parameters.empty())diagnose(ctx,file,s.line,"dofunc only calls functions declared without parameters");
   }else if(s.kind==shay::StatementKind::ExecuteClass){
+   if(extension==".shaz"){diagnose(ctx,input,s.line,"'$doclass' is not allowed in .shaz files");continue;}
    if(!ctx.classes.count(s.name))diagnose(ctx,file,s.line,"unknown class '"+s.name+"' inside "+bodyLabel);
   }else if(s.kind==shay::StatementKind::LogText&&(!ctx.log_file_name_set&&!ctx.log_file_extension_set)){
    diagnose(ctx,file,s.line,"'logit/>' requires '$logindxfl' or '$logindxnm' to be configured before use");
