@@ -67,12 +67,8 @@ void collect_expression_uses(const std::string&source,const BuildContext&ctx,con
 void collect_statement_uses(const shay::Statement&s,const BuildContext&ctx,const std::unordered_set<std::string>&locals,std::unordered_set<std::string>&used){
  switch(s.kind){
   case shay::StatementKind::OutputValue:
-   if(s.output_names.empty()){
-    if(ctx.variables.count(s.name)&&!locals.count(s.name))used.insert(s.name);
-   }else{
-    for(const auto&name:s.output_names)
-     if(ctx.variables.count(name)&&!locals.count(name))used.insert(name);
-   }
+   for(const auto&name:s.output_names)
+    if(ctx.variables.count(name)&&!locals.count(name))used.insert(name);
    break;
   case shay::StatementKind::OutputCall:
    for(const auto&arg:s.arguments)collect_expression_uses(arg,ctx,locals,used);
