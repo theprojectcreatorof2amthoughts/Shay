@@ -218,6 +218,10 @@ if "$SHAII" --check "$TMP/bad-syntax.shay" >"$TMP/out" 2>"$TMP/err"; then fail "
 grep -q 'expected a string, number, or boolean literal' "$TMP/err" || fail "parser diagnostic"
 grep -q 'unterminated string literal' "$TMP/err" || fail "lexer diagnostic"
 pass "lexer and parser diagnostics"
+if "$GSHAI" -o "$TMP/bad-syntax-app" "$TMP/bad-syntax.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted malformed syntax"; fi
+grep -q "bad-syntax.shay:1:13: error:" "$TMP/err" || fail "compiler parser error column"
+grep -q "bad-syntax.shay:2:9: error: unterminated string literal" "$TMP/err" || fail "compiler lexer error column"
+pass "gshai preserves exact parser and lexer error columns"
 
 cat > "$TMP/task.shaz" <<'EOF'
 instxt/>"Zeccurs task ran"
