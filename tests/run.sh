@@ -689,4 +689,63 @@ if "$GSHAI" -o "$TMP/log-unknown-variable" "$TMP/log-unknown-variable.shay" >"$T
 grep -q "log configuration references unknown variable 'missing_name'" "$TMP/err" || fail "unknown log variable diagnostic"
 pass "compiler validates variables used by log configuration directives"
 
+cat > "$TMP/classes.shaii" <<'EOF'
+#% Class and method declarations belong in .shaii files.
+$declr announce()
+    instxt/>"Standalone function executed"
+finish
+
+$declr initialize()
+    instxt/>"Initialization executed"
+finish
+
+$declr startup()
+    dofunc initialize
+    instxt/>"Startup executed"
+finish
+
+$classfunc !memory
+    $declrmthd mem_slot_make
+        instxt/>"Memory slot created"
+    finish
+
+    $declrmthd mem_slot_delete
+        instxt/>"Memory slot deleted"
+    finish
+finish
+
+dofunc announce
+EOF
+cat > "$TMP/classes-main.shay" <<'EOF'
+#% Runtime calls work in .shay files too.
+$shaiiport [classes.shaii]
+dofunc startup
+$doclass !memory
+EOF
+out=$("$SHAII" "$TMP/classes-main.shay") || fail "interpreter class and dofunc execution"
+printf '%s\n' "$out" | grep -q '^Standalone function executed || fail "dofunc inside .shaii"
+printf '%s\n' "$out" | grep -q '^Initialization executed || fail "nested dofunc call"
+printf '%s\n' "$out" | grep -q '^Startup executed || fail "top-level dofunc call"
+printf '%s\n' "$out" | grep -q '^Memory slot created || fail "first class method"
+printf '%s\n' "$out" | grep -q '^Memory slot deleted || fail "second class method"
+"$GSHAI" -o "$TMP/classes-app" "$TMP/classes-main.shay" || fail "compile class and dofunc program"
+out=$("$TMP/classes-app") || fail "run compiled class and dofunc program"
+printf '%s\n' "$out" | grep -q '^Standalone function executed || fail "compiled dofunc inside .shaii"
+printf '%s\n' "$out" | grep -q '^Initialization executed || fail "compiled nested dofunc"
+printf '%s\n' "$out" | grep -q '^Startup executed || fail "compiled top-level dofunc"
+printf '%s\n' "$out" | grep -q '^Memory slot created || fail "compiled first class method"
+printf '%s\n' "$out" | grep -q '^Memory slot deleted || fail "compiled second class method"
+pass "dofunc works in .shay and .shaii; doclass executes every method in declaration order"
+
+cat > "$TMP/illegal-declr.shay" <<'EOF'
+$declr forbidden()
+    instxt/>"This must not run"
+finish
+EOF
+if "$SHAII" --check "$TMP/illegal-declr.shay" >"$TMP/out" 2>"$TMP/err"; then fail "$declr was accepted in .shay"; fi
+grep -q "'$declr' is only allowed in .shaii files" "$TMP/err" || fail "declr file-type restriction diagnostic"
+if "$GSHAI" -o "$TMP/illegal-declr" "$TMP/illegal-declr.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted $declr in .shay"; fi
+grep -q "'$declr' is only allowed in .shaii files" "$TMP/err" || fail "compiler declr file-type restriction diagnostic"
+pass "$declr is restricted to .shaii files"
+
 printf '\nAll Shay toolchain tests passed.\n'
