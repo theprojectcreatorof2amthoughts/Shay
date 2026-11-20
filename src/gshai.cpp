@@ -358,12 +358,10 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
     out<<indent<<"shay_log("<<cpp_string(s.value)<<");\n";break;
    case shay::StatementKind::OutputTextExit:
     out<<indent<<"shay_runtime_write("<<cpp_string(s.value+"\n")<<"); throw ShayExit{};\n";break;
-   case shay::StatementKind::OutputValue:{
-    const auto&names=s.output_names.empty()?std::vector<std::string>{s.name}:s.output_names;
-    for(const auto&name:names)
+   case shay::StatementKind::OutputValue:
+    for(const auto&name:s.output_names)
      out<<indent<<"shay_runtime_write((values["<<cpp_string(name)<<"] + "<<cpp_string("\n")<<").c_str());\n";
     break;
-   }
    case shay::StatementKind::If:
     out<<indent<<"if ("<<cpp_condition(s.condition)<<") {\n";
     emit_body(out,s.body,ctx,indent+" ",function_name);
