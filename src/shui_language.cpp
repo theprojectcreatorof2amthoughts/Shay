@@ -290,7 +290,8 @@ bool generate_output(const std::string& app_source, const AdapterConfig& adapter
         std::size_t index = 0;
         for (const auto& element : elements) {
             const std::string id = csharp_escape(element.id);
-            const int top = 24 + static_cast<int>(index) * 138;
+            const int left = 24 + static_cast<int>(index % 2) * 210;
+            const int top = 24 + static_cast<int>(index / 2) * 140;
             std::string type, init;
             if (element.kind == "square") {
                 type = "Panel";
@@ -317,7 +318,7 @@ bool generate_output(const std::string& app_source, const AdapterConfig& adapter
             cs << "            var control" << index << " = new " << type << "\n"
                << "            {\n                Name = \"" << id << "\",\n"
                << "                " << init << ",\n"
-               << "                Location = new Point(24, " << top << "),\n"
+               << "                Location = new Point(" << left << ", " << top << "),\n"
                << "                Size = new Size(" << width << ", " << height << ")\n"
                << "            };\n"
                << "            Controls.Add(control" << index << ");\n";
