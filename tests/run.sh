@@ -1036,4 +1036,30 @@ if "$SHAII" "$TMP/map-missing.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpr
 grep -q "unknown map key 'missing'" "$TMP/err" || fail "map missing-key diagnostic"
 pass "map key lookup reports missing keys"
 
+
+cat > "$TMP/typed-values.shay" <<'EOF'
+brew age: number = -12
+brew name: string = "Ada"
+brew enabled: boolean = true
+insval/>age
+insval/>name
+insval/>enabled
+EOF
+expected=$(printf '%s\n' '-12' 'Ada' 'true')
+out=$("$SHAII" "$TMP/typed-values.shay") || fail "interpreter optional scalar types"
+[ "$out" = "$expected" ] || fail "interpreter typed scalar output"
+"$GSHAI" -o "$TMP/typed-values-app" "$TMP/typed-values.shay" || fail "compile optional scalar types"
+out=$("$TMP/typed-values-app") || fail "run compiled optional scalar types"
+[ "$out" = "$expected" ] || fail "compiler typed scalar output"
+pass "optional number, string, and boolean annotations preserve runtime values"
+
+cat > "$TMP/type-mismatch.shay" <<'EOF'
+brew age: number = "twelve"
+EOF
+if "$SHAII" "$TMP/type-mismatch.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpreter accepted a typed initializer mismatch"; fi
+grep -q "type mismatch for 'age': expected number, got string" "$TMP/err" || fail "typed initializer mismatch diagnostic"
+if "$GSHAI" -o "$TMP/type-mismatch-app" "$TMP/type-mismatch.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted a typed initializer mismatch"; fi
+grep -q "type mismatch for 'age': expected number, got string" "$TMP/err" || fail "compiler typed initializer mismatch diagnostic"
+pass "interpreter and compiler reject incompatible typed initializers"
+
 printf '\nAll Shay toolchain tests passed.\n'
