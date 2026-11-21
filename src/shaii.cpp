@@ -230,7 +230,7 @@ auto set=ctx.sets.find(name);
     break;
    }
    case shay::StatementKind::FileExists:
-    if(!ctx.check_only)shay_runtime_write(fs::exists(s.path)?"true\\n":"false\\n");
+    if(!ctx.check_only)shay_runtime_write(fs::exists(s.path)?"true\n":"false\n");
     break;
    case shay::StatementKind::FileDelete:{
     std::error_code ec;const bool removed=fs::remove(s.path,ec);
@@ -240,11 +240,11 @@ auto set=ctx.sets.find(name);
    case shay::StatementKind::DirectoryCreate:{
     std::error_code ec;fs::create_directories(s.path,ec);
     if(ec){ctx.error_category="io";ctx.error_message="cannot create directory '"+s.path+"'";ctx.error_line=s.line;failure=ctx.error_category+": "+ctx.error_message;success=false;}
-    else if(!ctx.check_only)shay_runtime_write(fs::is_directory(s.path)?"true\\n":"false\\n");
+    else if(!ctx.check_only)shay_runtime_write(fs::is_directory(s.path)?"true\n":"false\n");
     break;
    }
    case shay::StatementKind::DirectoryExists:
-    if(!ctx.check_only)shay_runtime_write(fs::is_directory(s.path)?"true\\n":"false\\n");
+    if(!ctx.check_only)shay_runtime_write(fs::is_directory(s.path)?"true\n":"false\n");
     break;
    case shay::StatementKind::ThrowError:
     ctx.error_category=s.error_category;ctx.error_message=s.value;ctx.error_line=s.line;
@@ -464,9 +464,9 @@ auto set=ctx.sets.find(name);
     break;
    }
    case shay::StatementKind::FileRead:{
-    std::ifstream input(s.path,std::ios::binary);
-    if(!input){diagnose(ctx,input,s.line,"io: cannot read file '"+s.path+"'");break;}
-    std::ostringstream contents;contents<<input.rdbuf();
+    std::ifstream fileInput(s.path,std::ios::binary);
+    if(!fileInput){diagnose(ctx,input,s.line,"io: cannot read file '"+s.path+"'");break;}
+    std::ostringstream contents;contents<<fileInput.rdbuf();
     ctx.values[s.name]=contents.str();ctx.numbers.erase(s.name);ctx.lists.erase(s.name);ctx.maps.erase(s.name);ctx.sets.erase(s.name);
     break;
    }
@@ -480,7 +480,7 @@ auto set=ctx.sets.find(name);
     break;
    }
    case shay::StatementKind::FileExists:
-    if(!ctx.check_only)shay_runtime_write(fs::exists(s.path)?"true\\n":"false\\n");
+    if(!ctx.check_only)shay_runtime_write(fs::exists(s.path)?"true\n":"false\n");
     break;
    case shay::StatementKind::FileDelete:{
     std::error_code ec;const bool removed=fs::remove(s.path,ec);
@@ -490,11 +490,11 @@ auto set=ctx.sets.find(name);
    case shay::StatementKind::DirectoryCreate:{
     std::error_code ec;fs::create_directories(s.path,ec);
     if(ec)diagnose(ctx,input,s.line,"io: cannot create directory '"+s.path+"'");
-    else if(!ctx.check_only)shay_runtime_write(fs::is_directory(s.path)?"true\\n":"false\\n");
+    else if(!ctx.check_only)shay_runtime_write(fs::is_directory(s.path)?"true\n":"false\n");
     break;
    }
    case shay::StatementKind::DirectoryExists:
-    if(!ctx.check_only)shay_runtime_write(fs::is_directory(s.path)?"true\\n":"false\\n");
+    if(!ctx.check_only)shay_runtime_write(fs::is_directory(s.path)?"true\n":"false\n");
     break;
    case shay::StatementKind::ThrowError:
     diagnose(ctx,input,s.line,s.error_category+": "+s.value);break;
