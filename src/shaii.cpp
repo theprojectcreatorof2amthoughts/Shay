@@ -20,6 +20,7 @@ struct Diagnostic{fs::path file;std::size_t line;std::string message;};
 struct Context{
  std::unordered_map<std::string,std::string> values;
  std::unordered_map<std::string,double> numbers;
+ std::unordered_map<std::string,std::vector<std::string>> lists;
  std::unordered_map<std::string,shay::Statement> functions;
  std::unordered_map<std::string,std::vector<std::string>> classes;
  std::unordered_set<std::string> loaded,active;
@@ -142,6 +143,8 @@ bool execute_statements(const std::vector<shay::Statement>&statements,Context&ct
     return false;
    case shay::StatementKind::OutputValue:{
     for(const auto&name:s.output_names){
+     auto list=ctx.lists.find(name);
+     if(list!=ctx.lists.end()){if(!ctx.check_only)for(const auto&item:list->second)shay_runtime_write((item+"\\n").c_str());continue;}
      auto number=scope.find(name);
      if(number!=scope.end()){
       if(!ctx.check_only)shay_runtime_write((number_text(number->second)+"\n").c_str());
@@ -212,7 +215,9 @@ void execute_file(const fs::path&input,Context&ctx){
    }
    case shay::StatementKind::Declare:{
     if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'brew' is not allowed");break;}
-    if(!s.value.empty()&&s.value.front()==StringMarker){ctx.values[s.name]=s.value.substr(1);ctx.numbers.erase(s.name);}
+    ctx.lists.erase(s.name);
+    if(s.list_value){ctx.values.erase(s.name);ctx.numbers.erase(s.name);ctx.lists[s.name]=s.list_items;}
+    else if(!s.value.empty()&&s.value.front()==StringMarker){ctx.values[s.name]=s.value.substr(1);ctx.numbers.erase(s.name);}
     else{ctx.values[s.name]=s.value;try{std::size_t used=0;double value=std::stod(s.value,&used);if(used==s.value.size())ctx.numbers[s.name]=value;else ctx.numbers.erase(s.name);}catch(...){ctx.numbers.erase(s.name);}}
     break;
    }
@@ -295,9 +300,11 @@ void execute_file(const fs::path&input,Context&ctx){
     break;
    case shay::StatementKind::OutputValue:{
     for(const auto&name:s.output_names){
+     auto list=ctx.lists.find(name);
+     if(list!=ctx.lists.end()){if(!ctx.check_only)for(const auto&item:list->second)shay_runtime_write((item+"\\n").c_str());continue;}
      auto found=ctx.values.find(name);
      if(found==ctx.values.end())diagnose(ctx,input,s.line,"unknown variable '"+name+"'");
-     else if(!ctx.check_only)shay_runtime_write((found->second+"\n").c_str());
+     else if(!ctx.check_only)shay_runtime_write((found->second+"\\n").c_str());
     }
     break;
    }
