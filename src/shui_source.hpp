@@ -68,14 +68,18 @@ inline bool prepare_shui_source(const std::filesystem::path& input,
     std::ostringstream translated;
     const std::regex ui_class(
         R"REGEX(\*!#classUideclr\s+!u#([A-Za-z_][A-Za-z0-9_]*))REGEX");
+    const std::regex ui_do_class(
+        R"REGEX(\*!#doUiclass\s+<"!u#([A-Za-z_][A-Za-z0-9_]*)">)REGEX");
     const std::regex ignored_directive(
-        R"REGEX((\$useentry\s+UI\(.+\)|!%#(brows|cs)Elementapp\s+<\{|\}>|\*#uiContrl\s+".+\.shuil"|\*!#doUiclass\s+<"!u#[A-Za-z_][A-Za-z0-9_]*">|\*#drawui\b.*|\$uiSet\s+\S+|\$dothis|\$uiFinish))REGEX");
+        R"REGEX((\$useentry\s+UI\(.+\)|!%#(brows|cs)Elementapp\s+<\{|\}>|\*#uiContrl\s+".+\.shuil"|\*#drawui\b.*|\$uiSet\s+\S+|\$dothis|\$uiFinish))REGEX");
     while (std::getline(lines, line)) {
         const std::string directive = std::regex_replace(
             line, std::regex(R"(^\s+|\s+$)"), "");
         std::smatch match;
         if (std::regex_match(directive, match, ui_class)) {
             translated << "$classfunc !" << match[1].str() << '\n';
+        } else if (std::regex_match(directive, match, ui_do_class)) {
+            translated << "$doclass !" << match[1].str() << '\n';
         } else if (std::regex_match(directive, ignored_directive)) {
             translated << '\n';
         } else {
