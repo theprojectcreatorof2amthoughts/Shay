@@ -217,14 +217,16 @@ These are target capabilities, not claims that the bootstrap currently implement
 
 ## UI applications
 
-Shay UI is part of Shay—not a separate language or compiler. A `.shui` file contains Shay code plus UI declarations, and is processed only by the existing `gshai` compiler or `shaii` interpreter. There must be no standalone `shui` executable or independent UI build/validation pipeline.
+Shay UI is a source format within Shay, not a separate language. Pass `.shui` files directly to the normal tools:
 
-UI application blocks use a dedicated `!%#` prefix to distinguish UI syntax from ordinary Shay statements:
+```sh
+./build/shaii --check examples/browser-demo.shui
+./build/shaii examples/browser-demo.shui
+./build/gshai -o build/browser-demo examples/browser-demo.shui
+```
 
-- `!%#browsElementapp <{` opens a browser UI application.
-- `!%#csElementapp <{` opens a Windows/C# UI application.
-- `}>` closes the application block.
+The shared frontend validates the UI entry target and the referenced `.shuil` adapter, then routes the embedded Shay statements through the ordinary Shay parser, interpreter, or native compiler. UI class methods use the existing Shay class/method runtime. The UI envelope and drawing declarations are not a second execution engine.
 
-The `.shuil` adapter selects the platform translator. Generated JavaScript or C# is only a platform-facing bridge: control events must call Shay methods through the Shay runtime, and runtime state changes must flow back to the controls. The Shay runtime—not generated platform code—owns application behavior and state.
+**Current implementation boundary:** `.shui` parsing, adapter validation, and embedded Shay logic compilation/interpreting are integrated. Rendering controls into a live browser or native Windows window, dispatching UI events into Shay methods, and synchronizing runtime state back to controls are not implemented yet. The JavaScript/C# adapters must remain bridges to Shay—not independent implementations of Shay behavior.
 
-See [the SHAY UI specification](docs/SHUI_SPEC.md) and the [browser](examples/browser-demo.shui) and [Windows](examples/windows-demo.shui) examples. This integration is a staged implementation; the standalone frontend and static generators are being retired as the shared compiler/interpreter support lands.
+See [the SHAY UI specification](docs/SHUI_SPEC.md) and the [browser](examples/browser-demo.shui) and [Windows](examples/windows-demo.shui) examples.
