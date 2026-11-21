@@ -1004,4 +1004,36 @@ grep -q "desktop target requires Windows" "$TMP/err" || fail "shui desktop platf
 pass "shui clearly gates the native desktop renderer to Windows"
 
 
+
+cat > "$TMP/maps-sets.shay" <<'EOF'
+brew user = {"name": "Ada", "role": "Compiler"}
+insval/>user["name"]
+mapset/>user, "role", "Language designer"
+mapremove/>user, "name"
+insval/>user
+brew tags = set["systems", "compiler", "systems"]
+setadd/>tags, "tools"
+setremove/>tags, "systems"
+setcontains/>tags, "compiler"
+setcontains/>tags, "systems"
+insval/>tags
+EOF
+expected=$(printf 'Ada\nrole = Language designer\ntrue\nfalse\ncompiler\ntools')
+out=$("$SHAII" "$TMP/maps-sets.shay") || fail "interpreter maps and sets"
+[ "$out" = "$expected" ] || fail "interpreter map/set output and mutation"
+pass "shaii creates, indexes, updates, removes, and queries maps and sets"
+
+"$GSHAI" -o "$TMP/maps-sets-app" "$TMP/maps-sets.shay" || fail "compile maps and sets"
+out=$("$TMP/maps-sets-app") || fail "run compiled maps and sets"
+[ "$out" = "$expected" ] || fail "compiler map/set output and mutation"
+pass "gshai compiles maps and sets consistently with the interpreter"
+
+cat > "$TMP/map-missing.shay" <<'EOF'
+brew user = {"name": "Ada"}
+insval/>user["missing"]
+EOF
+if "$SHAII" "$TMP/map-missing.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpreter accepted a missing map key"; fi
+grep -q "unknown map key 'missing'" "$TMP/err" || fail "map missing-key diagnostic"
+pass "map key lookup reports missing keys"
+
 printf '\nAll Shay toolchain tests passed.\n'
