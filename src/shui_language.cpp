@@ -96,7 +96,12 @@ Result validate_shui(const std::string& source) {
         if (!entry) {
             if (!matches(line, R"(\$useentry\s+UI\([A-Za-z_][A-Za-z0-9_]*\))"))
                 error(result, number, "expected '$useentry UI(Target)' before the UI app");
-            else entry = true;
+            else {
+                std::smatch target_match;
+                if (std::regex_search(line, target_match, std::regex(R"REGEX(UI\\(([A-Za-z_][A-Za-z0-9_]*)\\))REGEX")))
+                    entry_target = target_match[1].str();
+                entry = true;
+            }
             continue;
         }
         if (!app) {
