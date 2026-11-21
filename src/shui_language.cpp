@@ -162,7 +162,8 @@ Result validate_shui(const std::string& source) {
 Result validate_shuil(const std::string& source) {
     Result result;
     const auto lines = lines_of(source);
-    bool platform = false, method = false, language = false, translator_class_seen = false, translator_class_open = false;
+    bool platform = false, method = false, language = false;
+    bool translator_class_seen = false, translator_class_open = false;
     bool in_method = false, translator_loaded = false, translator_run = false;
     std::string selected_method;
     for (const auto& [number, line] : lines) {
@@ -181,12 +182,12 @@ Result validate_shuil(const std::string& source) {
             language = true; continue;
         }
         if (matches(line, R"(#\*!classmethdDeclr\s+!m#[A-Za-z_][A-Za-z0-9_]*)")) {
-            if (translator_class) error(result, number, "translator class is declared more than once");
-            translator_class = true; continue;
+            if (translator_class_seen) error(result, number, "translator class is declared more than once");
+            translator_class_seen = true; translator_class_open = true; continue;
         }
-        if (translator_class && line == "finish") {
+        if (translator_class_open && line == "finish") {
             if (in_method) in_method = false;
-            else translator_class = false;
+            else translator_class_open = false;
             continue;
         }
         if (translator_class_open && matches(line, R"(\$declrmthd\s+[A-Za-z_][A-Za-z0-9_]*)")) {
@@ -194,7 +195,7 @@ Result validate_shuil(const std::string& source) {
             in_method = true; continue;
         }
         if (translator_class_open && matches(line, R"(\$uiset\s+[A-Za-z0-9_]+)")) continue;
-        if (translator_class && matches(line, R"(\$mthdset\s+[A-Za-z0-9_]+)")) continue;
+        if (in_method && matches(line, R"(\$mthdset\s+[A-Za-z0-9_]+)")) continue;
         if (in_method && matches(line, R"(#\*\$(javasport|csharpsport)\s+(\[[A-Za-z0-9_./-]+\]|\["[^"]+\.(js|cs)"\]))")) {
             translator_loaded = true; continue;
         }
@@ -213,9 +214,9 @@ Result validate_shuil(const std::string& source) {
     if (in_method) error(result, lines.empty() ? 1 : lines.back().first, "translator method is missing its closing 'finish'");
     if (!translator_loaded) error(result, 1, "no platform translator file was loaded");
     if (!translator_run) error(result, 1, "missing platform translator execution directive");
-    if (selected_method == "javasTrans" && !source.empty() && source.find("#*$doJavaScript") == std::string::npos)
+    if (selected_method == "javasTrans" && source.find("#*$doJavaScript") == std::string::npos)
         error(result, 1, "javasTrans requires '#*$doJavaScript'");
-    if (selected_method == "csharpTrans" && !source.empty() && source.find("#*$doCSharp") == std::string::npos)
+    if (selected_method == "csharpTrans" && source.find("#*$doCSharp") == std::string::npos)
         error(result, 1, "csharpTrans requires '#*$doCSharp'");
     if (selected_method != "javasTrans" && selected_method != "csharpTrans" && !selected_method.empty())
         error(result, 1, "unsupported translation method '" + selected_method + "'");
