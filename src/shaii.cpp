@@ -21,6 +21,8 @@ struct Context{
  std::unordered_map<std::string,std::string> values;
  std::unordered_map<std::string,double> numbers;
  std::unordered_map<std::string,std::vector<std::string>> lists;
+ std::unordered_map<std::string,std::vector<std::pair<std::string,std::string>>> maps;
+ std::unordered_map<std::string,std::vector<std::string>> sets;
  std::unordered_map<std::string,shay::Statement> functions;
  std::unordered_map<std::string,std::vector<std::string>> classes;
  std::unordered_set<std::string> loaded,active;
@@ -143,6 +145,14 @@ bool execute_statements(const std::vector<shay::Statement>&statements,Context&ct
     return false;
    case shay::StatementKind::OutputValue:{
     for(const auto&name:s.output_names){
+     auto map=ctx.maps.find(name);
+     if(map!=ctx.maps.end()){
+      if(s.output_keyed){auto entry=std::find_if(map->second.begin(),map->second.end(),[&](const auto&item){return item.first==s.output_key;});if(entry==map->second.end()){failure=+"unknown map key '"+s.output_key+"'");success=false;break;}if(!ctx.check_only)shay_runtime_write((entry->second+"\\n").c_str());}
+      else if(!ctx.check_only)for(const auto&entry:map->second)shay_runtime_write((entry.first+" = "+entry.second+"\\n").c_str());
+      continue;
+     }
+     auto set=ctx.sets.find(name);
+     if(set!=ctx.sets.end()){if(!ctx.check_only)for(const auto&item:set->second)shay_runtime_write((item+"\\n").c_str());continue;}
      auto list=ctx.lists.find(name);
      if(list!=ctx.lists.end()){
       if(s.output_indexed){
@@ -176,6 +186,26 @@ bool execute_statements(const std::vector<shay::Statement>&statements,Context&ct
     else if(s.list_index>=list->second.size()){failure="list index "+std::to_string(s.list_index)+" is out of range for '"+s.name+"'";success=false;}
     else if(!ctx.check_only&&s.kind==shay::StatementKind::ListSet)list->second[s.list_index]=s.value;
     else if(!ctx.check_only&&s.kind==shay::StatementKind::ListRemove)list->second.erase(list->second.begin()+static_cast<std::ptrdiff_t>(s.list_index));
+    break;
+   }
+   case shay::StatementKind::MapSet:
+   case shay::StatementKind::MapRemove:
+   case shay::StatementKind::SetAdd:
+   case shay::StatementKind::SetRemove:
+   case shay::StatementKind::SetContains:{
+    if(s.kind==shay::StatementKind::MapSet||s.kind==shay::StatementKind::MapRemove){
+     auto map=ctx.maps.find(s.name);if(map==ctx.maps.end()){failure="unknown map '"+s.name+"'";success=false;break;}
+     auto entry=std::find_if(map->second.begin(),map->second.end(),[&](const auto&item){return item.first==s.output_key;});
+     if(s.kind==shay::StatementKind::MapSet){if(!ctx.check_only){if(entry==map->second.end())map->second.push_back({s.output_key,s.value});else entry->second=s.value;}}
+     else if(entry==map->second.end()){failure="unknown map key '"+s.output_key+"'";success=false;}
+     else if(!ctx.check_only)map->second.erase(entry);
+    }else{
+     auto set=ctx.sets.find(s.name);if(set==ctx.sets.end()){failure="unknown set '"+s.name+"'";success=false;break;}
+     auto item=std::find(set->second.begin(),set->second.end(),s.value);
+     if(s.kind==shay::StatementKind::SetAdd){if(!ctx.check_only&&item==set->second.end())set->second.push_back(s.value);}
+     else if(s.kind==shay::StatementKind::SetRemove){if(item==set->second.end()){failure="unknown set item '"+s.value+"'";success=false;}else if(!ctx.check_only)set->second.erase(item);}
+     else if(!ctx.check_only)shay_runtime_write((item==set->second.end()?"false\\n":"true\\n"));
+    }
     break;
    }
    case shay::StatementKind::If:{
@@ -232,8 +262,10 @@ void execute_file(const fs::path&input,Context&ctx){
    }
    case shay::StatementKind::Declare:{
     if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'brew' is not allowed");break;}
-    ctx.lists.erase(s.name);
-    if(s.list_value){ctx.values.erase(s.name);ctx.numbers.erase(s.name);ctx.lists[s.name]=s.list_items;}
+    ctx.lists.erase(s.name);ctx.maps.erase(s.name);ctx.sets.erase(s.name);
+    if(s.map_value){ctx.values.erase(s.name);ctx.numbers.erase(s.name);ctx.maps[s.name]=s.map_items;}
+    else if(s.set_value){ctx.values.erase(s.name);ctx.numbers.erase(s.name);std::vector<std::string> unique;for(const auto&item:s.list_items)if(std::find(unique.begin(),unique.end(),item)==unique.end())unique.push_back(item);ctx.sets[s.name]=std::move(unique);}
+    else if(s.list_value){ctx.values.erase(s.name);ctx.numbers.erase(s.name);ctx.lists[s.name]=s.list_items;}
     else if(!s.value.empty()&&s.value.front()==StringMarker){ctx.values[s.name]=s.value.substr(1);ctx.numbers.erase(s.name);}
     else{ctx.values[s.name]=s.value;try{std::size_t used=0;double value=std::stod(s.value,&used);if(used==s.value.size())ctx.numbers[s.name]=value;else ctx.numbers.erase(s.name);}catch(...){ctx.numbers.erase(s.name);}}
     break;
@@ -317,6 +349,14 @@ void execute_file(const fs::path&input,Context&ctx){
     break;
    case shay::StatementKind::OutputValue:{
     for(const auto&name:s.output_names){
+     auto map=ctx.maps.find(name);
+     if(map!=ctx.maps.end()){
+      if(s.output_keyed){auto entry=std::find_if(map->second.begin(),map->second.end(),[&](const auto&item){return item.first==s.output_key;});if(entry==map->second.end()){diagnose(ctx,input,s.line,+"unknown map key '"+s.output_key+"'");success=false;break;}if(!ctx.check_only)shay_runtime_write((entry->second+"\\n").c_str());}
+      else if(!ctx.check_only)for(const auto&entry:map->second)shay_runtime_write((entry.first+" = "+entry.second+"\\n").c_str());
+      continue;
+     }
+     auto set=ctx.sets.find(name);
+     if(set!=ctx.sets.end()){if(!ctx.check_only)for(const auto&item:set->second)shay_runtime_write((item+"\\n").c_str());continue;}
      auto list=ctx.lists.find(name);
      if(list!=ctx.lists.end()){
       if(s.output_indexed){
@@ -343,6 +383,26 @@ void execute_file(const fs::path&input,Context&ctx){
     else if(s.list_index>=list->second.size())diagnose(ctx,input,s.line,"list index "+std::to_string(s.list_index)+" is out of range for '"+s.name+"'");
     else if(!ctx.check_only&&s.kind==shay::StatementKind::ListSet)list->second[s.list_index]=s.value;
     else if(!ctx.check_only&&s.kind==shay::StatementKind::ListRemove)list->second.erase(list->second.begin()+static_cast<std::ptrdiff_t>(s.list_index));
+    break;
+   }
+   case shay::StatementKind::MapSet:
+   case shay::StatementKind::MapRemove:
+   case shay::StatementKind::SetAdd:
+   case shay::StatementKind::SetRemove:
+   case shay::StatementKind::SetContains:{
+    if(s.kind==shay::StatementKind::MapSet||s.kind==shay::StatementKind::MapRemove){
+     auto map=ctx.maps.find(s.name);if(map==ctx.maps.end()){diagnose(ctx,input,s.line,"unknown map '"+s.name+"'";break;break;}
+     auto entry=std::find_if(map->second.begin(),map->second.end(),[&](const auto&item){return item.first==s.output_key;});
+     if(s.kind==shay::StatementKind::MapSet){if(!ctx.check_only){if(entry==map->second.end())map->second.push_back({s.output_key,s.value});else entry->second=s.value;}}
+     else if(entry==map->second.end()){diagnose(ctx,input,s.line,"unknown map key '"+s.output_key+"'";break;}
+     else if(!ctx.check_only)map->second.erase(entry);
+    }else{
+     auto set=ctx.sets.find(s.name);if(set==ctx.sets.end()){diagnose(ctx,input,s.line,"unknown set '"+s.name+"'";break;break;}
+     auto item=std::find(set->second.begin(),set->second.end(),s.value);
+     if(s.kind==shay::StatementKind::SetAdd){if(!ctx.check_only&&item==set->second.end())set->second.push_back(s.value);}
+     else if(s.kind==shay::StatementKind::SetRemove){if(item==set->second.end()){diagnose(ctx,input,s.line,"unknown set item '"+s.value+"'";break;}else if(!ctx.check_only)set->second.erase(item);}
+     else if(!ctx.check_only)shay_runtime_write((item==set->second.end()?"false\\n":"true\\n"));
+    }
     break;
    }
    case shay::StatementKind::Invalid:break;
