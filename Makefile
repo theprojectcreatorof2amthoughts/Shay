@@ -19,7 +19,7 @@ CPPFLAGS ?=
 LDFLAGS ?=
 LDLIBS ?=
 
-FRONTEND_SOURCES := src/lexer.cpp src/parser.cpp src/shui.cpp src/shui_language.cpp
+FRONTEND_SOURCES := src/lexer.cpp src/parser.cpp src/shui_language.cpp
 FRONTEND_OBJECTS := $(patsubst src/%.cpp,$(BUILD_DIR)/%.o,$(FRONTEND_SOURCES))
 RUNTIME_OBJECT := $(BUILD_DIR)/runtime.o
 INTERPRETER_OBJECT := $(BUILD_DIR)/shaii.o
