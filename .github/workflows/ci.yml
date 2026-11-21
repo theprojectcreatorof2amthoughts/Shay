@@ -17,3 +17,12 @@ jobs:
         run: cmake -S . -B build-cmake && cmake --build build-cmake --parallel
       - name: Run CTest suite
         run: ctest --test-dir build-cmake --output-on-failure
+
+  windows-native-build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure Windows build
+        run: cmake -S . -B build-windows -A x64
+      - name: Build Windows targets (including native .shui renderer)
+        run: cmake --build build-windows --config Release --parallel
