@@ -71,10 +71,12 @@ inline bool prepare_shui_source(const std::filesystem::path& input,
     const std::regex ignored_directive(
         R"REGEX((\$useentry\s+UI\(.+\)|!%#(brows|cs)Elementapp\s+<\{|\}>|\*#uiContrl\s+".+\.shuil"|\*!#doUiclass\s+<"!u#[A-Za-z_][A-Za-z0-9_]*">|\*#drawui\b.*|\$uiSet\s+\S+|\$dothis|\$uiFinish))REGEX");
     while (std::getline(lines, line)) {
+        const std::string directive = std::regex_replace(
+            line, std::regex(R"(^\s+|\s+$)"), "");
         std::smatch match;
-        if (std::regex_match(line, match, ui_class)) {
+        if (std::regex_match(directive, match, ui_class)) {
             translated << "$classfunc !" << match[1].str() << '\n';
-        } else if (std::regex_match(line, ignored_directive)) {
+        } else if (std::regex_match(directive, ignored_directive)) {
             translated << '\n';
         } else {
             translated << line << '\n';
