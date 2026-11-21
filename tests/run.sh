@@ -1206,6 +1206,7 @@ grep -q 'new Panel' "$TMP/windows-ui-app.cs" || fail "Windows renderer did not e
 grep -q 'new Button' "$TMP/windows-ui-app.cs" || fail "Windows renderer did not emit a Button"
 grep -q 'PostAsync("http://127.0.0.1:18765/event"' "$TMP/windows-ui-app.cs" || fail "Windows button did not call the Shay event bridge"
 grep -q 'Tag = "displayName"' "$TMP/windows-ui-app.cs" || fail "Windows controls did not retain state bindings"
-pass "gshai emits native Windows Forms control source from .shui drawui declarations"
+dotnet build "$TMP/windows-ui-app.csproj" --nologo --verbosity quiet >"$TMP/dotnet-out" 2>"$TMP/dotnet-err" || { cat "$TMP/dotnet-out" "$TMP/dotnet-err" >&2; fail "generated Windows Forms project builds"; }
+pass "generated Windows Forms project compiles against the Shay runtime bridge"
 
 printf '\nAll Shay toolchain tests passed.\n'
