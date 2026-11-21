@@ -137,6 +137,14 @@ You can choose the executable path:
 ./build/gshai -o bin/my-program examples/hello.shay
 ```
 
+A project can also be compiled from multiple source roots. Files are loaded in the order supplied and share one program namespace and runtime state:
+
+```sh
+./build/gshai -o bin/my-program src/main.shay src/ui.shay src/tasks.shaz
+```
+
+Use the same form with `-ob output.sho` to produce one relocatable object containing all supplied source roots. An explicit output path is required when compiling more than one source file. Imports remain relative to the file containing each import, and duplicate imports are loaded only once.
+
 ### Create a native object file with `-ob`
 
 ```sh
