@@ -17,7 +17,9 @@ The Truck 2 and Truck 3 roadmap is being delivered as small, tested milestones.
 - [ ] HTTP/HTTPS APIs.
 - [ ] Concurrency and synchronization.
 
-## Truck 3: .shui
+## Truck 3: .shui / .shuil
+
+- [x] Initial `.shuil` platform-configuration parser and `shui validate-library` command (configuration validation only; translator execution is not implemented).
 
 - [x] Hybrid, backend-independent UI-tree specification.
 - [x] Parser, typed UI tree, and validation.

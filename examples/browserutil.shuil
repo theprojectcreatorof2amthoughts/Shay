@@ -1,0 +1,13 @@
+#*$ContrlDefine <browser>
+#*!MethdUi <javasTrans>
+
+#*!LangUI <US>
+#*!classmethdDeclr !m#javasMain
+    $uiset 0
+    $declrmthd TransMain
+        $mthdset 1
+
+        #*$javasport [uicontrol.js]
+        #*$doJavaScript
+    finish
+finish

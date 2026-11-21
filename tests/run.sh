@@ -1154,4 +1154,31 @@ out=$("$TMP/process-missing-app") || fail "run compiled missing process"
 [ "$out" = "127" ] || fail "compiler missing process exit code"
 pass "runproc launches executables with explicit argv and returns their exit status without a shell"
 
+
+"$SHUI" validate-library "$ROOT/examples/browserutil.shuil" >"$TMP/out" || fail ".shuil browser configuration validation"
+grep -q "valid (browser, javasTrans, language US, 1 method(s))" "$TMP/out" || fail ".shuil parsed platform and language metadata"
+pass "shui validates browser .shuil platform, translator, language, class, and method configuration"
+
+cat > "$TMP/external-translator.shuil" <<'EOF'
+#*$ContrlDefine <browser>
+#*!MethdUi <javasTrans>
+#*!LangUI <AR>
+#*!classmethdDeclr !m#arabicMain
+    $uiset 0
+    $declrmthd TransMain
+        $mthdset 1
+        #*$javasport ["custom-translator.js"]
+        #*$doJavaScript
+    finish
+finish
+EOF
+"$SHUI" validate-library "$TMP/external-translator.shuil" >"$TMP/out" || fail ".shuil external translator validation"
+grep -q "language AR" "$TMP/out" || fail ".shuil language selection"
+pass ".shuil accepts quoted external JavaScript translator paths and language codes"
+
+sed 's/\$mthdset 1/\$mthdset 2/' "$ROOT/examples/browserutil.shuil" >"$TMP/invalid-library.shuil"
+if "$SHUI" validate-library "$TMP/invalid-library.shuil" >"$TMP/out" 2>"$TMP/err"; then fail ".shuil accepted an invalid method setting"; fi
+grep -q "expected '\$mthdset 0' or '\$mthdset 1'" "$TMP/err" || fail ".shuil invalid method setting diagnostic"
+pass ".shuil rejects invalid method flags with a source location"
+
 printf '\nAll Shay toolchain tests passed.\n'
