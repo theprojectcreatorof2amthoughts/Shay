@@ -9,7 +9,7 @@ enum class StatementKind { ImportLibrary, ImportTask, Declare, InputVariable, Ou
 struct Statement {
     StatementKind kind = StatementKind::Invalid;
     std::size_t line = 1;
-    std::string name, value, condition;
+    std::string name, value, condition, type_annotation;
     std::vector<std::string> parameters, arguments, output_names;
     std::vector<Statement> body, else_body;
     bool has_return = false;
