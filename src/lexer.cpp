@@ -44,15 +44,7 @@ std::vector<Token> Lexer::scan() {
    }
   }
   if(c=='/'&&peek(1)=='>'){take();take();tokens.push_back({TokenKind::Symbol,"/>",startLine,startColumn});continue;}
-  if(c=='
-   tokens.push_back({TokenKind::Symbol,std::string(1,take()),startLine,startColumn});continue;
-  }
-  take();errors_.push_back({startLine,startColumn,std::string("unexpected character '")+c+"'"});tokens.push_back({TokenKind::Invalid,std::string(1,c),startLine,startColumn});
- }
- tokens.push_back({TokenKind::End,"",line_,column_});return tokens;
-}
-}
-||c=='-'||c=='['||c==']'||c=='.'||c=='+'||c=='*'||c=='/'||c=='('||c==')'||c==','||c=='{'||c=='}'||c==':'){
+  if(c==static_cast<char>(36)||c=='-'||c=='['||c==']'||c=='.'||c=='+'||c=='*'||c=='/'||c=='('||c==')'||c==','||c=='{'||c=='}'||c==':'){
    tokens.push_back({TokenKind::Symbol,std::string(1,take()),startLine,startColumn});continue;
   }
   take();errors_.push_back({startLine,startColumn,std::string("unexpected character '")+c+"'"});tokens.push_back({TokenKind::Invalid,std::string(1,c),startLine,startColumn});
