@@ -20,13 +20,13 @@ CPPFLAGS ?=
 LDFLAGS ?=
 LDLIBS ?=
 
-FRONTEND_SOURCES := src/lexer.cpp src/parser.cpp
+FRONTEND_SOURCES := src/lexer.cpp src/parser.cpp src/shui.cpp
 FRONTEND_OBJECTS := $(patsubst src/%.cpp,$(BUILD_DIR)/%.o,$(FRONTEND_SOURCES))
 RUNTIME_OBJECT := $(BUILD_DIR)/runtime.o
 INTERPRETER_OBJECT := $(BUILD_DIR)/shaii.o
 COMPILER_OBJECT := $(BUILD_DIR)/gshai.o
 SHUI_OBJECT := $(BUILD_DIR)/shui_main.o
-DEPFILES := $(FRONTEND_OBJECTS:.o=.d) $(RUNTIME_OBJECT:.o=.d) $(INTERPRETER_OBJECT:.o=.d) $(COMPILER_OBJECT:.o=.d)
+DEPFILES := $(FRONTEND_OBJECTS:.o=.d) $(RUNTIME_OBJECT:.o=.d) $(INTERPRETER_OBJECT:.o=.d) $(COMPILER_OBJECT:.o=.d) $(SHUI_OBJECT:.o=.d)
 
 .PHONY: all build test check run compile executable clean install uninstall debug release help
 all: build
@@ -71,13 +71,14 @@ executable: $(COMPILER)
 install: build
 	$(INSTALL) -d "$(DESTDIR)$(BINDIR)"
 	$(INSTALL) -m 0755 "$(COMPILER)" "$(DESTDIR)$(BINDIR)/gshai"
+	$(INSTALL) -m 0755 "$(SHUI)" "$(DESTDIR)$(BINDIR)/shui"
 	$(INSTALL) -m 0755 "$(INTERPRETER)" "$(DESTDIR)$(BINDIR)/shaii"
 	$(INSTALL) -d "$(DESTDIR)$(SHAREDIR)/siil"
 	$(INSTALL) -m 0644 siil/*.shaii "$(DESTDIR)$(SHAREDIR)/siil/"
 	$(INSTALL) -m 0644 siil/README.md "$(DESTDIR)$(SHAREDIR)/siil/README.md"
 
 uninstall:
-	rm -f "$(DESTDIR)$(BINDIR)/gshai" "$(DESTDIR)$(BINDIR)/shaii"
+	rm -f "$(DESTDIR)$(BINDIR)/gshai" "$(DESTDIR)$(BINDIR)/shaii" "$(DESTDIR)$(BINDIR)/shui"
 	@for lib in siil/*.shaii; do rm -f "$(DESTDIR)$(SHAREDIR)/siil/${lib##*/}"; done
 	rm -f "$(DESTDIR)$(SHAREDIR)/siil/README.md"
 	-rmdir "$(DESTDIR)$(SHAREDIR)/siil" "$(DESTDIR)$(SHAREDIR)"
@@ -93,7 +94,7 @@ clean:
 help:
 	@printf '%s\n' \
 	  'Shay toolchain' \
-	  '  make                 Build compiler (gshai) and interpreter (shaii)' \
+	  '  make                 Build compiler (gshai), interpreter (shaii), and UI tool (shui)' \
 	  '  make test            Run compiler/interpreter regression tests' \
 	  '  make check PROGRAM=examples/hello.shay' \
 	  '  make run PROGRAM=examples/hello.shay' \
