@@ -1208,10 +1208,8 @@ pass "directive .shui rejects UI classes without the required !u# prefix"
 
 
 "$SHUI" build "$TMP/directive-app.shui" -o "$TMP/directive-app.html" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "directive browser generation"; }
-grep -q '<button id="568xx654"' "$TMP/directive-app.html" && grep -q '<div id="568xx654"' "$TMP/directive-app.html" && false
 grep -q '<div id="568xx654"' "$TMP/directive-app.html" || fail "browser square output"
-grep -q '<button id="568xx654"' "$TMP/directive-app.html" && fail "browser element kind/ID mapping"
-grep -q '<button id="shay-element-' "$TMP/directive-app.html" || grep -q 'buttoncircle' "$TMP/directive-app.html" || fail "browser button output"
+grep -q '<button id="shay-element-1"' "$TMP/directive-app.html" || fail "browser button output"
 pass "shui generates browser HTML from directive-based UI elements"
 
 cat > "$TMP/windowsutil.shuil" <<'EOF'
