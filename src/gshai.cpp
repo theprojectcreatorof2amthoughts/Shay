@@ -492,7 +492,7 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
 }
 bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,const std::string&entry_symbol){
  std::ofstream out(path,std::ios::binary);if(!out)return false;
- out<<"#include <algorithm>\n#include <cstdio>\n#include <exception>\n#include <fstream>\n#include <iomanip>\n#include <iostream>\n#include <sstream>\n#include <stdexcept>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n#include <utility>\n#include <vector>\n"
+ out<<"#include <algorithm>\n#include <cstdio>\n#include <exception>\n#include <fstream>\n#include <filesystem>\n#include <iomanip>\n#include <iostream>\n#include <sstream>\n#include <stdexcept>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n#include <utility>\n#include <vector>\n"
        "struct ShayExit {};\n"
        "struct ShayError : std::runtime_error { std::string category; std::size_t line; ShayError(std::string c, std::string m, std::size_t l) : std::runtime_error(c + \": \" + m), category(std::move(c)), line(l) {} };\n"
        "[[maybe_unused]] static std::unordered_map<std::string,std::vector<std::string>> shay_lists;\n"
