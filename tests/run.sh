@@ -1133,7 +1133,7 @@ pass "shaii validates and interprets Shay logic embedded in .shui with its .shui
 
 "$GSHAI" -o "$TMP/integrated-ui-app" "$TMP/integrated-ui.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "gshai compiles integrated .shui"; }
 pass "gshai compiles .shui through the shared Shay compiler and runtime"
-test -f "$TMP/integrated-ui.html" || fail "browser .shui did not emit its HTML renderer output"
+test -f "$TMP/integrated-ui-app.html" || fail "browser .shui did not emit its HTML renderer output"
 grep -q '<div id="mainPanel" class="shay-square">' "$TMP/integrated-ui.html" || fail "browser renderer did not emit the declared square"
 grep -q 'data-shay-onclick="doCalc"' "$TMP/integrated-ui.html" || fail "browser renderer did not preserve its Shay event binding"
 grep -q 'data-shay-bind="displayName"' "$TMP/integrated-ui.html" || fail "browser renderer did not preserve its state binding"
@@ -1170,18 +1170,21 @@ cat > "$TMP/windowsutil.shuil" <<'EOF'
 finish
 EOF
 cat > "$TMP/windows-ui.shui" <<'EOF'
+brew displayName = "Windows guest"
 $useentry UI(Windows)
 !%#csElementapp <{
     *#uiContrl "windowsutil.shuil"
     *!#classUideclr !u#desktopPanel
         $uiSet 0
         $declrmthd doCalc
-            instxt/>"Windows method belongs to Shay"
+            insval/>displayName
         finish
     finish
     *!#doUiclass <"!u#desktopPanel">
     *#drawui <'square'> <<'mainPanel'>>
-    *#drawui <'buttoncircle'> <<'launchButton'>> <:intercative=yes:>
+    *#drawui <'buttoncircle'> <<'launchButton'>> <:onclick=doCalc:>
+    *#drawui <'textbox'> <<'nameInput'>> <:bind=displayName:>
+    *#drawui <'label'> <<'nameLabel'>> <:bind=displayName:>
 }>
 $dothis
 $uiFinish
@@ -1189,11 +1192,14 @@ EOF
 "$SHAII" --check "$TMP/windows-ui.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "shaii checks Windows .shui"; }
 "$GSHAI" -o "$TMP/windows-ui-app" "$TMP/windows-ui.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "gshai compiles Windows .shui"; }
 out=$("$SHAII" "$TMP/windows-ui.shui") || fail "shaii runs Windows .shui logic"
-[ "$out" = "Windows method belongs to Shay" ] || fail "Windows .shui runtime output"
+[ "$out" = "Windows guest" ] || fail "Windows .shui runtime output"
 pass "browser and Windows UI class activation route through Shay's existing class runtime"
-test -f "$TMP/windows-ui.cs" || fail "Windows .shui did not emit its C# renderer output"
-grep -q 'new Panel' "$TMP/windows-ui.cs" || fail "Windows renderer did not emit a Panel"
-grep -q 'new Button' "$TMP/windows-ui.cs" || fail "Windows renderer did not emit a Button"
+test -f "$TMP/windows-ui-app.cs" || fail "Windows .shui did not emit its C# renderer output"
+test -f "$TMP/windows-ui-app.csproj" || fail "Windows .shui did not emit its WinForms project"
+grep -q 'new Panel' "$TMP/windows-ui-app.cs" || fail "Windows renderer did not emit a Panel"
+grep -q 'new Button' "$TMP/windows-ui-app.cs" || fail "Windows renderer did not emit a Button"
+grep -q 'PostAsync("http://127.0.0.1:18765/event"' "$TMP/windows-ui-app.cs" || fail "Windows button did not call the Shay event bridge"
+grep -q 'Tag = "displayName"' "$TMP/windows-ui-app.cs" || fail "Windows controls did not retain state bindings"
 pass "gshai emits native Windows Forms control source from .shui drawui declarations"
 
 printf '\nAll Shay toolchain tests passed.\n'

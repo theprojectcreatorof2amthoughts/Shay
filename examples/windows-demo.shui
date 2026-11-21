@@ -1,3 +1,4 @@
+brew displayName = "Windows guest"
 $useentry UI(Windows)
 
 !%#csElementapp <{
@@ -5,15 +6,17 @@ $useentry UI(Windows)
     *!#classUideclr !u#desktopPanel
         $uiSet 0
         $declrmthd doCalc
-            instxt/>"Windows action handled by Shay"
+            insval/>displayName
         finish
     finish
     *!#doUiclass <"!u#desktopPanel">
     *#drawui <'square'> <<'mainPanel'>>
-    *#drawui <'buttoncircle'> <<'launchButton'>> <:intercative=yes:>
+    *#drawui <'buttoncircle'> <<'launchButton'>> <:onclick=doCalc:>
     *#drawui <'label'> <<'statusLabel'>>
     *#drawui <'textbox'> <<'nameInput'>>
     *#drawui <'checkbox'> <<'enableOption'>>
+    *#drawui <'textbox'> <<'nameInput'>> <:bind=displayName:>
+    *#drawui <'label'> <<'nameLabel'>> <:bind=displayName:>
 }>
 $dothis
 $uiFinish

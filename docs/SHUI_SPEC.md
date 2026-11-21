@@ -135,7 +135,7 @@ Pass `.shui` directly to the existing Shay tools; there is no separate UI execut
 ./build/gshai -o build/windows-demo examples/windows-demo.shui
 ```
 
-Both tools accept `.shui` directly. The shared frontend validates the UI envelope and referenced `.shuil` adapter, strips only the platform declaration layer, and sends embedded Shay statements through the same parser/runtime or native compiler path used by `.shay` files. `gshai -o` emits browser HTML and compiles a loopback HTTP event/state bridge into the executable. Start the compiled executable first, then open the generated HTML page. The bridge binds only to `127.0.0.1:18765` and requires the per-build token embedded in the page.
+Both tools accept `.shui` directly. The shared frontend validates the UI envelope and referenced `.shuil` adapter, strips only the platform declaration layer, and sends embedded Shay statements through the same parser/runtime or native compiler path used by `.shay` files. `gshai -o` emits browser HTML or a Windows Forms C# source/project and compiles a loopback HTTP event/state bridge into the executable. For Browser, start the compiled executable, then open the generated HTML. For Windows, run `dotnet build <app>.csproj` and launch the generated `*-ui.exe`; it starts the compiled Shay executable beside it. The bridge binds only to `127.0.0.1:18765` and requires the per-build token embedded in the generated UI.
 
 ## Translation pipeline
 
@@ -167,4 +167,4 @@ Not implemented yet:
 1. Native Windows Forms event dispatch and state synchronization through the runtime bridge.
 2. Automatic browser launch and a unified UI lifecycle manager.
 
-Platform code remains an adapter, not a second runtime. Browser event dispatch is implemented and tested; Windows Forms remains a generated source backend without its live bridge. Do not describe the cross-platform UI as complete until Windows event/state tests and the unified application lifecycle land.
+Platform code remains an adapter, not a second runtime. Browser and Windows Forms event/state bridges are generated from the same `.shui` bindings. The compiled Shay process owns behavior and state on both platforms. Browser launch remains a manual step; the Windows Forms project is built with `dotnet build`.
