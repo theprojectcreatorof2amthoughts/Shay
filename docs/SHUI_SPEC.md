@@ -120,18 +120,20 @@ finish
 
 A `.shui` app can point to this adapter with `*#uiContrl "windowsutil.shuil"`. The first generator maps `square` to a WinForms `Panel`, `buttoncircle` to `Button`, `label` to `Label`, `textbox` to `TextBox`, and `checkbox` to `CheckBox`. IDs become control names. Unsupported element kinds are reported instead of silently discarded.
 
-### Build commands
+### Build and run embedded Shay logic
+
+Pass `.shui` directly to the existing Shay tools; there is no separate UI executable:
 
 ```sh
-shui validate examples/browser-demo.shui
-shui build examples/browser-demo.shui -o browser-demo.html
+./build/shaii --check examples/browser-demo.shui
+./build/shaii examples/browser-demo.shui
+./build/gshai -o build/browser-demo examples/browser-demo.shui
 
-shui validate examples/windows-demo.shui
-shui build examples/windows-demo.shui -o windows-demo.cs
-dotnet build examples/windows-demo.csproj
+./build/shaii --check examples/windows-demo.shui
+./build/gshai -o build/windows-demo examples/windows-demo.shui
 ```
 
-The browser build emits a standalone HTML file. The Windows build emits C# source plus a .NET 8 Windows Forms project file. Build/run of the generated Windows project requires the .NET SDK and Windows Forms targeting/runtime. The C# generator currently creates the native controls and basic layout; wiring Shay methods to native control events is a later runtime stage.
+Both tools accept `.shui` directly. The shared frontend validates the UI envelope and referenced `.shuil` adapter, strips only the platform declaration layer, and sends embedded Shay statements through the same parser/runtime or native compiler path used by `.shay` files. These commands execute the embedded Shay logic; they do not yet launch a browser or native Windows window.
 
 ## Translation pipeline
 
@@ -146,13 +148,18 @@ The `.shui` source owns app structure and Shay behavior. The `.shuil` adapter ow
 
 ## Implementation status and compatibility
 
-The old `$app "Name" { ... }` UI format and standalone `shui` frontend are deprecated and must be removed as the integrated implementation lands. `.shui` is a Shay source extension, not a separate language or compiler input. Only `gshai` and `shaii` may process it: `gshai` compiles the Shay program and its UI, while `shaii` interprets the same program and UI. There must be no `shui` executable or independent `shui validate/build` pipeline.
+The old `$app "Name" { ... }` UI format and standalone `shui` frontend have been removed. There is no `shui` executable or independent `shui validate/build` pipeline. `.shui` is accepted directly by `gshai` and `shaii`; `.shuil` adapters are validated while loading the UI source.
 
-The integrated implementation is staged:
-1. Teach the shared Shay frontend to recognize `.shui` and `.shuil` syntax, including the `!%#` UI namespace, without changing ordinary `.shay` grammar.
-2. Route `.shui` through `gshai` compilation and `shaii` interpretation; reject standalone UI compilation.
-3. Execute UI methods and application state in the existing Shay runtime.
-4. Implement a bidirectional event/state bridge from browser JavaScript and Windows C# controls into that runtime.
-5. Expand controls, layout, localization, accessibility, and cross-platform conformance tests.
+Implemented:
+1. The shared Shay toolchain accepts `.shui` as an input extension.
+2. The `!%#` browser/Windows app envelope, UI class declarations, class references, draw declarations, and adapter configuration are validated.
+3. Embedded Shay statements and UI class methods are routed through the existing compiler/interpreter frontend and runtime.
+4. Make, CMake, installation, and regression tests no longer build or invoke a standalone `shui` program.
 
-Platform code is an adapter, not a second runtime. Browser JavaScript and Windows C# must send control events to the Shay runtime and receive state updates from it; they must never reimplement Shay methods or become the source of truth for application state. Until each stage lands with tests, the corresponding behavior is not considered implemented.
+Not implemented yet:
+1. Actual browser DOM and native Windows Forms control rendering from `drawui`.
+2. A bidirectional browser JavaScript / Windows C# event bridge into the running Shay runtime.
+3. Runtime state subscriptions and updates that keep controls synchronized.
+4. Interactive end-to-end tests for both platforms.
+
+Platform code remains an adapter, not a second runtime. Do not describe the UI as interactive or production-ready until the event/state bridge and both platform renderers land with automated tests.
