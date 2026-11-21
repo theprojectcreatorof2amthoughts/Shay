@@ -225,7 +225,16 @@ Program Parser::parse(){
    statement.kind=StatementKind::Declare;
    valid=consume(TokenKind::Identifier,"",program.errors,"expected a variable name after 'brew'");
    if(valid)statement.name=previous().text;
-   if(valid)valid=consume(TokenKind::Symbol,"=",program.errors,"expected '=' after variable name");
+   if(valid&&match(TokenKind::Symbol,":")){
+    if(!consume(TokenKind::Identifier,"",program.errors,"expected a type name after ':'"))valid=false;
+    else{
+     statement.type_annotation=previous().text;
+     if(statement.type_annotation!="number"&&statement.type_annotation!="string"&&statement.type_annotation!="boolean"){
+      error(program.errors,"unknown type '"+statement.type_annotation+"'; expected number, string, or boolean");valid=false;
+     }
+    }
+   }
+   if(valid)valid=consume(TokenKind::Symbol,"=",program.errors,"expected '=' after variable name or type annotation");
    if(valid&&match(TokenKind::Symbol,"{")){
     statement.map_value=true;
     while(valid&&!(peek().kind==TokenKind::Symbol&&peek().text=="}")&&!atEnd()&&peek().kind!=TokenKind::Newline){
@@ -279,6 +288,13 @@ Program Parser::parse(){
     else if(match(TokenKind::Number)||match(TokenKind::Identifier,"true")||match(TokenKind::Identifier,"false"))statement.value=previous().text;
     else if(match(TokenKind::Symbol,"-")){if(match(TokenKind::Number))statement.value="-"+previous().text;else{error(program.errors,"expected digits after unary '-'");valid=false;}}
     else{error(program.errors,"expected a string, number, or boolean literal");valid=false;}
+   }
+   if(valid&&!statement.type_annotation.empty()){
+    if(statement.list_value||statement.map_value||statement.set_value){error(program.errors,"scalar type annotations cannot be applied to list, map, or set literals");valid=false;}
+    else{
+     const std::string actual=!statement.value.empty()&&statement.value.front()==static_cast<char>(1)?"string":(statement.value=="true"||statement.value=="false"?"boolean":"number");
+     if(actual!=statement.type_annotation){error(program.errors,"type mismatch for '"+statement.name+"': expected "+statement.type_annotation+", got "+actual);valid=false;}
+    }
    }
   }else if(match(TokenKind::Identifier,"inpvarforw")){
    statement.kind=StatementKind::InputVariable;
