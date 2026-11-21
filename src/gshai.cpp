@@ -910,14 +910,19 @@ int main(int argc,char**argv){
    }
    std::string generated,generated_extension;
    shay::ui::language::Result generation_result;
-   if(!shay::ui::language::generate_output(app_source,adapter,input.stem().string(),generated,generated_extension,generation_result,ui_runtime_token)){
+   if(!shay::ui::language::generate_output(app_source,adapter,output.stem().string(),generated,generated_extension,generation_result,ui_runtime_token)){
     for(const auto&diagnostic:generation_result.diagnostics)
      std::cerr<<input.string()<<":"<<diagnostic.line<<": error: "<<diagnostic.message<<"\n";
     return 1;
    }
-   fs::path generated_path=input;
+   fs::path generated_path=output;
    generated_path.replace_extension(generated_extension);
    ui_artifacts.push_back({generated_path,std::move(generated)});
+   if(generated_extension==".cs"){
+    fs::path project_path=generated_path;project_path.replace_extension(".csproj");
+    const std::string project="<Project Sdk=\"Microsoft.NET.Sdk\">\n  <PropertyGroup>\n    <OutputType>WinExe</OutputType>\n    <TargetFramework>net8.0-windows</TargetFramework>\n    <UseWindowsForms>true</UseWindowsForms>\n    <EnableWindowsTargeting>true</EnableWindowsTargeting>\n    <OutputPath>.</OutputPath>\n    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>\n    <AssemblyName>"+output.stem().string()+"-ui</AssemblyName>\n    <ImplicitUsings>enable</ImplicitUsings>\n    <Nullable>enable</Nullable>\n  </PropertyGroup>\n</Project>\n";
+    ui_artifacts.push_back({project_path,project});
+   }
   }
  }
  const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();const fs::path temp=fs::temp_directory_path()/("shay-build-"+std::to_string(stamp)+".cpp");
