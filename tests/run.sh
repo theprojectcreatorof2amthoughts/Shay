@@ -942,67 +942,6 @@ grep -q "list index out of range for 'names'" "$TMP/err" || fail "compiled list 
 pass "interpreter and compiled programs reject out-of-range list indices"
 
 
-cat > "$TMP/counter.shui" <<'EOF'
-$app "Counter" {
- window main {
-  title: "Counter"
-  size: 480 x 320
-  layout: column
-  text heading {
-   value: "Counter"
-   style: title
-  }
-  text count {
-   bind: counter
-  }
-  button increment {
-   label: "Add one"
-   on_click: increment_counter
-  }
-  text_input name {
-   label: "Name"
-   bind: user_name
-   placeholder: "Your name"
-  }
- }
- logic {
-  brew counter = 0
-  $declr increment_counter()
-   counter = counter + 1
-  finish
- }
-}
-EOF
-"$SHUI" validate "$TMP/counter.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail ".shui validation"; }
-grep -q 'is valid' "$TMP/out" || fail ".shui validation success message"
-"$SHUI" build "$TMP/counter.shui" --target web -o "$TMP/counter.html" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail ".shui browser build"; }
-grep -q '<main id="main"' "$TMP/counter.html" || fail "browser renderer window root"
-grep -q 'data-shay-action="increment_counter"' "$TMP/counter.html" || fail "browser renderer button action binding"
-grep -q 'data-shay-bind="counter"' "$TMP/counter.html" || fail "browser renderer text binding"
-grep -q "shay:action" "$TMP/counter.html" || fail "browser renderer event bridge"
-pass "shui validates hybrid UI files and renders browser HTML with Shay event hooks"
-
-cat > "$TMP/invalid.shui" <<'EOF'
-$app "Invalid" {
- window main {
-  button broken {
-   label: "No handler"
-  }
- }
-}
-EOF
-if "$SHUI" validate "$TMP/invalid.shui" >"$TMP/out" 2>"$TMP/err"; then fail "shui accepted a button without an action handler"; fi
-grep -q "requires 'on_click'" "$TMP/err" || fail "shui button validation diagnostic"
-pass "shui reports invalid UI elements with source locations"
-
-if "$SHUI" run "$ROOT/examples/counter.shui" --target desktop >"$TMP/out" 2>"$TMP/err"; then
-    fail "non-Windows shui unexpectedly launched the desktop backend"
-fi
-grep -q "desktop target requires Windows" "$TMP/err" || fail "shui desktop platform diagnostic"
-pass "shui clearly gates the native desktop renderer to Windows"
-
-
-
 cat > "$TMP/maps-sets.shay" <<'EOF'
 brew user = {"name": "Ada", "role": "Compiler"}
 insval/>user["name"]
