@@ -12,7 +12,7 @@ brew username = "Alex"
 insval/>username
 ```
 
-The parser accepts string, numeric (including negative), and boolean literals for `brew`. It also accepts list literals containing strings, numbers, and booleans; `insval/>` prints list items in order, one per line. Empty lists are valid. List values support zero-based indexing with `insval/>items[0]`, appending with `listadd/>items, "value"`, replacing with `listset/>items, 0, "value"`, and removing with `listremove/>items, 0`. Out-of-range indices produce runtime errors.
+The parser accepts string, numeric (including negative), and boolean literals for `brew`. It also accepts list literals containing strings, numbers, and booleans; `insval/>` prints list items in order, one per line. Empty lists are valid. List values support zero-based indexing with `insval/>items[0]`, appending with `listadd/>items, "value"`, replacing with `listset/>items, 0, "value"`, and removing with `listremove/>items, 0`. Out-of-range indices produce runtime errors. Maps use quoted string keys, for example `brew user = {"name": "Ada"}`; read a key with `insval/>user["name"]`, update it with `mapset/>user, "name", "Grace"`, and remove it with `mapremove/>user, "name"`. Sets use `brew tags = set["compiler", "systems"]`; use `setadd/>`, `setremove/>`, and `setcontains/>` to mutate or query membership.
 
 ```shay
 brew names = ["Ada", "Grace", "Linus"]
