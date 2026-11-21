@@ -5,7 +5,7 @@ $useentry UI(Browser)
     *!#classUideclr !u#browserCalc
         $uiSet 0
         $declrmthd doCalc
-            x*y + x*y
+            instxt/>"Browser action handled by Shay"
         finish
     finish
     *!#doUiclass <"!u#browserCalc">
