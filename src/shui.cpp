@@ -87,7 +87,7 @@ private:
   while(!end()&&!is(TokenKind::Newline)&&!is(TokenKind::Symbol,"}")){
    const Token part=peek();++at_;
    if(!first&&part.kind==TokenKind::Identifier&&part.text=="x"&&value.size()&&std::isdigit(static_cast<unsigned char>(value.back())))value+="x";
-   else if(!first)value+=" ";
+   else if(!first&&value.back()!='x')value+=" ";
    if(part.kind==TokenKind::String||part.kind==TokenKind::Number||part.kind==TokenKind::Identifier)value+=part.text;
    else{fail(part,"property values must be strings, numbers, or identifiers");}
    first=false;
