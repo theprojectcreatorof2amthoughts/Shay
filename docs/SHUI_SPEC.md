@@ -47,7 +47,7 @@ $uiFinish
 | `*#drawui <'kind'>` | Declares/draws a UI element of the given kind. |
 | `<<'id'>>` | Optional explicit element ID following a `drawui` element kind. |
 | `<:onclick=method:>` | Binds a browser control click to a no-argument Shay method declared in the UI class. The call runs in the compiled Shay process. |
-| `<:bind=variable:>` | Binds a browser input/checkbox to a named Shay runtime value; the value is sent to the runtime and reflected back after events. |
+| `<:bind=variable:>` | Binds a browser or Windows Forms text box/checkbox to a declared Shay value; labels display the same value. Inputs update the runtime and state is reflected back after events. |
 | `<:intercative=yes:>` | Legacy metadata spelling retained for compatibility; it does not itself choose an event handler. |
 | `$dothis` | Executes the application. |
 | `$uiFinish` | Marks the end of the UI application lifecycle. |
@@ -159,11 +159,13 @@ Implemented:
 4. Make, CMake, installation, and regression tests no longer build or invoke a standalone `shui` program.
 
 Implemented:
-5. Browser DOM generation and browser click/input requests through an authenticated loopback bridge into the compiled Shay runtime.
-6. Browser state snapshots and updates for controls using `<:bind=variable:>`.
-7. Browser bridge regression tests that start the compiled runtime, invoke a Shay method over HTTP, and reject an invalid token.
+5. Browser DOM and Windows Forms control generation from the same `drawui` declarations.
+6. Authenticated loopback event dispatch from browser buttons and Windows Forms buttons into no-argument Shay methods.
+7. Bidirectional value binding for text boxes, checkboxes and labels through `<:bind=variable:>`.
+8. Browser and Windows runtime bridge tests, including a Windows Forms project build and a live Windows HTTP event invocation.
+9. Automatic browser-page launch when a desktop session is available; the Windows Forms host starts and stops its compiled Shay child process.
 
 Not implemented yet:
-1. A unified cross-platform application lifecycle manager with graceful browser-tab shutdown.
+1. Graceful browser-tab shutdown of the local Shay runtime.
 
 Platform code remains an adapter, not a second runtime. Browser and Windows Forms event/state bridges are generated from the same `.shui` bindings. The compiled Shay process owns behavior and state on both platforms. Browser builds launch the generated page automatically when a desktop session is available; Windows Forms projects are built with `dotnet build` and own the child runtime process lifecycle.
