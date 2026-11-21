@@ -85,9 +85,9 @@ void collect_statement_uses(const shay::Statement&s,const BuildContext&ctx,const
    for(const auto&arg:s.arguments)collect_expression_uses(arg,ctx,locals,used);
    break;
   case shay::StatementKind::TryCatch:{
-   collect_statement_uses(s.body,ctx,locals,used);
+   for(const auto&nested:s.body)collect_statement_uses(nested,ctx,locals,used);
    auto catchLocals=locals;catchLocals.insert(s.name);
-   collect_statement_uses(s.else_body,ctx,catchLocals,used);
+   for(const auto&nested:s.else_body)collect_statement_uses(nested,ctx,catchLocals,used);
    break;
   }
   case shay::StatementKind::MapSet:
