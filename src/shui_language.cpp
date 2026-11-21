@@ -142,7 +142,7 @@ Result validate_shui(const std::string& source) {
             continue;
         }
         if (in_method) continue;
-        if (matches(line, R"(\*#drawui\s+<'[A-Za-z_][A-Za-z0-9_-]*'>\s*(<<'[A-Za-z0-9_-]+'>>|<:[A-Za-z_][A-Za-z0-9_]*=[A-Za-z0-9_-]+:>)?)")) {
+        if (matches(line, R"(\*#drawui\s+<'[A-Za-z_][A-Za-z0-9_-]*'>\s*(?:<<'[A-Za-z0-9_-]+'>>)?\s*(?:<:[A-Za-z_][A-Za-z0-9_]*=[A-Za-z0-9_-]+:>)?)")) {
             std::smatch id_match;
             if (std::regex_search(line, id_match, std::regex(R"(<<'([A-Za-z0-9_-]+)'>>)"))) {
                 if (!ids.insert(id_match[1].str()).second)
