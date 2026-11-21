@@ -1109,7 +1109,7 @@ direxists/>"$TMP/new-folder"
 filedelete/>"$TMP/data.txt"
 fileexists/>"$TMP/data.txt"
 EOF
-expected=$(printf 'Hello world\ntrue\ntrue\nfalse')
+expected=$(printf 'Hello world\ntrue\ntrue\ntrue\nfalse')
 out=$("$SHAII" "$TMP/file-api.shay") || fail "interpreter file and directory APIs"
 [ "$out" = "$expected" ] || { printf "expected:\n%s\nactual:\n%s\n" "$expected" "$out" >&2; fail "interpreter file API results"; }
 "$GSHAI" -o "$TMP/file-api-app" "$TMP/file-api.shay" || fail "compile file and directory APIs"
