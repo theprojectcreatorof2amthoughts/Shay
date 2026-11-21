@@ -618,7 +618,7 @@ int main(int argc,char**argv){
   for(const auto&input:inputs)
    if(input.extension()!=".shay"&&input.extension()!=".shaz"){std::cerr<<"gshai: source inputs must be .shay or .shaz files\n";return 2;}
   if(output.empty()){output=inputs.front().parent_path()/inputs.front().stem();if(object_mode)output+=".sho";}
-  else if(object_mode&&output.extension()!=".sho"){std::cerr<<"gshai: -ob output must use the .sho extension\\n";return 2;}
+  else if(object_mode&&output.extension()!=".sho"){std::cerr<<"gshai: -ob output must use the .sho extension\n";return 2;}
  }
  if(link_mode){
   const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();
