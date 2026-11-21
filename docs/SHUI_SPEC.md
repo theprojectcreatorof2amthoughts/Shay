@@ -167,7 +167,7 @@ Implemented:
 
 Browser lifecycle:
 - The generated browser page sends an authenticated heartbeat every three seconds.
-- If the page disappears, the runtime waits twelve seconds without a heartbeat, then closes its listener and exits cleanly. The grace period tolerates normal background-tab throttling and page reloads.
+- If the page disappears, the runtime waits ninety seconds without a heartbeat, then closes its listener and exits cleanly. The grace period tolerates normal background-tab throttling and page reloads.
 - Windows Forms continues to own its child runtime lifecycle and does not use browser heartbeats.
 
 Platform code remains an adapter, not a second runtime. Browser and Windows Forms event/state bridges are generated from the same `.shui` bindings. The compiled Shay process owns behavior and state on both platforms. Browser builds launch the generated page automatically when a desktop session is available; Windows Forms projects are built with `dotnet build` and own the child runtime process lifecycle.
