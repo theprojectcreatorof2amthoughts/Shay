@@ -3,6 +3,7 @@
 #include "imports.hpp"
 #include "lexer.hpp"
 #include "parser.hpp"
+#include "shui_source.hpp"
 #include "runtime.h"
 #include <algorithm>
 #include <cerrno>
@@ -326,9 +327,17 @@ void execute_file(const fs::path&input,Context&ctx){
  if(ctx.active.count(key)){diagnose(ctx,input,1,"circular import detected");return;}
  if(ctx.loaded.count(key))return;
  const std::string extension=input.extension().string();
- if(extension!=".shay"&&extension!=".shaz"&&extension!=".shaii"){diagnose(ctx,input,1,"unsupported file extension (expected .shay, .shaz, or .shaii)");return;}
+ if(extension!=".shay"&&extension!=".shaz"&&extension!=".shaii"&&extension!=".shui"){diagnose(ctx,input,1,"unsupported file extension (expected .shay, .shaz, .shaii, or .shui)");return;}
  std::ifstream stream(input,std::ios::binary);if(!stream){diagnose(ctx,input,1,"cannot open source file");return;}
- const std::string source((std::istreambuf_iterator<char>(stream)),{});
+ const std::string raw_source((std::istreambuf_iterator<char>(stream)),{});
+ std::string source=raw_source;
+ if(extension==".shui"){
+  std::vector<shay::ui::language::SourceDiagnostic> ui_diagnostics;
+  if(!shay::ui::language::prepare_shui_source(input,raw_source,source,ui_diagnostics)){
+   for(const auto&item:ui_diagnostics)diagnose(ctx,input,item.line,item.message);
+   return;
+  }
+ }
  shay::Lexer lexer(source);const auto tokens=lexer.scan();shay::Parser parser(tokens);const shay::Program program=parser.parse();
  for(const auto&e:lexer.errors())diagnose(ctx,input,e.line,e.message);
  for(const auto&e:program.errors)diagnose(ctx,input,e.line,e.message);
@@ -378,7 +387,7 @@ void execute_file(const fs::path&input,Context&ctx){
     else ctx.functions.emplace(s.name,s);
     break;
    case shay::StatementKind::DeclareClass:{
-    if(extension!=".shaii"){diagnose(ctx,input,s.line,"'$classfunc' is only allowed in .shaii files");break;}
+    if(extension!=".shaii"&&extension!=".shui"){diagnose(ctx,input,s.line,"class declarations are only allowed in .shaii or .shui files");break;}
     if(ctx.classes.count(s.name)){diagnose(ctx,input,s.line,"class '"+s.name+"' is already declared");break;}
     std::vector<std::string> methods;bool valid=true;
     for(const auto&method:s.body)
@@ -558,7 +567,7 @@ int main(int argc,char**argv){
  bool check=false;fs::path source;
  for(int i=1;i<argc;++i){const std::string arg=argv[i];
   if(arg=="--check")check=true;
-  else if(arg=="--help"||arg=="-h"){std::cout<<"Usage: shaii [--check] program.shay|program.shaz|library.shaii\n       shaii --version\n";return 0;}
+  else if(arg=="--help"||arg=="-h"){std::cout<<"Usage: shaii [--check] program.shay|program.shaz|program.shui|library.shaii\n       shaii --version\n";return 0;}
   else if(!arg.empty()&&arg[0]=='-'){std::cerr<<"shaii: unknown option: "<<arg<<"\n";return 2;}
   else if(source.empty())source=arg;else{std::cerr<<"shaii: only one entry file is accepted\n";return 2;}
  }
