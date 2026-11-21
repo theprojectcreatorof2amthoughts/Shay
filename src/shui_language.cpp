@@ -162,7 +162,7 @@ Result validate_shui(const std::string& source) {
 Result validate_shuil(const std::string& source) {
     Result result;
     const auto lines = lines_of(source);
-    bool platform = false, method = false, language = false, translator_class = false;
+    bool platform = false, method = false, language = false, translator_class_seen = false, translator_class_open = false;
     bool in_method = false, translator_loaded = false, translator_run = false;
     std::string selected_method;
     for (const auto& [number, line] : lines) {
@@ -189,11 +189,11 @@ Result validate_shuil(const std::string& source) {
             else translator_class = false;
             continue;
         }
-        if (translator_class && matches(line, R"(\$declrmthd\s+[A-Za-z_][A-Za-z0-9_]*)")) {
+        if (translator_class_open && matches(line, R"(\$declrmthd\s+[A-Za-z_][A-Za-z0-9_]*)")) {
             if (in_method) error(result, number, "a translator method is already open");
             in_method = true; continue;
         }
-        if (translator_class && matches(line, R"(\$uiset\s+[A-Za-z0-9_]+)")) continue;
+        if (translator_class_open && matches(line, R"(\$uiset\s+[A-Za-z0-9_]+)")) continue;
         if (translator_class && matches(line, R"(\$mthdset\s+[A-Za-z0-9_]+)")) continue;
         if (in_method && matches(line, R"(#\*\$(javasport|csharpsport)\s+(\[[A-Za-z0-9_./-]+\]|\["[^"]+\.(js|cs)"\]))")) {
             translator_loaded = true; continue;
@@ -208,8 +208,8 @@ Result validate_shuil(const std::string& source) {
     if (!platform) error(result, 1, "missing '#*$ContrlDefine <platform>'");
     if (!method) error(result, 1, "missing '#*!MethdUi <translation-method>'");
     if (!language) error(result, 1, "missing '#*!LangUI <language>'");
-    if (!translator_class) error(result, lines.empty() ? 1 : lines.back().first, "missing '#*!classmethdDeclr !m#Name' translator class");
-    if (translator_class) error(result, lines.empty() ? 1 : lines.back().first, "translator class is missing its closing 'finish'");
+    if (!translator_class_seen) error(result, lines.empty() ? 1 : lines.back().first, "missing '#*!classmethdDeclr !m#Name' translator class");
+    if (translator_class_open) error(result, lines.empty() ? 1 : lines.back().first, "translator class is missing its closing 'finish'");
     if (in_method) error(result, lines.empty() ? 1 : lines.back().first, "translator method is missing its closing 'finish'");
     if (!translator_loaded) error(result, 1, "no platform translator file was loaded");
     if (!translator_run) error(result, 1, "missing platform translator execution directive");
