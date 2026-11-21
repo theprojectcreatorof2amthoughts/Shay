@@ -511,7 +511,8 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
 }
 bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,const std::string&entry_symbol,
                        bool ui_runtime=false,const std::string&ui_token="",
-                       const std::vector<std::pair<std::string,std::string>>&ui_events={}){
+                       const std::vector<std::pair<std::string,std::string>>&ui_events={},
+                       const std::string&ui_page=""){
  std::ofstream out(path,std::ios::binary);if(!out)return false;
  out<<"#include <algorithm>\n#include <cstdio>\n#include <exception>\n#include <fstream>\n#include <filesystem>\n#include <cerrno>\n#include <cstdint>\n#ifdef _WIN32\n#include <process.h>\n#include <winsock2.h>\n#include <ws2tcpip.h>\n#else\n#include <sys/types.h>\n#include <sys/wait.h>\n#include <sys/socket.h>\n#include <netinet/in.h>\n#include <arpa/inet.h>\n#include <unistd.h>\n#endif\n#include <iomanip>\n#include <iostream>\n#include <sstream>\n#include <stdexcept>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n#include <utility>\n#include <vector>\n#include <mutex>\n#include <cstdlib>\n"
        "struct ShayExit {};\n"
@@ -565,7 +566,7 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
    if(fn!=ctx.functions.end()&&emitted_methods.insert(event.second).second)
     methods.emplace_back(event.second,fn->second.has_return);
   }
-  shay::ui::runtime_codegen::emit(out,ui_token,methods);
+  shay::ui::runtime_codegen::emit(out,ui_token,methods,ui_page);
  }
  out<<"extern \"C\" int "<<entry_symbol<<"() {\n try {\n shay_ui_values.clear(); auto& values=shay_ui_values;\n";
  for(const auto&s:ctx.statements){
@@ -871,6 +872,7 @@ int main(int argc,char**argv){
  std::vector<std::pair<std::string,std::string>> ui_event_bindings;
  bool has_shui=false;
  std::string ui_runtime_token;
+ std::string ui_browser_page;
  if(!object_mode){
   for(const auto&input:inputs){
    if(input.extension()!=".shui")continue;
@@ -921,6 +923,7 @@ int main(int argc,char**argv){
    fs::path generated_path=output;
    generated_path.replace_extension(generated_extension);
    ui_artifacts.push_back({generated_path,std::move(generated)});
+   if(generated_extension==".html")ui_browser_page=fs::absolute(generated_path).string();
    if(generated_extension==".cs"){
     fs::path project_path=generated_path;project_path.replace_extension(".csproj");
     const std::string project="<Project Sdk=\"Microsoft.NET.Sdk\">\n  <PropertyGroup>\n    <OutputType>WinExe</OutputType>\n    <TargetFramework>net8.0-windows</TargetFramework>\n    <UseWindowsForms>true</UseWindowsForms>\n    <EnableWindowsTargeting>true</EnableWindowsTargeting>\n    <OutputPath>.</OutputPath>\n    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>\n    <AssemblyName>"+output.stem().string()+"-ui</AssemblyName>\n    <ImplicitUsings>enable</ImplicitUsings>\n    <Nullable>enable</Nullable>\n  </PropertyGroup>\n</Project>\n";
@@ -929,7 +932,7 @@ int main(int argc,char**argv){
   }
  }
  const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();const fs::path temp=fs::temp_directory_path()/("shay-build-"+std::to_string(stamp)+".cpp");
- if(!write_translation(context,temp,!object_mode,object_mode?object_entry_symbol(output):"shay_program_entry",has_shui,ui_runtime_token,ui_event_bindings)){std::cerr<<"gshai: cannot write temporary translation unit\n";return 1;}
+ if(!write_translation(context,temp,!object_mode,object_mode?object_entry_symbol(output):"shay_program_entry",has_shui,ui_runtime_token,ui_event_bindings,ui_browser_page)){std::cerr<<"gshai: cannot write temporary translation unit\n";return 1;}
  const char*configured=std::getenv("CXX");const std::string cxx=configured&&*configured?configured:"c++";
  int status=0;
 #ifdef _WIN32

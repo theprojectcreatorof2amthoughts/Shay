@@ -24,8 +24,10 @@ inline std::string cpp_quote(const std::string& value) {
 }
 
 inline void emit(std::ostream& out, const std::string& token,
-                 const std::vector<std::pair<std::string, bool>>& events) {
+                 const std::vector<std::pair<std::string, bool>>& events,
+                 const std::string& browser_page) {
     out << "static const std::string shay_ui_token=" << cpp_quote(token) << ";\n"
+        << "static const std::string shay_ui_page=" << cpp_quote(browser_page) << ";\n"
         << "static std::mutex shay_ui_mutex;\n"
         << "static std::string shay_ui_dispatch(const std::string& method){"
            "std::lock_guard<std::mutex> guard(shay_ui_mutex);"
@@ -130,6 +132,30 @@ static void shay_ui_reply(ShayUiSocket client, int status,
         sent += static_cast<std::size_t>(count);
     }
 }
+static std::string shay_ui_shell_quote(const std::string& value) {
+#ifdef _WIN32
+    std::string out = "\\"";
+    for (char c : value) { if (c == '"') out += "\\\\"; out += c; }
+    out += "\\"";
+#else
+    std::string out = "'";
+    for (char c : value) { if (c == '\'') out += "'\\''"; else out += c; }
+    out += "'";
+#endif
+    return out;
+}
+static void shay_ui_open_page() {
+    if (shay_ui_page.empty()) return;
+#ifdef _WIN32
+    const std::string command = "start \"\" " + shay_ui_shell_quote(shay_ui_page);
+#elif defined(__APPLE__)
+    const std::string command = "open " + shay_ui_shell_quote(shay_ui_page) + " >/dev/null 2>&1 &";
+#else
+    if (!std::getenv("DISPLAY") && !std::getenv("WAYLAND_DISPLAY")) return;
+    const std::string command = "xdg-open " + shay_ui_shell_quote(shay_ui_page) + " >/dev/null 2>&1 &";
+#endif
+    std::system(command.c_str());
+}
 static int shay_ui_serve() {
 #ifdef _WIN32
     WSADATA data;
@@ -158,6 +184,7 @@ static int shay_ui_serve() {
         return 1;
     }
     std::cout << "Shay UI bridge listening at http://127.0.0.1:18765\n";
+    shay_ui_open_page();
     for (;;) {
         ShayUiSocket client = accept(server, nullptr, nullptr);
 #ifdef _WIN32
