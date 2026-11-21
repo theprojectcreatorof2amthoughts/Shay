@@ -226,11 +226,26 @@ Program Parser::parse(){
    valid=consume(TokenKind::Identifier,"",program.errors,"expected a variable name after 'brew'");
    if(valid)statement.name=previous().text;
    if(valid)valid=consume(TokenKind::Symbol,"=",program.errors,"expected '=' after variable name");
-   if(valid){
+   if(valid&&match(TokenKind::Symbol,"[")){
+    statement.list_value=true;
+    while(valid&&!(peek().kind==TokenKind::Symbol&&peek().text=="]")&&!atEnd()&&peek().kind!=TokenKind::Newline){
+     std::string item;
+     if(match(TokenKind::String))item=previous().text;
+     else if(match(TokenKind::Number)||match(TokenKind::Identifier,"true")||match(TokenKind::Identifier,"false"))item=previous().text;
+     else if(match(TokenKind::Symbol,"-")){
+      if(match(TokenKind::Number))item="-"+previous().text;
+      else{error(program.errors,"expected digits after unary '-' in list");valid=false;break;}
+     }else{error(program.errors,"list items must be strings, numbers, or booleans");valid=false;break;}
+     statement.list_items.push_back(item);
+     if(match(TokenKind::Symbol,","))continue;
+     if(!(peek().kind==TokenKind::Symbol&&peek().text=="]")){error(program.errors,"expected ',' or ']' after list item");valid=false;}
+    }
+    if(valid)valid=consume(TokenKind::Symbol,"]",program.errors,"expected ']' to close list literal");
+   }else if(valid){
     if(match(TokenKind::String))statement.value=std::string(1,static_cast<char>(1))+previous().text;
     else if(match(TokenKind::Number)||match(TokenKind::Identifier,"true")||match(TokenKind::Identifier,"false"))statement.value=previous().text;
     else if(match(TokenKind::Symbol,"-")){if(match(TokenKind::Number))statement.value="-"+previous().text;else{error(program.errors,"expected digits after unary '-'");valid=false;}}
-    else{error(program.errors,"expected a string, number, or boolean literal");valid=false;}
+    else{error(program.errors,"expected a string, number, boolean, or list literal");valid=false;}
    }
   }else if(match(TokenKind::Identifier,"inpvarforw")){
    statement.kind=StatementKind::InputVariable;
