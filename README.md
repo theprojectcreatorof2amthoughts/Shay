@@ -14,6 +14,8 @@ Shay has its own original grammar and vocabulary, including `brew` for variable 
 | `.shay` | Shay program |
 | `.shaii` | Shay library |
 | `.shaz` | Zeccur task file |
+| `.shui` | Shay UI application source, processed by `gshai` or `shaii` |
+| `.shuil` | Shay platform UI adapter, loaded by `.shui` |
 | `.sho` | Compiled Shay object file (native relocatable object) |
 
 ## Vocabulary
@@ -211,3 +213,20 @@ The long-term goal is to grow Shay into a complete, practical, general-purpose p
 - Make/CMake builds and automated regression/diagnostic tests.
 
 These are target capabilities, not claims that the bootstrap currently implements them.
+
+
+## UI applications
+
+Shay UI is a source format within Shay, not a separate language. Pass `.shui` files directly to the normal tools:
+
+```sh
+./build/shaii --check examples/browser-demo.shui
+./build/shaii examples/browser-demo.shui
+./build/gshai -o build/browser-demo examples/browser-demo.shui
+```
+
+The shared frontend validates the UI entry target and the referenced `.shuil` adapter, then routes the embedded Shay statements through the ordinary Shay parser, interpreter, or native compiler. UI class methods use the existing Shay class/method runtime. The UI envelope and drawing declarations are not a second execution engine.
+
+**Current implementation boundary:** `.shui` parsing, adapter validation, and embedded Shay logic compilation/interpreting are integrated. Rendering controls into a live browser or native Windows window, dispatching UI events into Shay methods, and synchronizing runtime state back to controls are not implemented yet. The JavaScript/C# adapters must remain bridges to Shay—not independent implementations of Shay behavior.
+
+See [the SHAY UI specification](docs/SHUI_SPEC.md) and the [browser](examples/browser-demo.shui) and [Windows](examples/windows-demo.shui) examples.

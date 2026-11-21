@@ -24,5 +24,5 @@ jobs:
       - uses: actions/checkout@v4
       - name: Configure Windows build
         run: cmake -S . -B build-windows -A x64
-      - name: Build Windows targets (including native .shui renderer)
+      - name: Build Windows compiler and interpreter targets
         run: cmake --build build-windows --config Release --parallel

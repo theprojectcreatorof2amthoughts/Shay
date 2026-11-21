@@ -1,0 +1,19 @@
+$useentry UI(Windows)
+
+!%#csElementapp <{
+    *#uiContrl "windowsutil.shuil"
+    *!#classUideclr !u#desktopPanel
+        $uiSet 0
+        $declrmthd doCalc
+            instxt/>"Windows action handled by Shay"
+        finish
+    finish
+    *!#doUiclass <"!u#desktopPanel">
+    *#drawui <'square'> <<'mainPanel'>>
+    *#drawui <'buttoncircle'> <<'launchButton'>> <:intercative=yes:>
+    *#drawui <'label'> <<'statusLabel'>>
+    *#drawui <'textbox'> <<'nameInput'>>
+    *#drawui <'checkbox'> <<'enableOption'>>
+}>
+$dothis
+$uiFinish

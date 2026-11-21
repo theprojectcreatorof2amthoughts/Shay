@@ -2,11 +2,9 @@
 set -eu
 SHAII="${1:-./build/shaii}"
 GSHAI="${2:-./build/gshai}"
-SHUI="${3:-./build/shui}"
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 case "$SHAII" in /*) ;; *) SHAII="$ROOT/$SHAII";; esac
 case "$GSHAI" in /*) ;; *) GSHAI="$ROOT/$GSHAI";; esac
-case "$SHUI" in /*) ;; *) SHUI="$ROOT/$SHUI";; esac
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT HUP INT TERM
 pass() { printf 'PASS: %s\n' "$1"; }
@@ -944,67 +942,6 @@ grep -q "list index out of range for 'names'" "$TMP/err" || fail "compiled list 
 pass "interpreter and compiled programs reject out-of-range list indices"
 
 
-cat > "$TMP/counter.shui" <<'EOF'
-$app "Counter" {
- window main {
-  title: "Counter"
-  size: 480 x 320
-  layout: column
-  text heading {
-   value: "Counter"
-   style: title
-  }
-  text count {
-   bind: counter
-  }
-  button increment {
-   label: "Add one"
-   on_click: increment_counter
-  }
-  text_input name {
-   label: "Name"
-   bind: user_name
-   placeholder: "Your name"
-  }
- }
- logic {
-  brew counter = 0
-  $declr increment_counter()
-   counter = counter + 1
-  finish
- }
-}
-EOF
-"$SHUI" validate "$TMP/counter.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail ".shui validation"; }
-grep -q 'is valid' "$TMP/out" || fail ".shui validation success message"
-"$SHUI" build "$TMP/counter.shui" --target web -o "$TMP/counter.html" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail ".shui browser build"; }
-grep -q '<main id="main"' "$TMP/counter.html" || fail "browser renderer window root"
-grep -q 'data-shay-action="increment_counter"' "$TMP/counter.html" || fail "browser renderer button action binding"
-grep -q 'data-shay-bind="counter"' "$TMP/counter.html" || fail "browser renderer text binding"
-grep -q "shay:action" "$TMP/counter.html" || fail "browser renderer event bridge"
-pass "shui validates hybrid UI files and renders browser HTML with Shay event hooks"
-
-cat > "$TMP/invalid.shui" <<'EOF'
-$app "Invalid" {
- window main {
-  button broken {
-   label: "No handler"
-  }
- }
-}
-EOF
-if "$SHUI" validate "$TMP/invalid.shui" >"$TMP/out" 2>"$TMP/err"; then fail "shui accepted a button without an action handler"; fi
-grep -q "requires 'on_click'" "$TMP/err" || fail "shui button validation diagnostic"
-pass "shui reports invalid UI elements with source locations"
-
-if "$SHUI" run "$ROOT/examples/counter.shui" --target desktop >"$TMP/out" 2>"$TMP/err"; then
-    fail "non-Windows shui unexpectedly launched the desktop backend"
-fi
-grep -q "desktop target requires Windows" "$TMP/err" || fail "shui desktop platform diagnostic"
-pass "shui clearly gates the native desktop renderer to Windows"
-
-
-
 cat > "$TMP/maps-sets.shay" <<'EOF'
 brew user = {"name": "Ada", "role": "Compiler"}
 insval/>user["name"]
@@ -1153,5 +1090,83 @@ out=$("$SHAII" "$TMP/process-missing.shay") || fail "interpreter missing process
 out=$("$TMP/process-missing-app") || fail "run compiled missing process"
 [ "$out" = "127" ] || fail "compiler missing process exit code"
 pass "runproc launches executables with explicit argv and returns their exit status without a shell"
+
+
+cat > "$TMP/browserutil.shuil" <<'EOF'
+#*$ContrlDefine <browser>
+#*!MethdUi <javasTrans>
+#*!LangUI <US>
+#*!classmethdDeclr !m#javasMain
+    $uiset 0
+    $declrmthd TransMain
+        $mthdset 1
+        #*$javasport [uicontrol.js]
+        #*$doJavaScript
+    finish
+finish
+EOF
+cat > "$TMP/integrated-ui.shui" <<'EOF'
+$useentry UI(Browser)
+!%#browsElementapp <{
+    *#uiContrl "browserutil.shuil"
+    *!#classUideclr !u#browserCalc
+        $uiSet 0
+        $declrmthd doCalc
+            instxt/>"UI method belongs to Shay"
+        finish
+    finish
+    *!#doUiclass <"!u#browserCalc">
+    *#drawui <'square'> <<'mainPanel'>>
+    *#drawui <'buttoncircle'> <:intercative=yes:>
+}>
+$dothis
+$uiFinish
+EOF
+
+"$SHAII" --check "$TMP/integrated-ui.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "shaii checks integrated .shui"; }
+grep -q 'no errors' "$TMP/out" || fail "shaii .shui check message"
+out=$("$SHAII" "$TMP/integrated-ui.shui") || fail "shaii runs embedded .shui logic"
+[ "$out" = "UI method belongs to Shay" ] || fail "shaii .shui runtime output"
+pass "shaii validates and interprets Shay logic embedded in .shui with its .shuil adapter"
+
+"$GSHAI" -o "$TMP/integrated-ui-app" "$TMP/integrated-ui.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "gshai compiles integrated .shui"; }
+out=$("$TMP/integrated-ui-app") || fail "run compiled .shui logic"
+[ "$out" = "UI method belongs to Shay" ] || fail "compiled .shui runtime output"
+pass "gshai compiles .shui through the shared Shay compiler and runtime"
+
+cat > "$TMP/windowsutil.shuil" <<'EOF'
+#*$ContrlDefine <windows>
+#*!MethdUi <csharpTrans>
+#*!LangUI <US>
+#*!classmethdDeclr !m#csharpMain
+    $uiset 0
+    $declrmthd TransMain
+        $mthdset 1
+        #*$csharpsport [uicontrol.cs]
+        #*$doCSharp
+    finish
+finish
+EOF
+cat > "$TMP/windows-ui.shui" <<'EOF'
+$useentry UI(Windows)
+!%#csElementapp <{
+    *#uiContrl "windowsutil.shuil"
+    *!#classUideclr !u#desktopPanel
+        $uiSet 0
+        $declrmthd doCalc
+            instxt/>"Windows method belongs to Shay"
+        finish
+    finish
+    *!#doUiclass <"!u#desktopPanel">
+    *#drawui <'square'> <<'mainPanel'>>
+}>
+$dothis
+$uiFinish
+EOF
+"$SHAII" --check "$TMP/windows-ui.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "shaii checks Windows .shui"; }
+"$GSHAI" -o "$TMP/windows-ui-app" "$TMP/windows-ui.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "gshai compiles Windows .shui"; }
+out=$("$SHAII" "$TMP/windows-ui.shui") || fail "shaii runs Windows .shui logic"
+[ "$out" = "Windows method belongs to Shay" ] || fail "Windows .shui runtime output"
+pass "browser and Windows UI class activation route through Shay's existing class runtime"
 
 printf '\nAll Shay toolchain tests passed.\n'

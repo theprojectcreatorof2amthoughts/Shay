@@ -2,6 +2,7 @@
 #include "imports.hpp"
 #include "lexer.hpp"
 #include "parser.hpp"
+#include "shui_source.hpp"
 #include <chrono>
 #include <cctype>
 #include <cstdio>
@@ -180,9 +181,17 @@ void load_file(const fs::path&input,BuildContext&ctx){
  std::error_code ec;const fs::path canonical=fs::weakly_canonical(input,ec);const std::string key=(ec?input:canonical).string();
  if(ctx.active.count(key)){diagnose(ctx,input,1,"circular import detected");return;}if(ctx.loaded.count(key))return;
  const std::string extension=input.extension().string();
- if(extension!=".shay"&&extension!=".shaz"&&extension!=".shaii"){diagnose(ctx,input,1,"unsupported file extension (expected .shay, .shaz, or .shaii)");return;}
+ if(extension!=".shay"&&extension!=".shaz"&&extension!=".shaii"&&extension!=".shui"){diagnose(ctx,input,1,"unsupported file extension (expected .shay, .shaz, .shaii, or .shui)");return;}
  std::ifstream stream(input,std::ios::binary);if(!stream){diagnose(ctx,input,1,"cannot open source file");return;}
- const std::string source((std::istreambuf_iterator<char>(stream)),std::istreambuf_iterator<char>());
+ const std::string raw_source((std::istreambuf_iterator<char>(stream)),std::istreambuf_iterator<char>());
+ std::string source=raw_source;
+ if(extension==".shui"){
+  std::vector<shay::ui::language::SourceDiagnostic> ui_diagnostics;
+  if(!shay::ui::language::prepare_shui_source(input,raw_source,source,ui_diagnostics)){
+   for(const auto&item:ui_diagnostics)diagnose(ctx,input,item.line,item.message);
+   return;
+  }
+ }
  {
   std::istringstream lines(source);std::string text;
   auto&stored=ctx.source_lines[input.string()];
@@ -218,7 +227,7 @@ void load_file(const fs::path&input,BuildContext&ctx){
    ctx.functions.emplace(s.name,s);
    ctx.pending_function_validation.emplace_back(input,s);
   }else if(s.kind==shay::StatementKind::DeclareClass){
-   if(extension!=".shaii"){diagnose(ctx,input,s.line,"'$classfunc' is only allowed in .shaii files");continue;}
+   if(extension!=".shaii"&&extension!=".shui"){diagnose(ctx,input,s.line,"class declarations are only allowed in .shaii or .shui files");continue;}
    if(ctx.classes.count(s.name)){diagnose(ctx,input,s.line,"class '"+s.name+"' is already declared");continue;}
    std::vector<std::string> methods;bool valid=true;
    for(const auto&method:s.body)
@@ -757,7 +766,7 @@ int main(int argc,char**argv){
  }
  if(positional.size()==1&&positional[0]=="--version"){std::cout<<"gshai 0.4.0 (Shay compiler)\n";return 0;}
  if(positional.size()==1&&(positional[0]=="--help"||positional[0]=="-h")){
-  std::cout<<"Usage:\n  gshai [Shay flags] -ob [output.sho] source.shay|source.shaz [more sources ...]\n  gshai [Shay flags] -o  [output]     source.shay|source.shaz [more sources ...]\n  gshai [Shay flags] -o  [output]     program.sho [more.sho ...]   Link existing objects\n  gshai --version\n\n"
+  std::cout<<"Usage:\n  gshai [Shay flags] -ob [output.sho] source.shay|source.shaz|source.shui [more sources ...]\n  gshai [Shay flags] -o  [output]     source.shay|source.shaz [more sources ...]\n  gshai [Shay flags] -o  [output]     program.sho [more.sho ...]   Link existing objects\n  gshai --version\n\n"
            <<"-ob compiles one or more source files into a .sho object; -o compiles source files or links .sho objects in order.\n"
            <<"Shay compiler flags (may appear anywhere):\n"
            <<"  --shaywall    Enable common Shay warnings, including unused variables\n"
@@ -788,7 +797,7 @@ int main(int argc,char**argv){
  }else{
   if(output.empty()&&inputs.size()!=1){std::cerr<<"gshai: multiple source files require an explicit output path\n";return 2;}
   for(const auto&input:inputs)
-   if(input.extension()!=".shay"&&input.extension()!=".shaz"){std::cerr<<"gshai: source inputs must be .shay or .shaz files\n";return 2;}
+   if(input.extension()!=".shay"&&input.extension()!=".shaz"&&input.extension()!=".shui"){std::cerr<<"gshai: source inputs must be .shay or .shaz files\n";return 2;}
   if(output.empty()){output=inputs.front().parent_path()/inputs.front().stem();if(object_mode)output+=".sho";}
   else if(object_mode&&output.extension()!=".sho"){std::cerr<<"gshai: -ob output must use the .sho extension\n";return 2;}
  }

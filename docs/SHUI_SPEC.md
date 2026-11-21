@@ -1,155 +1,165 @@
-# .shui — Hybrid UI File Format (Proposal)
+# Shay UI language: .shui and .shuil
 
-## Goal
+This document describes the **directive-based UI language**. It supersedes the earlier proposed `$app { ... }` syntax for new UI projects. The older parser/renderer remains a legacy implementation until the new frontend is integrated; do not silently translate one syntax into the other.
 
-A `.shui` file describes an application interface declaratively and uses Shay for behavior. The same document must be usable by more than one renderer:
+## File roles
 
-- **Windows desktop renderer** — native desktop windows and controls.
-- **Browser renderer** — semantic HTML/CSS/DOM output with browser event handling.
+- `.shui`: application source. Selects an entry target, declares UI classes, invokes those classes, describes controls, and defines when the app runs and finishes.
+- `.shuil`: platform UI control/translation file. Selects the platform, translation method, and human language, then loads and executes the platform translator.
+- The same logical `.shui` app can use different `.shuil` adapters. Platform-specific output belongs in the adapter, not in shared app logic.
 
-The file format, parser, UI tree, IDs, properties, and event model are backend-independent. Platform renderers must not define new language syntax.
+## .shui application syntax
 
-## Design principles
-
-1. One source file and one UI tree; multiple renderers.
-2. Shay remains the behavior language. Do not embed JavaScript or C++ in UI files.
-3. Stable IDs connect declarative elements to Shay state and events.
-4. Layout is responsive and expressed in logical units, not platform pixels.
-5. Accessibility semantics are part of each control's definition.
-6. A renderer reports unsupported capabilities as diagnostics; it must not silently discard them.
-7. UI files are parsed and validated before a window or browser page is created.
-
-## Proposed syntax (not implemented yet)
-
-This is a design sketch. It is not accepted by `gshai` or `shaii` until the parser/runtime implementation lands.
+The following is the canonical browser example. The Windows form uses `!%#csElementapp <{` instead. Directive spelling and casing are intentional.
 
 ```shay
-$app "Counter" {
-    window main {
-        title: "Shay Counter"
-        size: 480 x 320
-        layout: column
-        gap: 12
+$useentry UI(Browser)
 
-        text heading {
-            value: "Counter"
-            style: title
-        }
-
-        text count {
-            bind: counter
-        }
-
-        button increment {
-            label: "Add one"
-            on_click: increment_counter
-        }
-    }
-
-    logic {
-        brew counter = 0
-
-        $declr increment_counter()
-            counter = counter + 1
+!%#browsElementapp <{
+    *#uiContrl "browserutil.shuil"
+    *!#classUideclr !u#browserCalc
+        $uiSet 0
+        $declrmthd doCalc
+            x*y + x*y
         finish
-    }
-}
+    finish
+    *!#doUiclass <"!u#browserCalc">
+    *#drawui <'square'> <<'568xx654'>>
+    *#drawui <'buttoncircle'> <:intercative=yes:>
+}>
+$dothis
+$uiFinish
 ```
 
-The exact grammar and statement integration are subject to parser design review. In particular, the existing `brew` and function syntax must remain consistent with ordinary Shay files.
+### Directives and rules
 
-## Initial element set
+| Syntax | Role |
+|---|---|
+| `$useentry UI(Browser)` | Selects the UI entry target. `Browser` is the target in this example. |
+| `!%#browsElementapp <{` | Opens a browser UI application body. |
+| `!%#csElementapp <{` | Opens a Windows/C# UI application body. |
+| `}>` | Closes the UI application body. |
+| `*#uiContrl "file.shuil"` | Loads the named platform control/translation file. |
+| `*!#classUideclr !u#Name` | Declares a UI class. UI class names must use the `!u#` prefix. |
+| `$uiSet value` | Marks whether the current code is UI code. This directive is valid only in `.shui`; it is not a UI state initializer. |
+| `$declrmthd name` | Declares a method inside a UI class. |
+| `*!#doUiclass <"!u#Name">` | Invokes the named UI class. References use the same `!u#` prefix. |
+| `*#drawui <'kind'>` | Declares/draws a UI element of the given kind. |
+| `<<'id'>>` | Optional explicit element ID following a `drawui` element kind. |
+| `<:key=value:>` | Optional element metadata. The spelling `intercative` in the example is preserved as supplied; its accepted values and event semantics are not yet finalized. |
+| `$dothis` | Executes the application. |
+| `$uiFinish` | Marks the end of the UI application lifecycle. |
 
-- Containers: `window`, `panel`, `row`, `column`, `scroll`.
-- Display: `text`, `image`, `separator`.
-- Input: `button`, `text_input`, `checkbox`, `dropdown`.
-- Layout: logical width/height, min/max constraints, padding, gap, alignment.
-- Behavior: `bind`, `on_click`, `on_change`, `on_submit`.
+A class declaration is closed by `finish`; each method is also closed by `finish`. Therefore the sample has one `finish` for `doCalc` and another for `browserCalc`.
 
-## Runtime model
+### UI class naming
 
-1. Load and parse the `.shui` document.
-2. Validate unique IDs, element properties, bindings, and event handler names.
-3. Build an immutable UI description tree.
-4. Initialize the Shay logic environment and state bindings.
-5. Select a renderer (desktop or browser).
-6. Translate UI events into queued Shay callbacks.
-7. Apply state changes on the UI thread and schedule a renderer update.
+- UI class declaration and invocation names use `!u#`.
+- This namespace is distinct from ordinary Shay class names (`!`) and method/translator class names in `.shuil` (`!m#`).
+- A missing or incorrect prefix is a syntax/validation error, not an alias.
 
-The UI thread owns native/browser UI objects. Shay callbacks must not mutate renderer objects directly from worker threads.
+## .shuil platform adapter
 
-## Renderer contract
-
-Each renderer consumes the same validated UI tree and exposes the same event/state contract.
-
-- Desktop: native window lifecycle, keyboard navigation, focus, accessibility, DPI scaling.
-- Browser: semantic HTML, keyboard navigation, focus, accessibility, responsive CSS.
-- Shared: stable IDs, value conversion, event ordering, validation, error reporting.
-
-No renderer-specific property may change the meaning of shared Shay code.
-
-## CLI direction
-
-Proposed commands (names are provisional):
-
-- `shay run app.shui --target desktop`
-- `shay run app.shui --target web`
-- `shay build app.shui --target desktop`
-- `shay build app.shui --target web`
-
-The implementation should integrate with the existing `gshai`, `shaii`, and project build flow rather than introduce a competing compiler frontend.
-
-## Delivery gates
-
-1. Grammar and AST for `.shui`; parser-only tests.
-2. Shared UI tree and validation; no renderer yet.
-3. Browser renderer and a runnable sample.
-4. Windows desktop renderer and the same sample.
-5. Event callbacks, state binding, and cross-renderer conformance tests.
-6. Packaging and project-build integration.
-
-A feature is not considered cross-platform complete until the same sample passes on both targets.
-
-
-## Implemented parser/browser slice
-
-The initial `shui` command now implements a small, validated subset of this format:
+A `.shuil` file configures how the selected platform receives the UI and how the UI is translated.
 
 ```shay
-$app "Counter" {
-    window main {
-        title: "Counter"
-        size: 480 x 320
-        layout: column
+#*$ContrlDefine <browser>
+#*!MethdUi <javasTrans>
 
-        text heading {
-            value: "Counter"
-            style: title
-        }
+#*!LangUI <US>
+#*!classmethdDeclr !m#javasMain
+    $uiset 0
+    $declrmthd TransMain
+        $mthdset 1
 
-        text count {
-            bind: counter
-        }
-
-        button increment {
-            label: "Add one"
-            on_click: increment_counter
-        }
-    }
-
-    logic {
-        brew counter = 0
-        $declr increment_counter()
-            counter = counter + 1
-        finish
-    }
-}
+        #*$javasport [uicontrol.js]
+        #*$doJavaScript
+    finish
+finish
 ```
 
-Commands:
+| Syntax | Role |
+|---|---|
+| `#*$ContrlDefine <browser>` | Selects the platform control target. |
+| `#*!MethdUi <javasTrans>` | Selects the UI translation method/engine. |
+| `#*!LangUI <US>` | Selects the human language of UI text (US English in the example), not a programming language. |
+| `#*!classmethdDeclr !m#Name` | Declares a platform translation class/method container. The `!m#` namespace is distinct from `!u#`. |
+| `$uiset 0` | Appears in the supplied `.shuil` example. Its relationship to the case-sensitive `$uiSet` directive in `.shui` remains intentionally distinct until specified. |
+| `$mthdset 1` | Sets the method execution mode/flag; exact values and semantics remain to be specified. |
+| `#*$javasport [uicontrol.js]` | Loads Shay's integrated JavaScript translator file. |
+| `#*$doJavaScript` | Runs the JavaScript translation stage. |
+| `#*$csharpsport [uicontrol.cs]` | Selects the integrated C# translator for Windows. |
+| `#*$doCSharp` | Runs the C# translation stage. |
 
-- `shui validate app.shui` parses and validates the UI tree.
-- `shui build app.shui --target web -o app.html` emits a standalone HTML/CSS page.
-- `shui run app.shui --target desktop` launches the native Win32 renderer on Windows.
+For an external JavaScript translator, use a quoted filename inside the brackets:
 
-The browser output includes semantic controls and dispatches `shay:action` and `shay:input` browser events. The native Windows renderer is available through `shui run app.shui --target desktop`; it creates Win32 controls and currently sends button-action names to the debugger. The logic block is preserved as tokens, but neither renderer executes Shay logic or synchronizes bound state yet. That shared event/runtime bridge is the next integration milestone.
+```shay
+#*$javasport ["your_file.js"]
+```
+
+Do not confuse this with `*#uiContrl "browserutil.shuil"`, which loads a `.shuil` adapter from the application.
+
+
+### Native Windows / C# adapter
+
+Windows uses a native Windows Forms backend, not a browser wrapper. The corresponding adapter is:
+
+```shay
+#*$ContrlDefine <windows>
+#*!MethdUi <csharpTrans>
+#*!LangUI <US>
+#*!classmethdDeclr !m#csharpMain
+    $uiset 0
+    $declrmthd TransMain
+        $mthdset 1
+        #*$csharpsport [uicontrol.cs]
+        #*$doCSharp
+    finish
+finish
+```
+
+A `.shui` app can point to this adapter with `*#uiContrl "windowsutil.shuil"`. The first generator maps `square` to a WinForms `Panel`, `buttoncircle` to `Button`, `label` to `Label`, `textbox` to `TextBox`, and `checkbox` to `CheckBox`. IDs become control names. Unsupported element kinds are reported instead of silently discarded.
+
+### Build and run embedded Shay logic
+
+Pass `.shui` directly to the existing Shay tools; there is no separate UI executable:
+
+```sh
+./build/shaii --check examples/browser-demo.shui
+./build/shaii examples/browser-demo.shui
+./build/gshai -o build/browser-demo examples/browser-demo.shui
+
+./build/shaii --check examples/windows-demo.shui
+./build/gshai -o build/windows-demo examples/windows-demo.shui
+```
+
+Both tools accept `.shui` directly. The shared frontend validates the UI envelope and referenced `.shuil` adapter, strips only the platform declaration layer, and sends embedded Shay statements through the same parser/runtime or native compiler path used by `.shay` files. These commands execute the embedded Shay logic; they do not yet launch a browser or native Windows window.
+
+## Translation pipeline
+
+1. Read the `.shui` source and resolve its selected entry target.
+2. Load the matching `.shuil` adapter named by `*#uiContrl`.
+3. Validate the adapter's platform, translation method, and UI language declarations.
+4. Build a platform-neutral UI description from `drawui` declarations and UI classes.
+5. Invoke the adapter's selected translator (for example, JavaScript for Browser).
+6. Emit platform output and report unsupported controls or metadata as diagnostics.
+
+The `.shui` source owns app structure and Shay behavior. The `.shuil` adapter owns platform translation. A platform adapter must not silently change shared application semantics.
+
+## Implementation status and compatibility
+
+The old `$app "Name" { ... }` UI format and standalone `shui` frontend have been removed. There is no `shui` executable or independent `shui validate/build` pipeline. `.shui` is accepted directly by `gshai` and `shaii`; `.shuil` adapters are validated while loading the UI source.
+
+Implemented:
+1. The shared Shay toolchain accepts `.shui` as an input extension.
+2. The `!%#` browser/Windows app envelope, UI class declarations, class references, draw declarations, and adapter configuration are validated.
+3. Embedded Shay statements and UI class methods are routed through the existing compiler/interpreter frontend and runtime.
+4. Make, CMake, installation, and regression tests no longer build or invoke a standalone `shui` program.
+
+Not implemented yet:
+1. Actual browser DOM and native Windows Forms control rendering from `drawui`.
+2. A bidirectional browser JavaScript / Windows C# event bridge into the running Shay runtime.
+3. Runtime state subscriptions and updates that keep controls synchronized.
+4. Interactive end-to-end tests for both platforms.
+
+Platform code remains an adapter, not a second runtime. Do not describe the UI as interactive or production-ready until the event/state bridge and both platform renderers land with automated tests.

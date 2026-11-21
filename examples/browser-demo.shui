@@ -1,0 +1,16 @@
+$useentry UI(Browser)
+
+!%#browsElementapp <{
+    *#uiContrl "browserutil.shuil"
+    *!#classUideclr !u#browserCalc
+        $uiSet 0
+        $declrmthd doCalc
+            instxt/>"Browser action handled by Shay"
+        finish
+    finish
+    *!#doUiclass <"!u#browserCalc">
+    *#drawui <'square'> <<'568xx654'>>
+    *#drawui <'buttoncircle'> <:intercative=yes:>
+}>
+$dothis
+$uiFinish

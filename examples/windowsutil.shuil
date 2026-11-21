@@ -1,0 +1,11 @@
+#*$ContrlDefine <windows>
+#*!MethdUi <csharpTrans>
+#*!LangUI <US>
+#*!classmethdDeclr !m#csharpMain
+    $uiset 0
+    $declrmthd TransMain
+        $mthdset 1
+        #*$csharpsport [uicontrol.cs]
+        #*$doCSharp
+    finish
+finish
