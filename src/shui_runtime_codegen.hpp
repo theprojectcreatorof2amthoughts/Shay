@@ -49,6 +49,8 @@ inline void emit(std::ostream& out, const std::string& token,
            "shay_ui_capture=nullptr;return output;}\n";
 
     out << R"SHAY(
+static bool shay_ui_browser_seen = false;
+static std::chrono::steady_clock::time_point shay_ui_last_ping;
 static std::string shay_ui_json_escape(const std::string& value) {
     std::string out;
     for (unsigned char c : value) {
@@ -186,6 +188,26 @@ static int shay_ui_serve() {
     std::cout << "Shay UI bridge listening at http://127.0.0.1:18765\n";
     shay_ui_open_page();
     for (;;) {
+        fd_set readable;
+        FD_ZERO(&readable);
+        FD_SET(server, &readable);
+        timeval wait_time{};
+        wait_time.tv_sec = 1;
+#ifdef _WIN32
+        const int ready = select(0, &readable, nullptr, nullptr, &wait_time);
+#else
+        const int ready = select(server + 1, &readable, nullptr, nullptr, &wait_time);
+#endif
+        if (ready == 0) {
+            if (!shay_ui_page.empty() && shay_ui_browser_seen &&
+                std::chrono::steady_clock::now() - shay_ui_last_ping >
+                    std::chrono::seconds(12)) {
+                std::cout << "Shay UI: browser closed; stopping runtime\\n";
+                break;
+            }
+            continue;
+        }
+        if (ready < 0) continue;
         ShayUiSocket client = accept(server, nullptr, nullptr);
 #ifdef _WIN32
         if (client == INVALID_SOCKET) continue;
@@ -235,6 +257,14 @@ static int shay_ui_serve() {
             if (shay_ui_url_decode(path.substr(13)) == shay_ui_token)
                 shay_ui_reply(client, 200, "application/json", shay_ui_state());
             else shay_ui_reply(client, 403, "text/plain", "invalid token");
+        } else if (verb == "POST" && path == "/ping") {
+            if (body != shay_ui_token) {
+                shay_ui_reply(client, 403, "text/plain", "invalid token");
+            } else {
+                shay_ui_browser_seen = true;
+                shay_ui_last_ping = std::chrono::steady_clock::now();
+                shay_ui_reply(client, 204, "text/plain", "");
+            }
         } else if (verb == "POST" && (path == "/event" || path == "/set")) {
             const auto split = body.find('|');
             if (split == std::string::npos || body.substr(0, split) != shay_ui_token) {
@@ -264,6 +294,10 @@ static int shay_ui_serve() {
         }
         shay_ui_close(client);
     }
+    shay_ui_close(server);
+#ifdef _WIN32
+    WSACleanup();
+#endif
     return 0;
 }
 )SHAY";
