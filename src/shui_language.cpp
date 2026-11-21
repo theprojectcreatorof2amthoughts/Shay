@@ -252,7 +252,8 @@ bool inspect_adapter(const std::string& source, AdapterConfig& config, Result& r
 }
 bool generate_output(const std::string& app_source, const AdapterConfig& adapter,
                      const std::string& app_name, std::string& output,
-                     std::string& output_extension, Result& result) {
+                     std::string& output_extension, Result& result,
+                     const std::string& runtime_token) {
     const auto elements = elements_of(app_source);
     if (adapter.platform == "browser" && adapter.method == "javasTrans") {
         output_extension = ".html";
@@ -284,11 +285,27 @@ bool generate_output(const std::string& app_source, const AdapterConfig& adapter
             if (element.kind == "checkbox") html << " type=\"checkbox\"";
             if (element.metadata_key == "intercative" && element.metadata_value == "yes")
                 html << " data-intercative=\"yes\"";
+            if (element.metadata_key == "onclick")
+                html << " data-shay-onclick=\"" << html_escape(element.metadata_value) << "\"";
+            if (element.metadata_key == "bind")
+                html << " data-shay-bind=\"" << html_escape(element.metadata_value) << "\"";
             if (tag == "input") html << " />";
             else html << ">" << text << "</" << tag << ">";
             html << "\n";
         }
-        html << "</main>\n</body>\n</html>\n";
+        html << "</main>\n";
+        if (!runtime_token.empty()) {
+            html << "<pre id=\"shay-output\" role=\"status\" aria-live=\"polite\"></pre>\n"
+                 << "<script>\n(() => {\n"
+                 << "const token=" << std::quoted(runtime_token) << ";\n"
+                 << "const base='http://127.0.0.1:18765';\n"
+                 << "const output=document.getElementById('shay-output');\n"
+                 << "async function sync(){try{const r=await fetch(base+'/state?token='+encodeURIComponent(token));if(!r.ok)return;const state=await r.json();document.querySelectorAll('[data-shay-bind]').forEach(el=>{const key=el.dataset.shayBind;if(!(key in state))return;if(el.type==='checkbox')el.checked=state[key]==='true';else if(document.activeElement!==el)el.value=state[key];});}catch(_){}}\n"
+                 << "document.querySelectorAll('[data-shay-onclick]').forEach(el=>el.addEventListener('click',async()=>{try{const r=await fetch(base+'/event',{method:'POST',headers:{'Content-Type':'text/plain'},body:token+'|'+el.dataset.shayOnclick});const value=await r.text();if(output)output.textContent=value;await sync();}catch(_){if(output)output.textContent='Shay runtime is not running. Start the compiled app first.';}}));\n"
+                 << "document.querySelectorAll('[data-shay-bind]').forEach(el=>el.addEventListener(el.type==='checkbox'?'change':'input',async()=>{const value=el.type==='checkbox'?String(el.checked):el.value;try{await fetch(base+'/set',{method:'POST',headers:{'Content-Type':'text/plain'},body:token+'|'+el.dataset.shayBind+'='+encodeURIComponent(value)});}catch(_){}}));\n"
+                 << "sync();\n})();\n</script>\n";
+        }
+        html << "</body>\n</html>\n";
         output = html.str();
         return result.ok();
     }
