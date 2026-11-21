@@ -1,4 +1,5 @@
 #include "shui.hpp"
+#include "shui_language.hpp"
 #ifdef _WIN32
 #include "shui_win32.hpp"
 #endif
@@ -25,6 +26,22 @@ int main(int argc,char**argv){
  fs::path input=argv[2];if(input.extension()!=".shui"){std::cerr<<"shui: input must have the .shui extension\n";return 2;}
  std::ifstream stream(input,std::ios::binary);if(!stream){std::cerr<<"shui: cannot open '"<<input.string()<<"'\n";return 1;}
  std::ostringstream buffer;buffer<<stream.rdbuf();const std::string source=buffer.str();
+ const bool directive_syntax=input.extension()==".shuil"||source.find("$useentry UI(")!=std::string::npos;
+ if(directive_syntax){
+  const auto checked=shay::ui::language::validate_source(source,input.extension().string());
+  for(const auto&e:checked.diagnostics)std::cerr<<input.string()<<":"<<e.line<<":1: error: "<<e.message<<"\\n";
+  if(!checked.ok())return 1;
+  if(command!="validate"){
+   std::cerr<<"shui: directive-based .shui/.shuil syntax validation is implemented; translation/build and runtime execution are the next stage\\n";
+   return 2;
+  }
+  std::cout<<"shui: "<<input.string()<<" is valid (directive-based UI syntax)\\n";
+  return 0;
+ }
+ if(input.extension()==".shuil"){
+  std::cerr<<"shui: .shuil files support validation only\\n";
+  return 2;
+ }
  shay::Lexer lexer(source);const auto tokens=lexer.scan();if(!lexer.errors().empty()){print_errors(input,lexer.errors());return 1;}
  auto parsed=shay::ui::parse(tokens);if(!parsed.ok()){print_errors(input,parsed.errors);return 1;}
  auto validation=shay::ui::validate(parsed.app);if(!validation.empty()){print_errors(input,validation);return 1;}
