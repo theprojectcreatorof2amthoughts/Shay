@@ -147,12 +147,12 @@ bool execute_statements(const std::vector<shay::Statement>&statements,Context&ct
     for(const auto&name:s.output_names){
      auto map=ctx.maps.find(name);
      if(map!=ctx.maps.end()){
-      if(s.output_keyed){auto entry=std::find_if(map->second.begin(),map->second.end(),[&](const auto&item){return item.first==s.output_key;});if(entry==map->second.end()){failure=+"unknown map key '"+s.output_key+"'");success=false;break;}if(!ctx.check_only)shay_runtime_write((entry->second+"\\n").c_str());}
-      else if(!ctx.check_only)for(const auto&entry:map->second)shay_runtime_write((entry.first+" = "+entry.second+"\\n").c_str());
+      if(s.output_keyed){auto entry=std::find_if(map->second.begin(),map->second.end(),[&](const auto&item){return item.first==s.output_key;});if(entry==map->second.end()){failure="unknown map key '"+s.output_key+"'";success=false;break;}if(!ctx.check_only)shay_runtime_write((entry->second+"\n").c_str());}
+      else if(!ctx.check_only)for(const auto&entry:map->second)shay_runtime_write((entry.first+" = "+entry.second+"\n").c_str());
       continue;
      }
      auto set=ctx.sets.find(name);
-     if(set!=ctx.sets.end()){if(!ctx.check_only)for(const auto&item:set->second)shay_runtime_write((item+"\\n").c_str());continue;}
+     if(set!=ctx.sets.end()){if(!ctx.check_only)for(const auto&item:set->second)shay_runtime_write((item+"\n").c_str());continue;}
      auto list=ctx.lists.find(name);
      if(list!=ctx.lists.end()){
       if(s.output_indexed){
@@ -204,7 +204,7 @@ bool execute_statements(const std::vector<shay::Statement>&statements,Context&ct
      auto item=std::find(set->second.begin(),set->second.end(),s.value);
      if(s.kind==shay::StatementKind::SetAdd){if(!ctx.check_only&&item==set->second.end())set->second.push_back(s.value);}
      else if(s.kind==shay::StatementKind::SetRemove){if(item==set->second.end()){failure="unknown set item '"+s.value+"'";success=false;}else if(!ctx.check_only)set->second.erase(item);}
-     else if(!ctx.check_only)shay_runtime_write((item==set->second.end()?"false\\n":"true\\n"));
+     else if(!ctx.check_only)shay_runtime_write((item==set->second.end()?"false\n":"true\n"));
     }
     break;
    }
@@ -351,12 +351,12 @@ void execute_file(const fs::path&input,Context&ctx){
     for(const auto&name:s.output_names){
      auto map=ctx.maps.find(name);
      if(map!=ctx.maps.end()){
-      if(s.output_keyed){auto entry=std::find_if(map->second.begin(),map->second.end(),[&](const auto&item){return item.first==s.output_key;});if(entry==map->second.end()){diagnose(ctx,input,s.line,+"unknown map key '"+s.output_key+"'");success=false;break;}if(!ctx.check_only)shay_runtime_write((entry->second+"\\n").c_str());}
-      else if(!ctx.check_only)for(const auto&entry:map->second)shay_runtime_write((entry.first+" = "+entry.second+"\\n").c_str());
+      if(s.output_keyed){auto entry=std::find_if(map->second.begin(),map->second.end(),[&](const auto&item){return item.first==s.output_key;});if(entry==map->second.end()){diagnose(ctx,input,s.line,"unknown map key '"+s.output_key+"'");break;}if(!ctx.check_only)shay_runtime_write((entry->second+"\n").c_str());}
+      else if(!ctx.check_only)for(const auto&entry:map->second)shay_runtime_write((entry.first+" = "+entry.second+"\n").c_str());
       continue;
      }
      auto set=ctx.sets.find(name);
-     if(set!=ctx.sets.end()){if(!ctx.check_only)for(const auto&item:set->second)shay_runtime_write((item+"\\n").c_str());continue;}
+     if(set!=ctx.sets.end()){if(!ctx.check_only)for(const auto&item:set->second)shay_runtime_write((item+"\n").c_str());continue;}
      auto list=ctx.lists.find(name);
      if(list!=ctx.lists.end()){
       if(s.output_indexed){
@@ -401,7 +401,7 @@ void execute_file(const fs::path&input,Context&ctx){
      auto item=std::find(set->second.begin(),set->second.end(),s.value);
      if(s.kind==shay::StatementKind::SetAdd){if(!ctx.check_only&&item==set->second.end())set->second.push_back(s.value);}
      else if(s.kind==shay::StatementKind::SetRemove){if(item==set->second.end()){diagnose(ctx,input,s.line,"unknown set item '"+s.value+"'";break;}else if(!ctx.check_only)set->second.erase(item);}
-     else if(!ctx.check_only)shay_runtime_write((item==set->second.end()?"false\\n":"true\\n"));
+     else if(!ctx.check_only)shay_runtime_write((item==set->second.end()?"false\n":"true\n"));
     }
     break;
    }
