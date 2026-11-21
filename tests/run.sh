@@ -1097,4 +1097,39 @@ if "$TMP/unhandled-error-app" >"$TMP/out" 2>"$TMP/err"; then fail "compiled app 
 grep -q "io: file missing" "$TMP/err" || fail "compiler unhandled error diagnostic"
 pass "unhandled structured errors preserve their category and message"
 
+
+cat > "$TMP/file-api.shay" <<EOF
+filewrite/>"$TMP/data.txt", "Hello"
+fileappend/>"$TMP/data.txt", " world"
+fileread/>"$TMP/data.txt", contents
+insval/>contents
+fileexists/>"$TMP/data.txt"
+dircreate/>"$TMP/new-folder"
+direxists/>"$TMP/new-folder"
+filedelete/>"$TMP/data.txt"
+fileexists/>"$TMP/data.txt"
+EOF
+expected=$(printf 'Hello world\ntrue\ntrue\nfalse')
+out=$("$SHAII" "$TMP/file-api.shay") || fail "interpreter file and directory APIs"
+[ "$out" = "$expected" ] || fail "interpreter file API results"
+"$GSHAI" -o "$TMP/file-api-app" "$TMP/file-api.shay" || fail "compile file and directory APIs"
+out=$("$TMP/file-api-app") || fail "run compiled file and directory APIs"
+[ "$out" = "$expected" ] || fail "compiler file API results"
+pass "interpreter and compiler read, write, append, test, create, and delete files/directories"
+
+cat > "$TMP/file-error.shay" <<EOF
+tryit
+    fileread/>"$TMP/missing.txt", contents
+catchit problem
+    insval/>problem
+endtry
+EOF
+expected="io: cannot read file '$TMP/missing.txt'"
+out=$("$SHAII" "$TMP/file-error.shay") || fail "interpreter catches file errors"
+[ "$out" = "$expected" ] || fail "interpreter file error category"
+"$GSHAI" -o "$TMP/file-error-app" "$TMP/file-error.shay" || fail "compile caught file error"
+out=$("$TMP/file-error-app") || fail "run caught file error"
+[ "$out" = "$expected" ] || fail "compiler file error category"
+pass "filesystem failures become catchable structured io errors"
+
 printf '\nAll Shay toolchain tests passed.\n'
