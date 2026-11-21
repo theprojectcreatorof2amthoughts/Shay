@@ -1140,6 +1140,7 @@ test -f "$TMP/integrated-ui-app.html" || fail "browser .shui did not emit its HT
 grep -q '<div id="mainPanel" class="shay-square">' "$TMP/integrated-ui-app.html" || fail "browser renderer did not emit the declared square"
 grep -q 'data-shay-onclick="doCalc"' "$TMP/integrated-ui-app.html" || fail "browser renderer did not preserve its Shay event binding"
 grep -q 'data-shay-bind="displayName"' "$TMP/integrated-ui-app.html" || fail "browser renderer did not preserve its state binding"
+grep -q 'setInterval(heartbeat,3000)' "$TMP/integrated-ui-app.html" || fail "browser renderer did not emit runtime lifecycle heartbeat"
 pass "gshai emits browser HTML controls from .shui drawui declarations"
 token=$(sed -n 's/.*const token="\([^"]*\)";.*/\1/p' "$TMP/integrated-ui-app.html")
 [ -n "$token" ] || fail "browser HTML did not include its runtime token"
@@ -1151,6 +1152,10 @@ for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
   sleep 0.1
 done
 [ "$ui_state" = '{"displayName":"Initial"}' ] || { cat "$TMP/ui-server-out" "$TMP/ui-server-err" >&2; fail "Shay UI state endpoint"; }
+ping_status=$(curl --silent --output /dev/null --write-out '%{http_code}' -X POST --data-binary "$token" http://127.0.0.1:18765/ping)
+[ "$ping_status" = "204" ] || fail "Shay UI browser heartbeat endpoint"
+invalid_ping_status=$(curl --silent --output /dev/null --write-out '%{http_code}' -X POST --data-binary "invalid" http://127.0.0.1:18765/ping)
+[ "$invalid_ping_status" = "403" ] || fail "Shay UI bridge accepted an invalid heartbeat token"
 curl --silent --show-error --fail -X POST --data-binary "$token|displayName=Yamen" http://127.0.0.1:18765/set >/dev/null || fail "Shay UI input binding"
 ui_state=$(curl --silent --show-error --fail "http://127.0.0.1:18765/state?token=$token")
 [ "$ui_state" = '{"displayName":"Yamen"}' ] || fail "Shay UI state update"
