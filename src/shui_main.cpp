@@ -35,7 +35,7 @@ int main(int argc,char**argv){
    std::cerr<<"shui: directive-based .shui/.shuil syntax validation is implemented; translation/build and runtime execution are the next stage\n";
    return 2;
   }
-  std::cout<<"shui: "<<input.string()<<" is valid (directive-based UI syntax)\\n";
+  std::cout<<"shui: "<<input.string()<<" is valid (directive-based UI syntax)\n";
   return 0;
  }
  if(input.extension()==".shuil"){
