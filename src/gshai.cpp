@@ -424,9 +424,9 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
     break;
    }
    case shay::StatementKind::JsonParse:
-    out<<indent<<"values["<<cpp_string(s.name)<<"] = "<<cpp_string(s.value)<<";\\n";break;
+    out<<indent<<"values["<<cpp_string(s.name)<<"] = "<<cpp_string(s.value)<<";\n";break;
    case shay::StatementKind::JsonStringify:
-    out<<indent<<"{ auto shay_json = values.find("<<cpp_string(s.name)<<"); if(shay_json == values.end()) throw std::runtime_error("<<cpp_string("unknown JSON variable '"+s.name+"'")<<"); shay_runtime_write((shay_json->second + "<<cpp_string("\n")<<").c_str()); }\\n";break;
+    out<<indent<<"{ auto shay_json = values.find("<<cpp_string(s.name)<<"); if(shay_json == values.end()) throw std::runtime_error("<<cpp_string("unknown JSON variable '"+s.name+"'")<<"); shay_runtime_write((shay_json->second + "<<cpp_string("\n")<<").c_str()); }\n";break;
    case shay::StatementKind::FileRead:
     out<<indent<<"{ std::ifstream shay_file("<<cpp_string(s.path)<<", std::ios::binary); if(!shay_file) throw ShayError("<<cpp_string("io")<<", "<<cpp_string("cannot read file '"+s.path+"'")<<", "<<s.line<<"); std::ostringstream shay_contents; shay_contents<<shay_file.rdbuf(); values["<<cpp_string(s.name)<<"]=shay_contents.str(); }\n";break;
    case shay::StatementKind::FileWrite:
@@ -529,7 +529,7 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
  out<<"static std::string shay_log_name = "<<cpp_string(ctx.log_file_name)<<";\n"
     "static std::string shay_log_extension = "<<cpp_string(ctx.log_file_extension)<<";\n"
     "static std::string shay_log_path(){std::string path=shay_log_name;auto slash=path.find_last_of(\"/\\\\\");auto dot=path.find_last_of('.');if(dot!=std::string::npos&&(slash==std::string::npos||dot>slash))path.erase(dot);return path+shay_log_extension;}\n"
-    "static void shay_log(const std::string& message){const std::string path=shay_log_path();std::ofstream stream(path,std::ios::binary|std::ios::app);if(!stream)throw std::runtime_error(\"cannot open Shay log file: \"+path);stream.write(message.data(),static_cast<std::streamsize>(message.size()));if(message.empty()||message.back()!='\\n')stream.put('\\n');if(!stream)throw std::runtime_error(\"cannot write Shay log file: \"+path);}\n";
+    "static void shay_log(const std::string& message){const std::string path=shay_log_path();std::ofstream stream(path,std::ios::binary|std::ios::app);if(!stream)throw std::runtime_error(\"cannot open Shay log file: \"+path);stream.write(message.data(),static_cast<std::streamsize>(message.size()));if(message.empty()||message.back()!='\n')stream.put('\n');if(!stream)throw std::runtime_error(\"cannot write Shay log file: \"+path);}\n";
  for(const auto&s:ctx.statements)if(s.kind==shay::StatementKind::DeclareFunction){
   out<<"static "<<(s.has_return?"double":"void")<<" shay_fn_"<<s.name<<"(std::unordered_map<std::string,std::string>& global_values";
   for(const auto&p:s.parameters)out<<", double "<<p;
@@ -695,9 +695,9 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
    default:break;
   }
  }
- out<<" for(const auto& failure : shay_failures) if(!shay_handled_failures.count(failure.first)){std::fprintf(stderr,\"Shay function '%s' failed: %s\\n\",failure.first.c_str(),failure.second.c_str());return 1;}\n"
+ out<<" for(const auto& failure : shay_failures) if(!shay_handled_failures.count(failure.first)){std::fprintf(stderr,\"Shay function '%s' failed: %s\n\",failure.first.c_str(),failure.second.c_str());return 1;}\n"
        " return 0;\n } catch(const ShayExit&) { return 1; }\n"
-       " catch(const std::exception& error) { std::fprintf(stderr,\"Shay runtime error: %s\\n\",error.what()); return 1; }\n}\n";
+       " catch(const std::exception& error) { std::fprintf(stderr,\"Shay runtime error: %s\n\",error.what()); return 1; }\n}\n";
  if(!add_main&&entry_symbol!="shay_program_entry")
   out<<"#if defined(__GNUC__) || defined(__clang__)\n"
         "extern \"C\" int shay_program_entry() __attribute__((weak));\n"
