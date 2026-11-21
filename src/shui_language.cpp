@@ -1,6 +1,7 @@
 #include "shui_language.hpp"
 #include <algorithm>
 #include <cctype>
+#include <iomanip>
 #include <regex>
 #include <set>
 #include <sstream>
