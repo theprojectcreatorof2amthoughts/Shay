@@ -370,9 +370,23 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
    case shay::StatementKind::OutputTextExit:
     out<<indent<<"shay_runtime_write("<<cpp_string(s.value+"\n")<<"); throw ShayExit{};\n";break;
    case shay::StatementKind::OutputValue:
-    for(const auto&name:s.output_names)
-     out<<indent<<"{ auto shay_list = shay_lists.find("<<cpp_string(name)<<"); if(shay_list != shay_lists.end()) { for(const auto& item : shay_list->second) shay_runtime_write((item + "<<cpp_string("\n")<<").c_str()); } else { auto shay_value = values.find("<<cpp_string(name)<<"); if(shay_value == values.end()) throw std::runtime_error("<<cpp_string("unknown variable '"+name+"'")<<"); shay_runtime_write((shay_value->second + "<<cpp_string("\n")<<").c_str()); } }\n";
+    for(const auto&name:s.output_names){
+     if(s.output_indexed){
+      out<<indent<<"{ auto it=shay_lists.find("<<cpp_string(name)<<"); if(it==shay_lists.end()) throw std::runtime_error("<<cpp_string("unknown list '"+name+"'")<<"); if("<<s.list_index<<" >= it->second.size()) throw std::out_of_range("<<cpp_string("list index out of range for '"+name+"'")<<"); shay_runtime_write((it->second["<<s.list_index<<"] + "<<cpp_string("\n")<<").c_str()); }\\n";
+     }else{
+      out<<indent<<"{ auto shay_list = shay_lists.find("<<cpp_string(name)<<"); if(shay_list != shay_lists.end()) { for(const auto& item : shay_list->second) shay_runtime_write((item + "<<cpp_string("\n")<<").c_str()); } else { auto shay_value = values.find("<<cpp_string(name)<<"); if(shay_value == values.end()) throw std::runtime_error("<<cpp_string("unknown variable '"+name+"'")<<"); shay_runtime_write((shay_value->second + "<<cpp_string("\n")<<").c_str()); } }\\n";
+     }
+    }
     break;
+   case shay::StatementKind::ListAppend:
+   case shay::StatementKind::ListSet:
+   case shay::StatementKind::ListRemove:{
+    out<<indent<<"{ auto it=shay_lists.find("<<cpp_string(s.name)<<"); if(it==shay_lists.end()) throw std::runtime_error("<<cpp_string("unknown list '"+s.name+"'")<<"); ";
+    if(s.kind==shay::StatementKind::ListAppend)out<<"it->second.push_back("<<cpp_string(s.value)<<"); ";
+    else if(s.kind==shay::StatementKind::ListSet)out<<"if("<<s.list_index<<" >= it->second.size()) throw std::out_of_range("<<cpp_string("list index out of range for '"+s.name+"'")<<"); it->second["<<s.list_index<<"]="<<cpp_string(s.value)<<"; ";
+    else out<<"if("<<s.list_index<<" >= it->second.size()) throw std::out_of_range("<<cpp_string("list index out of range for '"+s.name+"'")<<"); it->second.erase(it->second.begin()+"<<s.list_index<<"); ";
+    out<<"}\\n";break;
+   }
    case shay::StatementKind::If:
     out<<indent<<"if ("<<cpp_condition(s.condition)<<") {\n";
     emit_body(out,s.body,ctx,indent+" ",function_name);
@@ -487,8 +501,12 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
    case shay::StatementKind::OutputTextExit:
     out<<" shay_runtime_write("<<cpp_string(s.value+"\n")<<"); throw ShayExit{};\n";break;
    case shay::StatementKind::OutputValue:
-    for(const auto&name:s.output_names)
-     out<<" { auto shay_list = shay_lists.find("<<cpp_string(name)<<"); if(shay_list != shay_lists.end()) { for(const auto& item : shay_list->second) shay_runtime_write((item + "<<cpp_string("\n")<<").c_str()); } else { auto shay_value = values.find("<<cpp_string(name)<<"); if(shay_value == values.end()) throw std::runtime_error("<<cpp_string("unknown variable '"+name+"'")<<"); shay_runtime_write((shay_value->second + "<<cpp_string("\n")<<").c_str()); } }\n";
+    for(const auto&name:s.output_names){
+     if(s.output_indexed)
+      out<<" { auto it=shay_lists.find("<<cpp_string(name)<<"); if(it==shay_lists.end()) throw std::runtime_error("<<cpp_string("unknown list '"+name+"'")<<"); if("<<s.list_index<<" >= it->second.size()) throw std::out_of_range("<<cpp_string("list index out of range for '"+name+"'")<<"); shay_runtime_write((it->second["<<s.list_index<<"] + "<<cpp_string("\\n")<<").c_str()); }\\n";
+     else
+      out<<" { auto shay_list = shay_lists.find("<<cpp_string(name)<<"); if(shay_list != shay_lists.end()) { for(const auto& item : shay_list->second) shay_runtime_write((item + "<<cpp_string("\\n")<<").c_str()); } else { auto shay_value = values.find("<<cpp_string(name)<<"); if(shay_value == values.end()) throw std::runtime_error("<<cpp_string("unknown variable '"+name+"'")<<"); shay_runtime_write((shay_value->second + "<<cpp_string("\\n")<<").c_str()); } }\\n";
+    }
     break;
    case shay::StatementKind::OutputCall:{
     auto fn=ctx.functions.find(s.name);if(fn==ctx.functions.end())break;
@@ -699,4 +717,13 @@ int main(int argc,char**argv){
  std::error_code ignored;fs::remove(temp,ignored);
  if(status!=0){fs::remove(output,ignored);std::cerr<<"gshai: native compiler/linker failed\n";return 1;}
  std::cout<<"gshai: wrote "<<(object_mode?"object file ":"executable ")<<output.string()<<'\n';return 0;
-}
+}   case shay::StatementKind::ListAppend:
+   case shay::StatementKind::ListSet:
+   case shay::StatementKind::ListRemove:{
+    out<<"{ auto it=shay_lists.find("<<cpp_string(s.name)<<"); if(it==shay_lists.end()) throw std::runtime_error("<<cpp_string("unknown list '"+s.name+"'")<<"); ";
+    if(s.kind==shay::StatementKind::ListAppend)out<<"it->second.push_back("<<cpp_string(s.value)<<"); ";
+    else if(s.kind==shay::StatementKind::ListSet)out<<"if("<<s.list_index<<" >= it->second.size()) throw std::out_of_range("<<cpp_string("list index out of range for '"+s.name+"'")<<"); it->second["<<s.list_index<<"]="<<cpp_string(s.value)<<"; ";
+    else out<<"if("<<s.list_index<<" >= it->second.size()) throw std::out_of_range("<<cpp_string("list index out of range for '"+s.name+"'")<<"); it->second.erase(it->second.begin()+"<<s.list_index<<"); ";
+    out<<"}\\n";break;
+   }
+
