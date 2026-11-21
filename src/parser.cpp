@@ -57,7 +57,7 @@ Program Parser::parse(){
    if(valid)valid=consume(TokenKind::Symbol,",",program.errors,"expected ',' after JSON document");
    if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected a variable name to receive parsed JSON");
    if(valid)statement.name=previous().text;
-   if(valid){std::string compact,error;if(!json::compact(statement.value,compact,error)){error(program.errors,"invalid JSON: "+error);valid=false;}else statement.value=std::move(compact);}
+   if(valid){std::string compact,error_message;if(!json::compact(statement.value,compact,error_message)){error(program.errors,"invalid JSON: "+error_message);valid=false;}else statement.value=std::move(compact);}
   }else if(match(TokenKind::Identifier,"jsonstringify")){
    statement.kind=StatementKind::JsonStringify;
    valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'jsonstringify'");
