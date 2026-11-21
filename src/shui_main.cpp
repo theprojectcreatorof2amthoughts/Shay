@@ -20,7 +20,7 @@ void print_errors(const fs::path&file,const std::vector<shay::ui::ParseError>&er
 }
 int main(int argc,char**argv){
  if(argc<2||std::string(argv[1])=="--help"||std::string(argv[1])=="-h"){
-  std::cout<<"Usage:\n  shui validate app.shui\n  shui build app.shui --target web -o app.html\n  shui run app.shui --target desktop\n";return argc<2?2:0;
+  std::cout<<"Usage:\n  shui validate app.shui\n  shui validate platform.shuil\n  shui build app.shui -o app.html|app.cs\n  dotnet build app.csproj (for Windows C# output)\n";return argc<2?2:0;
  }
  const std::string command=argv[1];if(command!="validate"&&command!="build"&&command!="run"){std::cerr<<"shui: expected 'validate', 'build', or 'run'\n";return 2;}
  if(argc<3){std::cerr<<"shui: missing .shui input file\n";return 2;}
