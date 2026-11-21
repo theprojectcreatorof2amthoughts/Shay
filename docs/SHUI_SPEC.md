@@ -164,7 +164,6 @@ Implemented:
 7. Browser bridge regression tests that start the compiled runtime, invoke a Shay method over HTTP, and reject an invalid token.
 
 Not implemented yet:
-1. Automatic browser launch.
-2. A unified cross-platform application lifecycle manager.
+1. A unified cross-platform application lifecycle manager with graceful browser-tab shutdown.
 
-Platform code remains an adapter, not a second runtime. Browser and Windows Forms event/state bridges are generated from the same `.shui` bindings. The compiled Shay process owns behavior and state on both platforms. Browser launch remains a manual step; the Windows Forms project is built with `dotnet build`.
+Platform code remains an adapter, not a second runtime. Browser and Windows Forms event/state bridges are generated from the same `.shui` bindings. The compiled Shay process owns behavior and state on both platforms. Browser builds launch the generated page automatically when a desktop session is available; Windows Forms projects are built with `dotnet build` and own the child runtime process lifecycle.
