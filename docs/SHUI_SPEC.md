@@ -102,7 +102,7 @@ Do not confuse this with `*#uiContrl "browserutil.shuil"`, which loads a `.shuil
 
 Windows uses a native Windows Forms backend, not a browser wrapper. The corresponding adapter is:
 
-\`\`\`shay
+```shay
 #*$ContrlDefine <windows>
 #*!MethdUi <csharpTrans>
 #*!LangUI <US>
@@ -114,20 +114,20 @@ Windows uses a native Windows Forms backend, not a browser wrapper. The correspo
         #*$doCSharp
     finish
 finish
-\`\`\`
+```
 
-A \`.shui\` app can point to this adapter with \`*#uiContrl "windowsutil.shuil"\`. The first generator maps \`square\` to a WinForms \`Panel\`, \`buttoncircle\` to \`Button\`, \`label\` to \`Label\`, \`textbox\` to \`TextBox\`, and \`checkbox\` to \`CheckBox\`. IDs become control names. Unsupported element kinds are reported instead of silently discarded.
+A `.shui` app can point to this adapter with `*#uiContrl "windowsutil.shuil"`. The first generator maps `square` to a WinForms `Panel`, `buttoncircle` to `Button`, `label` to `Label`, `textbox` to `TextBox`, and `checkbox` to `CheckBox`. IDs become control names. Unsupported element kinds are reported instead of silently discarded.
 
 ### Build commands
 
-\`\`\`sh
+```sh
 shui validate examples/browser-demo.shui
 shui build examples/browser-demo.shui -o browser-demo.html
 
 shui validate examples/windows-demo.shui
 shui build examples/windows-demo.shui -o windows-demo.cs
 dotnet build examples/windows-demo.csproj
-\`\`\`
+```
 
 The browser build emits a standalone HTML file. The Windows build emits C# source plus a .NET 8 Windows Forms project file. Build/run of the generated Windows project requires the .NET SDK and Windows Forms targeting/runtime. The C# generator currently creates the native controls and basic layout; wiring Shay methods to native control events is a later runtime stage.
 
