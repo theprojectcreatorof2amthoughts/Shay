@@ -395,13 +395,13 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
      out<<indent<<"{ auto m=shay_maps.find("<<cpp_string(s.name)<<"); if(m==shay_maps.end()) throw std::runtime_error("<<cpp_string("unknown map '"+s.name+"'")<<"); auto e=std::find_if(m->second.begin(),m->second.end(),[&](const auto&v){return v.first=="<<cpp_string(s.output_key)<<";}); ";
      if(s.kind==shay::StatementKind::MapSet)out<<"if(e==m->second.end()) m->second.push_back({"<<cpp_string(s.output_key)<<","<<cpp_string(s.value)<<"}); else e->second="<<cpp_string(s.value)<<"; ";
      else out<<"if(e==m->second.end()) throw std::runtime_error("<<cpp_string("unknown map key '"+s.output_key+"'")<<"); m->second.erase(e); ";
-     out<<"}\\n";
+     out<<"}\n";
     }else{
      out<<indent<<"{ auto set=shay_sets.find("<<cpp_string(s.name)<<"); if(set==shay_sets.end()) throw std::runtime_error("<<cpp_string("unknown set '"+s.name+"'")<<"); auto item=std::find(set->second.begin(),set->second.end(),"<<cpp_string(s.value)<<"); ";
      if(s.kind==shay::StatementKind::SetAdd)out<<"if(item==set->second.end()) set->second.push_back("<<cpp_string(s.value)<<"); ";
      else if(s.kind==shay::StatementKind::SetRemove)out<<"if(item==set->second.end()) throw std::runtime_error("<<cpp_string("unknown set item '"+s.value+"'")<<"); set->second.erase(item); ";
      else out<<"shay_runtime_write(item==set->second.end()?"<<cpp_string("false\n")<<":"<<cpp_string("true\n")<<"); ";
-     out<<"}\\n";
+     out<<"}\n";
     }
     break;
    }
@@ -455,8 +455,8 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
  out<<"#include <algorithm>\n#include <cstdio>\n#include <exception>\n#include <fstream>\n#include <iomanip>\n#include <iostream>\n#include <sstream>\n#include <stdexcept>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n#include <vector>\n"
        "struct ShayExit {};\n"
        "[[maybe_unused]] static std::unordered_map<std::string,std::vector<std::string>> shay_lists;\n"
-       "[[maybe_unused]] static std::unordered_map<std::string,std::vector<std::pair<std::string,std::string>>> shay_maps;\\n"
-       "[[maybe_unused]] static std::unordered_map<std::string,std::vector<std::string>> shay_sets;\\n"
+       "[[maybe_unused]] static std::unordered_map<std::string,std::vector<std::pair<std::string,std::string>>> shay_maps;\n"
+       "[[maybe_unused]] static std::unordered_map<std::string,std::vector<std::string>> shay_sets;\n"
        "static std::unordered_map<std::string,std::string> shay_failures;\n"
        "static std::unordered_set<std::string> shay_handled_failures;\n"
        "static bool shay_failed(const std::string& name){auto it=shay_failures.find(name);if(it==shay_failures.end())return false;shay_handled_failures.insert(name);return true;}\n"
@@ -501,15 +501,15 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
     if(s.map_value){
      out<<" shay_maps["<<cpp_string(s.name)<<"] = {";
      for(std::size_t i=0;i<s.map_items.size();++i){if(i)out<<", ";out<<"{"<<cpp_string(s.map_items[i].first)<<", "<<cpp_string(s.map_items[i].second)<<"}";}
-     out<<"}; shay_sets.erase("<<cpp_string(s.name)<<"); shay_lists.erase("<<cpp_string(s.name)<<"); values.erase("<<cpp_string(s.name)<<");\\n";
+     out<<"}; shay_sets.erase("<<cpp_string(s.name)<<"); shay_lists.erase("<<cpp_string(s.name)<<"); values.erase("<<cpp_string(s.name)<<");\n";
     }else if(s.set_value){
      out<<" shay_sets["<<cpp_string(s.name)<<"] = {";
      for(std::size_t i=0;i<s.list_items.size();++i){if(i)out<<", ";out<<cpp_string(s.list_items[i]);}
-     out<<"}; shay_maps.erase("<<cpp_string(s.name)<<"); shay_lists.erase("<<cpp_string(s.name)<<"); values.erase("<<cpp_string(s.name)<<");\\n";
+     out<<"}; shay_maps.erase("<<cpp_string(s.name)<<"); shay_lists.erase("<<cpp_string(s.name)<<"); values.erase("<<cpp_string(s.name)<<");\n";
     }else if(s.list_value){
      out<<" shay_lists["<<cpp_string(s.name)<<"] = {";
      for(std::size_t i=0;i<s.list_items.size();++i){if(i)out<<", ";out<<cpp_string(s.list_items[i]);}
-     out<<"}; shay_maps.erase("<<cpp_string(s.name)<<"); shay_sets.erase("<<cpp_string(s.name)<<"); values.erase("<<cpp_string(s.name)<<");\\n";
+     out<<"}; shay_maps.erase("<<cpp_string(s.name)<<"); shay_sets.erase("<<cpp_string(s.name)<<"); values.erase("<<cpp_string(s.name)<<");\n";
     }else{
      std::string value=s.value;if(!value.empty()&&value.front()==StringMarker)value.erase(value.begin());
      out<<" shay_lists.erase("<<cpp_string(s.name)<<"); shay_maps.erase("<<cpp_string(s.name)<<"); shay_sets.erase("<<cpp_string(s.name)<<"); values["<<cpp_string(s.name)<<"] = "<<cpp_string(value)<<";\\n";
