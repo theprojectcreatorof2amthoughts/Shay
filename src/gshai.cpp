@@ -273,7 +273,7 @@ std::string object_entry_symbol(const fs::path&object){
  return symbol;
 }
 std::string cpp_string(const std::string&value){
- std::ostringstream out;out<<'"';for(unsigned char c:value){switch(c){case '\\':out<<"\\\\";break;case '"':out<<"\\\"";break;case '\n':out<<"\n";break;case '\r':out<<"\\r";break;case '\t':out<<"\\t";break;default:if(c<32||c>=127){const char octal[]="01234567";out<<"\\"<<octal[(c>>6)&7]<<octal[(c>>3)&7]<<octal[c&7];}else out<<static_cast<char>(c);}}out<<'"';return out.str();
+ std::ostringstream out;out<<'"';for(unsigned char c:value){switch(c){case '\\':out<<"\\\\";break;case '"':out<<"\\\"";break;case '\n':out<<"\\n";break;case '\r':out<<"\\r";break;case '\t':out<<"\\t";break;default:if(c<32||c>=127){const char octal[]="01234567";out<<"\\"<<octal[(c>>6)&7]<<octal[(c>>3)&7]<<octal[c&7];}else out<<static_cast<char>(c);}}out<<'"';return out.str();
 }
 class ExpressionEmitter{
  std::string source;std::size_t at=0;
@@ -529,7 +529,7 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
  out<<"static std::string shay_log_name = "<<cpp_string(ctx.log_file_name)<<";\n"
     "static std::string shay_log_extension = "<<cpp_string(ctx.log_file_extension)<<";\n"
     "static std::string shay_log_path(){std::string path=shay_log_name;auto slash=path.find_last_of(\"/\\\\\");auto dot=path.find_last_of('.');if(dot!=std::string::npos&&(slash==std::string::npos||dot>slash))path.erase(dot);return path+shay_log_extension;}\n"
-    "static void shay_log(const std::string& message){const std::string path=shay_log_path();std::ofstream stream(path,std::ios::binary|std::ios::app);if(!stream)throw std::runtime_error(\"cannot open Shay log file: \"+path);stream.write(message.data(),static_cast<std::streamsize>(message.size()));if(message.empty()||message.back()!='\n')stream.put('\n');if(!stream)throw std::runtime_error(\"cannot write Shay log file: \"+path);}\n";
+    "static void shay_log(const std::string& message){const std::string path=shay_log_path();std::ofstream stream(path,std::ios::binary|std::ios::app);if(!stream)throw std::runtime_error(\"cannot open Shay log file: \"+path);stream.write(message.data(),static_cast<std::streamsize>(message.size()));if(message.empty()||message.back()!='\\n')stream.put('\\n');if(!stream)throw std::runtime_error(\"cannot write Shay log file: \"+path);}\n";
  for(const auto&s:ctx.statements)if(s.kind==shay::StatementKind::DeclareFunction){
   out<<"static "<<(s.has_return?"double":"void")<<" shay_fn_"<<s.name<<"(std::unordered_map<std::string,std::string>& global_values";
   for(const auto&p:s.parameters)out<<", double "<<p;
@@ -695,9 +695,9 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
    default:break;
   }
  }
- out<<" for(const auto& failure : shay_failures) if(!shay_handled_failures.count(failure.first)){std::fprintf(stderr,\"Shay function '%s' failed: %s\n\",failure.first.c_str(),failure.second.c_str());return 1;}\n"
+ out<<" for(const auto& failure : shay_failures) if(!shay_handled_failures.count(failure.first)){std::fprintf(stderr,\"Shay function '%s' failed: %s\\n\",failure.first.c_str(),failure.second.c_str());return 1;}\n"
        " return 0;\n } catch(const ShayExit&) { return 1; }\n"
-       " catch(const std::exception& error) { std::fprintf(stderr,\"Shay runtime error: %s\n\",error.what()); return 1; }\n}\n";
+       " catch(const std::exception& error) { std::fprintf(stderr,\"Shay runtime error: %s\\n\",error.what()); return 1; }\n}\n";
  if(!add_main&&entry_symbol!="shay_program_entry")
   out<<"#if defined(__GNUC__) || defined(__clang__)\n"
         "extern \"C\" int shay_program_entry() __attribute__((weak));\n"
