@@ -98,7 +98,7 @@ Result validate_shui(const std::string& source) {
     }
     if (!entry) error(result, 1, "missing '$useentry UI(Target)'");
     if (!app) error(result, 1, "missing '$browsElementapp <{'");
-    if (!app_closed) error(result, lines.empty() ? 1 : lines.back().first, "missing '}>’ to close the UI app body");
+    if (!app_closed) error(result, lines.empty() ? 1 : lines.back().first, "missing '}> to close the UI app body");
     if (app_closed && !do_this) error(result, lines.empty() ? 1 : lines.back().first, "missing '$dothis' after the UI app body");
     if (do_this && !ui_finish) error(result, lines.empty() ? 1 : lines.back().first, "missing '$uiFinish' after '$dothis'");
     return result;
