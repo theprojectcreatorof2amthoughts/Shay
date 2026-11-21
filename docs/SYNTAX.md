@@ -203,3 +203,11 @@ filedelete/>"notes.txt"
 ```
 
 Use `tryit` / `catchit` to handle I/O failures; they are categorized as `io` errors. Paths are resolved relative to the program's current working directory.
+
+Process execution uses an explicit argument list and does not invoke a command shell:
+
+```shay
+runproc/>"cmake", "--version"
+```
+
+The statement prints the child process exit code. A missing executable returns `127`; arguments are passed as separate values rather than concatenated into a shell command.
