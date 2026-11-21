@@ -1154,4 +1154,26 @@ out=$("$TMP/process-missing-app") || fail "run compiled missing process"
 [ "$out" = "127" ] || fail "compiler missing process exit code"
 pass "runproc launches executables with explicit argv and returns their exit status without a shell"
 
+
+cat > "$TMP/json-api.shay" <<'EOF'
+jsonparse/>"{ \"name\" : \"Ada\", \"items\" : [1, true, null], \"meta\" : { \"ok\" : false } }", document
+jsonstringify/>document
+EOF
+expected='{"name":"Ada","items":[1,true,null],"meta":{"ok":false}}'
+out=$("$SHAII" "$TMP/json-api.shay") || fail "interpreter JSON parse/stringify"
+[ "$out" = "$expected" ] || fail "interpreter JSON compact serialization"
+"$GSHAI" -o "$TMP/json-api-app" "$TMP/json-api.shay" || fail "compile JSON parse/stringify"
+out=$("$TMP/json-api-app") || fail "run compiled JSON parse/stringify"
+[ "$out" = "$expected" ] || fail "compiler JSON compact serialization"
+pass "JSON parsing validates nested objects and arrays; stringify emits compact JSON in both runtimes"
+
+cat > "$TMP/json-invalid.shay" <<'EOF'
+jsonparse/>"{ \"name\":, }", broken
+EOF
+if "$SHAII" "$TMP/json-invalid.shay" >"$TMP/json-invalid-out" 2>"$TMP/json-invalid-err"; then fail "interpreter accepted malformed JSON"; fi
+grep -q "invalid JSON" "$TMP/json-invalid-err" || fail "interpreter JSON diagnostic"
+if "$GSHAI" -o "$TMP/json-invalid-app" "$TMP/json-invalid.shay" >"$TMP/json-invalid-compiler-out" 2>"$TMP/json-invalid-compiler-err"; then fail "compiler accepted malformed JSON"; fi
+grep -q "invalid JSON" "$TMP/json-invalid-compiler-err" || fail "compiler JSON diagnostic"
+pass "malformed JSON is rejected with a byte-offset diagnostic"
+
 printf '\nAll Shay toolchain tests passed.\n'
