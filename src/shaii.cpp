@@ -253,7 +253,7 @@ auto set=ctx.sets.find(name);
    case shay::StatementKind::JsonStringify:{
     auto found=ctx.values.find(s.name);
     if(found==ctx.values.end()){failure="unknown JSON variable '"+s.name+"'";success=false;}
-    else if(!ctx.check_only)shay_runtime_write((found->second+"\\n").c_str());
+    else if(!ctx.check_only)shay_runtime_write((found->second+"\n").c_str());
     break;
    }
    case shay::StatementKind::FileRead:{
