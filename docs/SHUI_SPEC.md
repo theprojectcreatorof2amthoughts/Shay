@@ -86,6 +86,8 @@ finish
 | `$mthdset 1` | Sets the method execution mode/flag; exact values and semantics remain to be specified. |
 | `#*$javasport [uicontrol.js]` | Loads Shay's integrated JavaScript translator file. |
 | `#*$doJavaScript` | Runs the JavaScript translation stage. |
+| `#*$csharpsport [uicontrol.cs]` | Selects the integrated C# translator for Windows. |
+| `#*$doCSharp` | Runs the C# translation stage. |
 
 For an external JavaScript translator, use a quoted filename inside the brackets:
 
@@ -94,6 +96,40 @@ For an external JavaScript translator, use a quoted filename inside the brackets
 ```
 
 Do not confuse this with `*#uiContrl "browserutil.shuil"`, which loads a `.shuil` adapter from the application.
+
+
+### Native Windows / C# adapter
+
+Windows uses a native Windows Forms backend, not a browser wrapper. The corresponding adapter is:
+
+\`\`\`shay
+#*$ContrlDefine <windows>
+#*!MethdUi <csharpTrans>
+#*!LangUI <US>
+#*!classmethdDeclr !m#csharpMain
+    $uiset 0
+    $declrmthd TransMain
+        $mthdset 1
+        #*$csharpsport [uicontrol.cs]
+        #*$doCSharp
+    finish
+finish
+\`\`\`
+
+A \`.shui\` app can point to this adapter with \`*#uiContrl "windowsutil.shuil"\`. The first generator maps \`square\` to a WinForms \`Panel\`, \`buttoncircle\` to \`Button\`, \`label\` to \`Label\`, \`textbox\` to \`TextBox\`, and \`checkbox\` to \`CheckBox\`. IDs become control names. Unsupported element kinds are reported instead of silently discarded.
+
+### Build commands
+
+\`\`\`sh
+shui validate examples/browser-demo.shui
+shui build examples/browser-demo.shui -o browser-demo.html
+
+shui validate examples/windows-demo.shui
+shui build examples/windows-demo.shui -o windows-demo.cs
+dotnet build examples/windows-demo.csproj
+\`\`\`
+
+The browser build emits a standalone HTML file. The Windows build emits C# source plus a .NET 8 Windows Forms project file. Build/run of the generated Windows project requires the .NET SDK and Windows Forms targeting/runtime. The C# generator currently creates the native controls and basic layout; wiring Shay methods to native control events is a later runtime stage.
 
 ## Translation pipeline
 
@@ -111,10 +147,9 @@ The `.shui` source owns app structure and Shay behavior. The `.shuil` adapter ow
 The repository currently contains an earlier `$app "Name" { ... }` parser and browser/Win32 renderer. That implementation is not the grammar shown above. The directive-based frontend must be introduced without breaking existing `.shaii`, `.shay`, and `.shaz` parsing, and without pretending the legacy renderer already executes the new syntax.
 
 The directive-based work is staged:
-1. Dedicated tokenization and syntax validation for `.shui` and `.shuil`.
-2. Shared UI description and validation for class references, element IDs, and metadata.
-3. Browser translation adapter and generated output.
-4. Additional platform adapters.
-5. Runtime event/state integration with Shay methods.
+1. Dedicated syntax validation for `.shui` and `.shuil`.
+2. Browser HTML generation and Windows Forms C# project generation for the initial control set.
+3. Expanded controls, layout, localization, and accessibility.
+4. Runtime event/state integration between native controls and Shay methods.
 
 Until each stage lands with tests, the corresponding runtime/renderer behavior is not considered implemented.
