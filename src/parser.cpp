@@ -39,6 +39,22 @@ Program Parser::parse(){
    statement.kind=StatementKind::MarkFailure;
    valid=consume(TokenKind::Identifier,"",program.errors,"expected a function name after '!#'");
    if(valid)statement.name=previous().text;
+  }else if(match(TokenKind::Identifier,"fileread")||match(TokenKind::Identifier,"filewrite")||match(TokenKind::Identifier,"fileappend")||match(TokenKind::Identifier,"fileexists")||match(TokenKind::Identifier,"filedelete")||match(TokenKind::Identifier,"dircreate")||match(TokenKind::Identifier,"direxists")){
+   const std::string operation=previous().text;
+   statement.kind=operation=="fileread"?StatementKind::FileRead:(operation=="filewrite"?StatementKind::FileWrite:(operation=="fileappend"?StatementKind::FileAppend:(operation=="fileexists"?StatementKind::FileExists:(operation=="filedelete"?StatementKind::FileDelete:(operation=="dircreate"?StatementKind::DirectoryCreate:StatementKind::DirectoryExists)))));
+   valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after '"+operation+"'");
+   if(valid)valid=consume(TokenKind::String,"",program.errors,"expected a quoted filesystem path");
+   if(valid)statement.path=previous().text;
+   if(valid&&(statement.kind==StatementKind::FileRead||statement.kind==StatementKind::FileWrite||statement.kind==StatementKind::FileAppend)){
+    valid=consume(TokenKind::Symbol,",",program.errors,"expected ',' after filesystem path");
+    if(valid&&statement.kind==StatementKind::FileRead){
+     valid=consume(TokenKind::Identifier,"",program.errors,"expected a variable name to receive file contents");
+     if(valid)statement.name=previous().text;
+    }else if(valid){
+     valid=consume(TokenKind::String,"",program.errors,"expected quoted file contents");
+     if(valid)statement.value=previous().text;
+    }
+   }
   }else if(match(TokenKind::Identifier,"throwit")){
    statement.kind=StatementKind::ThrowError;
    valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'throwit'");

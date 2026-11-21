@@ -188,3 +188,18 @@ catchit problem
     insval/>problem
 endtry
 ```
+
+Filesystem operations use quoted paths and never invoke a shell:
+
+```shay
+filewrite/>"notes.txt", "Hello"
+fileappend/>"notes.txt", " world"
+fileread/>"notes.txt", contents
+insval/>contents
+fileexists/>"notes.txt"
+dircreate/>"cache"
+direxists/>"cache"
+filedelete/>"notes.txt"
+```
+
+Use `tryit` / `catchit` to handle I/O failures; they are categorized as `io` errors. Paths are resolved relative to the program's current working directory.

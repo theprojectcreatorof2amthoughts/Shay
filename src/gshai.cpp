@@ -209,6 +209,9 @@ void load_file(const fs::path&input,BuildContext&ctx){
    if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'inpvarforw' is not allowed");continue;}
    // First use declares the variable; later uses intentionally reuse it.
    if(ctx.variables.insert(s.name).second)ctx.variable_declarations.emplace_back(input,s);
+  }else if(s.kind==shay::StatementKind::FileRead){
+   if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'fileread' is not allowed");continue;}
+   if(ctx.variables.insert(s.name).second)ctx.variable_declarations.emplace_back(input,s);
   }else if(s.kind==shay::StatementKind::DeclareFunction){
    if(extension!=".shaii"){diagnose(ctx,input,s.line,"'$declr' is only allowed in .shaii files");continue;}
    if(ctx.functions.count(s.name)){diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");continue;}
@@ -420,6 +423,19 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
     }
     break;
    }
+   case shay::StatementKind::FileRead:
+    out<<indent<<"{ std::ifstream shay_file("<<cpp_string(s.path)<<", std::ios::binary); if(!shay_file) throw ShayError("<<cpp_string("io")<<", "<<cpp_string("cannot read file '"+s.path+"'")<<", "<<s.line<<"); std::ostringstream shay_contents; shay_contents<<shay_file.rdbuf(); values["<<cpp_string(s.name)<<"]=shay_contents.str(); }\n";break;
+   case shay::StatementKind::FileWrite:
+   case shay::StatementKind::FileAppend:
+    out<<indent<<"{ std::ofstream shay_file("<<cpp_string(s.path)<<", std::ios::binary | "<<(s.kind==shay::StatementKind::FileAppend?"std::ios::app":"std::ios::trunc")<<"); if(!shay_file) throw ShayError("<<cpp_string("io")<<", "<<cpp_string("cannot write file '"+s.path+"'")<<", "<<s.line<<"); shay_file<<"<<cpp_string(s.value)<<"; if(!shay_file) throw ShayError("<<cpp_string("io")<<", "<<cpp_string("failed while writing file '"+s.path+"'")<<", "<<s.line<<"); }\n";break;
+   case shay::StatementKind::FileExists:
+    out<<indent<<"shay_runtime_write(std::filesystem::exists("<<cpp_string(s.path)<<")?"<<cpp_string("true\n")<<":"<<cpp_string("false\n")<<");\n";break;
+   case shay::StatementKind::FileDelete:
+    out<<indent<<"{ std::error_code ec; if(!std::filesystem::remove("<<cpp_string(s.path)<<",ec)||ec) throw ShayError("<<cpp_string("io")<<", "<<cpp_string("cannot delete file '"+s.path+"'")<<", "<<s.line<<"); }\n";break;
+   case shay::StatementKind::DirectoryCreate:
+    out<<indent<<"{ std::error_code ec; std::filesystem::create_directories("<<cpp_string(s.path)<<",ec); if(ec) throw ShayError("<<cpp_string("io")<<", "<<cpp_string("cannot create directory '"+s.path+"'")<<", "<<s.line<<"); shay_runtime_write(std::filesystem::is_directory("<<cpp_string(s.path)<<")?"<<cpp_string("true\n")<<":"<<cpp_string("false\n")<<"); }\n";break;
+   case shay::StatementKind::DirectoryExists:
+    out<<indent<<"shay_runtime_write(std::filesystem::is_directory("<<cpp_string(s.path)<<")?"<<cpp_string("true\n")<<":"<<cpp_string("false\n")<<");\n";break;
    case shay::StatementKind::ThrowError:
     out<<indent<<"throw ShayError("<<cpp_string(s.error_category)<<", "<<cpp_string(s.value)<<", "<<s.line<<");\n";break;
    case shay::StatementKind::TryCatch:
@@ -479,7 +495,7 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
 }
 bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,const std::string&entry_symbol){
  std::ofstream out(path,std::ios::binary);if(!out)return false;
- out<<"#include <algorithm>\n#include <cstdio>\n#include <exception>\n#include <fstream>\n#include <iomanip>\n#include <iostream>\n#include <sstream>\n#include <stdexcept>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n#include <utility>\n#include <vector>\n"
+ out<<"#include <algorithm>\n#include <cstdio>\n#include <exception>\n#include <fstream>\n#include <filesystem>\n#include <iomanip>\n#include <iostream>\n#include <sstream>\n#include <stdexcept>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n#include <utility>\n#include <vector>\n"
        "struct ShayExit {};\n"
        "struct ShayError : std::runtime_error { std::string category; std::size_t line; ShayError(std::string c, std::string m, std::size_t l) : std::runtime_error(c + \": \" + m), category(std::move(c)), line(l) {} };\n"
        "[[maybe_unused]] static std::unordered_map<std::string,std::vector<std::string>> shay_lists;\n"
@@ -574,6 +590,19 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
     else out<<"if("<<s.list_index<<" >= it->second.size()) throw std::out_of_range("<<cpp_string("list index out of range for '"+s.name+"'")<<"); it->second.erase(it->second.begin()+"<<s.list_index<<"); ";
     out<<"}\n";break;
    }
+   case shay::StatementKind::FileRead:
+    out<<"{ std::ifstream shay_file("<<cpp_string(s.path)<<", std::ios::binary); if(!shay_file) throw ShayError("<<cpp_string("io")<<", "<<cpp_string("cannot read file '"+s.path+"'")<<", "<<s.line<<"); std::ostringstream shay_contents; shay_contents<<shay_file.rdbuf(); values["<<cpp_string(s.name)<<"]=shay_contents.str(); }\n";break;
+   case shay::StatementKind::FileWrite:
+   case shay::StatementKind::FileAppend:
+    out<<"{ std::ofstream shay_file("<<cpp_string(s.path)<<", std::ios::binary | "<<(s.kind==shay::StatementKind::FileAppend?"std::ios::app":"std::ios::trunc")<<"); if(!shay_file) throw ShayError("<<cpp_string("io")<<", "<<cpp_string("cannot write file '"+s.path+"'")<<", "<<s.line<<"); shay_file<<"<<cpp_string(s.value)<<"; if(!shay_file) throw ShayError("<<cpp_string("io")<<", "<<cpp_string("failed while writing file '"+s.path+"'")<<", "<<s.line<<"); }\n";break;
+   case shay::StatementKind::FileExists:
+    out<<"shay_runtime_write(std::filesystem::exists("<<cpp_string(s.path)<<")?"<<cpp_string("true\n")<<":"<<cpp_string("false\n")<<");\n";break;
+   case shay::StatementKind::FileDelete:
+    out<<"{ std::error_code ec; if(!std::filesystem::remove("<<cpp_string(s.path)<<",ec)||ec) throw ShayError("<<cpp_string("io")<<", "<<cpp_string("cannot delete file '"+s.path+"'")<<", "<<s.line<<"); }\n";break;
+   case shay::StatementKind::DirectoryCreate:
+    out<<"{ std::error_code ec; std::filesystem::create_directories("<<cpp_string(s.path)<<",ec); if(ec) throw ShayError("<<cpp_string("io")<<", "<<cpp_string("cannot create directory '"+s.path+"'")<<", "<<s.line<<"); shay_runtime_write(std::filesystem::is_directory("<<cpp_string(s.path)<<")?"<<cpp_string("true\n")<<":"<<cpp_string("false\n")<<"); }\n";break;
+   case shay::StatementKind::DirectoryExists:
+    out<<"shay_runtime_write(std::filesystem::is_directory("<<cpp_string(s.path)<<")?"<<cpp_string("true\n")<<":"<<cpp_string("false\n")<<");\n";break;
    case shay::StatementKind::ThrowError:
     out<<" throw ShayError("<<cpp_string(s.error_category)<<", "<<cpp_string(s.value)<<", "<<s.line<<");\n";break;
    case shay::StatementKind::TryCatch:
