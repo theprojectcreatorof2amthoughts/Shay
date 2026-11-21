@@ -816,6 +816,9 @@ int main(int argc,char**argv){
   if(output.empty()){output=inputs.front().parent_path()/inputs.front().stem();if(object_mode)output+=".sho";}
   else if(object_mode&&output.extension()!=".sho"){std::cerr<<"gshai: -ob output must use the .sho extension\n";return 2;}
  }
+#ifdef _WIN32
+ if(!object_mode&&output.extension().empty())output += ".exe";
+#endif
  if(link_mode){
   const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();
   const fs::path wrapper=fs::temp_directory_path()/("shay-link-"+std::to_string(stamp)+".cpp");
@@ -930,13 +933,20 @@ int main(int argc,char**argv){
  const char*configured=std::getenv("CXX");const std::string cxx=configured&&*configured?configured:"c++";
  int status=0;
 #ifdef _WIN32
- std::vector<std::string> arguments={cxx,"-std=c++20","-O"+optimization};
- arguments.push_back("-w");
- if(object_mode)arguments.push_back("-c");
- arguments.push_back(temp.string());
+ const std::string compiler_leaf=fs::path(cxx).filename().string();
+ const bool use_msvc=compiler_leaf=="cl"||compiler_leaf=="cl.exe";
+ std::vector<std::string> arguments;
+ if(use_msvc){
+  arguments={cxx,"/nologo","/std:c++20","/EHsc",optimization=="0"?"/Od":"/O2","/W0"};
+  if(object_mode){arguments.push_back("/c");arguments.push_back(temp.string());arguments.push_back("/Fo:"+output.string());}
+  else{arguments.push_back(temp.string());if(has_shui)arguments.push_back("Ws2_32.lib");arguments.push_back("/Fe:"+output.string());}
+ }else{
+  arguments={cxx,"-std=c++20","-O"+optimization,"-w"};
+  if(object_mode)arguments.push_back("-c");
+  arguments.push_back(temp.string());
   if(has_shui&&!object_mode)arguments.push_back("-lws2_32");
- arguments.push_back("-o");
- arguments.push_back(output.string());
+  arguments.push_back("-o");arguments.push_back(output.string());
+ }
  std::vector<const char*> compiler_argv;compiler_argv.reserve(arguments.size()+1);
  for(const auto&argument:arguments)compiler_argv.push_back(argument.c_str());
  compiler_argv.push_back(nullptr);

@@ -29,3 +29,35 @@ jobs:
         run: cmake -S . -B build-windows -A x64
       - name: Build Windows compiler and interpreter targets
         run: cmake --build build-windows --config Release --parallel
+      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Build and exercise generated Windows SHUI application
+        shell: pwsh
+        run: |
+          $env:CXX = "cl"
+          & .\build-windows\Release\gshai.exe -o build-windows\windows-demo examples\windows-demo.shui
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet build build-windows\windows-demo.csproj --nologo --verbosity quiet
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $source = Get-Content build-windows\windows-demo.cs -Raw
+          $token = [regex]::Match($source, 'private const string ShayToken = "([^"]+)"').Groups[1].Value
+          if (-not $token) { throw "Generated Windows UI did not contain its runtime token" }
+          $runtime = Start-Process -FilePath (Resolve-Path build-windows\windows-demo.exe) -PassThru -WindowStyle Hidden
+          try {
+            $ready = $false
+            for ($i = 0; $i -lt 30; $i++) {
+              try {
+                Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:18765/state?token=$token" | Out-Null
+                $ready = $true
+                break
+              } catch { Start-Sleep -Milliseconds 100 }
+            }
+            if (-not $ready) { throw "Windows Shay runtime bridge did not start" }
+            Invoke-WebRequest -UseBasicParsing -Method Post -ContentType "text/plain" -Body "$token|displayName=CI" "http://127.0.0.1:18765/set" | Out-Null
+            $event = Invoke-WebRequest -UseBasicParsing -Method Post -ContentType "text/plain" -Body "$token|doCalc" "http://127.0.0.1:18765/event"
+            if ($event.Content -ne "CI") { throw "Windows UI event did not execute Shay method: $($event.Content)" }
+          } finally {
+            Stop-Process -Id $runtime.Id -Force -ErrorAction SilentlyContinue
+          }
