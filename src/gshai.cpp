@@ -511,7 +511,9 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
      out<<"}; shay_sets.erase("<<cpp_string(s.name)<<"); shay_lists.erase("<<cpp_string(s.name)<<"); values.erase("<<cpp_string(s.name)<<");\n";
     }else if(s.set_value){
      out<<" shay_sets["<<cpp_string(s.name)<<"] = {";
-     for(std::size_t i=0;i<s.list_items.size();++i){if(i)out<<", ";out<<cpp_string(s.list_items[i]);}
+     std::unordered_set<std::string> unique_items;
+     bool first_item=true;
+     for(const auto&item:s.list_items)if(unique_items.insert(item).second){if(!first_item)out<<", ";out<<cpp_string(item);first_item=false;}
      out<<"}; shay_maps.erase("<<cpp_string(s.name)<<"); shay_lists.erase("<<cpp_string(s.name)<<"); values.erase("<<cpp_string(s.name)<<");\n";
     }else if(s.list_value){
      out<<" shay_lists["<<cpp_string(s.name)<<"] = {";
