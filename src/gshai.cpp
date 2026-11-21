@@ -84,6 +84,13 @@ void collect_statement_uses(const shay::Statement&s,const BuildContext&ctx,const
   case shay::StatementKind::OutputCall:
    for(const auto&arg:s.arguments)collect_expression_uses(arg,ctx,locals,used);
    break;
+  case shay::StatementKind::MapSet:
+  case shay::StatementKind::MapRemove:
+  case shay::StatementKind::SetAdd:
+  case shay::StatementKind::SetRemove:
+  case shay::StatementKind::SetContains:
+   if(ctx.variables.count(s.name)&&!locals.count(s.name))used.insert(s.name);
+   break;
   case shay::StatementKind::ReturnValue:
    collect_expression_uses(s.value,ctx,locals,used);
    break;
