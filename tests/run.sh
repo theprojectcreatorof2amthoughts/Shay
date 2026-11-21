@@ -787,7 +787,8 @@ pass "gshai compiles multiple .shay roots into one executable with shared progra
 "$GSHAI" -ob "$TMP/multi-source-project.sho" "$TMP/project-first.shay" "$TMP/project-second.shay" || fail "compile multiple Shay sources into one .sho object"
 "$GSHAI" -o "$TMP/multi-source-object-app" "$TMP/multi-source-project.sho" || fail "link multi-source .sho object"
 out=$("$TMP/multi-source-object-app") || fail "run multi-source .sho executable"
-cmp "$TMP/multi-source-expected.txt" <(printf '%s\\n' "$out") || fail "multi-source .sho output"
+printf '%s\\n' "$out" > "$TMP/multi-source-object-actual.txt"
+cmp "$TMP/multi-source-expected.txt" "$TMP/multi-source-object-actual.txt" || fail "multi-source .sho output"
 pass "gshai emits one linkable .sho object from multiple source files"
 
 
