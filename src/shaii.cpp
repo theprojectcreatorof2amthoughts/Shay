@@ -391,17 +391,19 @@ void execute_file(const fs::path&input,Context&ctx){
    case shay::StatementKind::SetRemove:
    case shay::StatementKind::SetContains:{
     if(s.kind==shay::StatementKind::MapSet||s.kind==shay::StatementKind::MapRemove){
-     auto map=ctx.maps.find(s.name);if(map==ctx.maps.end()){diagnose(ctx,input,s.line,"unknown map '"+s.name+"'";break;break;}
+     auto map=ctx.maps.find(s.name);
+     if(map==ctx.maps.end()){diagnose(ctx,input,s.line,"unknown map '"+s.name+"'");break;}
      auto entry=std::find_if(map->second.begin(),map->second.end(),[&](const auto&item){return item.first==s.output_key;});
      if(s.kind==shay::StatementKind::MapSet){if(!ctx.check_only){if(entry==map->second.end())map->second.push_back({s.output_key,s.value});else entry->second=s.value;}}
-     else if(entry==map->second.end()){diagnose(ctx,input,s.line,"unknown map key '"+s.output_key+"'";break;}
+     else if(entry==map->second.end())diagnose(ctx,input,s.line,"unknown map key '"+s.output_key+"'");
      else if(!ctx.check_only)map->second.erase(entry);
     }else{
-     auto set=ctx.sets.find(s.name);if(set==ctx.sets.end()){diagnose(ctx,input,s.line,"unknown set '"+s.name+"'";break;break;}
+     auto set=ctx.sets.find(s.name);
+     if(set==ctx.sets.end()){diagnose(ctx,input,s.line,"unknown set '"+s.name+"'");break;}
      auto item=std::find(set->second.begin(),set->second.end(),s.value);
      if(s.kind==shay::StatementKind::SetAdd){if(!ctx.check_only&&item==set->second.end())set->second.push_back(s.value);}
-     else if(s.kind==shay::StatementKind::SetRemove){if(item==set->second.end()){diagnose(ctx,input,s.line,"unknown set item '"+s.value+"'";break;}else if(!ctx.check_only)set->second.erase(item);}
-     else if(!ctx.check_only)shay_runtime_write((item==set->second.end()?"false\n":"true\n"));
+     else if(s.kind==shay::StatementKind::SetRemove){if(item==set->second.end())diagnose(ctx,input,s.line,"unknown set item '"+s.value+"'");else if(!ctx.check_only)set->second.erase(item);}
+     else if(!ctx.check_only)shay_runtime_write(item==set->second.end()?"false\n":"true\n");
     }
     break;
    }
