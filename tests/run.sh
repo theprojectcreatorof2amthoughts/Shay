@@ -1154,4 +1154,56 @@ out=$("$TMP/process-missing-app") || fail "run compiled missing process"
 [ "$out" = "127" ] || fail "compiler missing process exit code"
 pass "runproc launches executables with explicit argv and returns their exit status without a shell"
 
+
+cat > "$TMP/directive-app.shui" <<'EOF'
+$useentry UI(Browser)
+$browsElementapp <{
+    *#uiContrl "browserutil.shuil"
+    *!#classUideclr !u#browserCalc
+        $uiSet 0
+        $declrmthd doCalc
+            x*y + x*y
+        finish
+    finish
+    *!#doUiclass <"!u#browserCalc">
+    *#drawui <'square'> <<'568xx654'>>
+    *#drawui <'buttoncircle'> <:intercative=yes:>
+}>
+$dothis
+$uiFinish
+EOF
+"$SHUI" validate "$TMP/directive-app.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "directive .shui validation"; }
+grep -q 'valid (directive-based UI syntax)' "$TMP/out" || fail "directive .shui success message"
+pass "shui validates the directive-based app, UI class, drawui ID, and metadata syntax"
+
+cat > "$TMP/browserutil.shuil" <<'EOF'
+#*$ContrlDefine <browser>
+#*!MethdUi <javasTrans>
+#*!LangUI <US>
+#*!classmethdDeclr !m#javasMain
+    $uiset 0
+    $declrmthd TransMain
+        $mthdset 1
+        #*$javasport [uicontrol.js]
+        #*$doJavaScript
+    finish
+finish
+EOF
+"$SHUI" validate "$TMP/browserutil.shuil" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "directive .shuil validation"; }
+grep -q 'valid (directive-based UI syntax)' "$TMP/out" || fail "directive .shuil success message"
+pass "shui validates platform, translation method, UI language, and JavaScript adapter directives"
+
+cat > "$TMP/bad-ui-class.shui" <<'EOF'
+$useentry UI(Browser)
+$browsElementapp <{
+    *!#classUideclr !browserCalc
+    finish
+}>
+$dothis
+$uiFinish
+EOF
+if "$SHUI" validate "$TMP/bad-ui-class.shui" >"$TMP/out" 2>"$TMP/err"; then fail "directive .shui accepted a class without !u#"; fi
+grep -q 'unrecognized .shui directive' "$TMP/err" || fail "directive UI class prefix diagnostic"
+pass "directive .shui rejects UI classes without the required !u# prefix"
+
 printf '\nAll Shay toolchain tests passed.\n'
