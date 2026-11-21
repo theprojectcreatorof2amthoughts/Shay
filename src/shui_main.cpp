@@ -80,6 +80,23 @@ int main(int argc,char**argv){
   if(!generated_file){std::cerr<<"shui: cannot write '"<<output_path.string()<<"'\n";return 1;}
   generated_file<<generated;
   if(!generated_file){std::cerr<<"shui: failed while writing '"<<output_path.string()<<"'\n";return 1;}
+  if(adapter.platform=="windows"&&adapter.method=="csharpTrans"){
+   fs::path project_path=output_path;project_path.replace_extension(".csproj");
+   std::ofstream project_file(project_path,std::ios::binary);
+   if(!project_file){std::cerr<<"shui: cannot write Windows project '"<<project_path.string()<<"'\n";return 1;}
+   project_file<<"<Project Sdk=\"Microsoft.NET.Sdk\">\n"
+               <<"  <PropertyGroup>\n"
+               <<"    <OutputType>WinExe</OutputType>\n"
+               <<"    <TargetFramework>net8.0-windows</TargetFramework>\n"
+               <<"    <UseWindowsForms>true</UseWindowsForms>\n"
+               <<"    <EnableWindowsTargeting>true</EnableWindowsTargeting>\n"
+               <<"    <ImplicitUsings>enable</ImplicitUsings>\n"
+               <<"    <Nullable>enable</Nullable>\n"
+               <<"  </PropertyGroup>\n"
+               <<"</Project>\n";
+   if(!project_file){std::cerr<<"shui: failed while writing Windows project\n";return 1;}
+   std::cout<<"shui: generated Windows Forms project "<<project_path.string()<<"\n";
+  }
   std::cout<<"shui: generated "<<adapter.platform<<" UI source "<<output_path.string()<<"\n";return 0;
  }
  shay::Lexer lexer(source);const auto tokens=lexer.scan();if(!lexer.errors().empty()){print_errors(input,lexer.errors());return 1;}
