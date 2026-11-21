@@ -371,7 +371,7 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
     out<<indent<<"shay_runtime_write("<<cpp_string(s.value+"\n")<<"); throw ShayExit{};\n";break;
    case shay::StatementKind::OutputValue:
     for(const auto&name:s.output_names)
-     out<<indent<<"{ auto shay_list = shay_lists.find("<<cpp_string(name)<<"); if(shay_list != shay_lists.end()) { for(const auto& item : shay_list->second) shay_runtime_write((item + "<<cpp_string("\n")<<").c_str()); } else { auto shay_value = values.find("<<cpp_string(name)<<"); if(shay_value == values.end()) throw std::runtime_error("<<cpp_string("unknown variable '"+name+"'")<<"); shay_runtime_write((shay_value->second + "<<cpp_string("\n")<<").c_str()); } }\\n";
+     out<<indent<<"{ auto shay_list = shay_lists.find("<<cpp_string(name)<<"); if(shay_list != shay_lists.end()) { for(const auto& item : shay_list->second) shay_runtime_write((item + "<<cpp_string("\n")<<").c_str()); } else { auto shay_value = values.find("<<cpp_string(name)<<"); if(shay_value == values.end()) throw std::runtime_error("<<cpp_string("unknown variable '"+name+"'")<<"); shay_runtime_write((shay_value->second + "<<cpp_string("\n")<<").c_str()); } }\n";
     break;
    case shay::StatementKind::If:
     out<<indent<<"if ("<<cpp_condition(s.condition)<<") {\n";
@@ -488,7 +488,7 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
     out<<" shay_runtime_write("<<cpp_string(s.value+"\n")<<"); throw ShayExit{};\n";break;
    case shay::StatementKind::OutputValue:
     for(const auto&name:s.output_names)
-     out<<" { auto shay_list = shay_lists.find("<<cpp_string(name)<<"); if(shay_list != shay_lists.end()) { for(const auto& item : shay_list->second) shay_runtime_write((item + "<<cpp_string("\n")<<").c_str()); } else { auto shay_value = values.find("<<cpp_string(name)<<"); if(shay_value == values.end()) throw std::runtime_error("<<cpp_string("unknown variable '"+name+"'")<<"); shay_runtime_write((shay_value->second + "<<cpp_string("\n")<<").c_str()); } }\\n";
+     out<<" { auto shay_list = shay_lists.find("<<cpp_string(name)<<"); if(shay_list != shay_lists.end()) { for(const auto& item : shay_list->second) shay_runtime_write((item + "<<cpp_string("\n")<<").c_str()); } else { auto shay_value = values.find("<<cpp_string(name)<<"); if(shay_value == values.end()) throw std::runtime_error("<<cpp_string("unknown variable '"+name+"'")<<"); shay_runtime_write((shay_value->second + "<<cpp_string("\n")<<").c_str()); } }\n";
     break;
    case shay::StatementKind::OutputCall:{
     auto fn=ctx.functions.find(s.name);if(fn==ctx.functions.end())break;
