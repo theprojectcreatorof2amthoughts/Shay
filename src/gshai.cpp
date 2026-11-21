@@ -209,6 +209,9 @@ void load_file(const fs::path&input,BuildContext&ctx){
    if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'inpvarforw' is not allowed");continue;}
    // First use declares the variable; later uses intentionally reuse it.
    if(ctx.variables.insert(s.name).second)ctx.variable_declarations.emplace_back(input,s);
+  }else if(s.kind==shay::StatementKind::FileRead){
+   if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'fileread' is not allowed");continue;}
+   if(ctx.variables.insert(s.name).second)ctx.variable_declarations.emplace_back(input,s);
   }else if(s.kind==shay::StatementKind::DeclareFunction){
    if(extension!=".shaii"){diagnose(ctx,input,s.line,"'$declr' is only allowed in .shaii files");continue;}
    if(ctx.functions.count(s.name)){diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");continue;}
