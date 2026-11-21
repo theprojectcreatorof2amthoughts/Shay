@@ -3,6 +3,7 @@
 #include "lexer.hpp"
 #include "parser.hpp"
 #include "shui_source.hpp"
+#include "shui_runtime_codegen.hpp"
 #include <chrono>
 #include <cctype>
 #include <cstdio>
@@ -508,9 +509,12 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
   }
  }
 }
-bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,const std::string&entry_symbol){
+bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,const std::string&entry_symbol,
+                       bool ui_runtime=false,const std::string&ui_token="",
+                       const std::vector<std::pair<std::string,std::string>>&ui_events={},
+                       const std::string&ui_page=""){
  std::ofstream out(path,std::ios::binary);if(!out)return false;
- out<<"#include <algorithm>\n#include <cstdio>\n#include <exception>\n#include <fstream>\n#include <filesystem>\n#include <cerrno>\n#include <cstdint>\n#ifdef _WIN32\n#include <process.h>\n#else\n#include <sys/types.h>\n#include <sys/wait.h>\n#include <unistd.h>\n#endif\n#include <iomanip>\n#include <iostream>\n#include <sstream>\n#include <stdexcept>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n#include <utility>\n#include <vector>\n"
+ out<<"#include <algorithm>\n#include <cstdio>\n#include <exception>\n#include <fstream>\n#include <filesystem>\n#include <cerrno>\n#include <cstdint>\n#ifdef _WIN32\n#include <winsock2.h>\n#include <ws2tcpip.h>\n#include <process.h>\n#else\n#include <sys/types.h>\n#include <sys/wait.h>\n#include <sys/socket.h>\n#include <netinet/in.h>\n#include <arpa/inet.h>\n#include <unistd.h>\n#endif\n#include <iomanip>\n#include <iostream>\n#include <sstream>\n#include <stdexcept>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n#include <utility>\n#include <vector>\n#include <mutex>\n#include <cstdlib>\n"
        "struct ShayExit {};\n"
        "struct ShayError : std::runtime_error { std::string category; std::size_t line; ShayError(std::string c, std::string m, std::size_t l) : std::runtime_error(c + \": \" + m), category(std::move(c)), line(l) {} };\n"
        "static int shay_run_process(const std::string& program, const std::vector<std::string>& arguments) {\n"
@@ -527,10 +531,12 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
        "[[maybe_unused]] static std::unordered_map<std::string,std::vector<std::string>> shay_sets;\n"
        "static std::unordered_map<std::string,std::string> shay_failures;\n"
        "static std::unordered_set<std::string> shay_handled_failures;\n"
+       "static std::unordered_map<std::string,std::string> shay_ui_values;\n"
+       "static thread_local std::string* shay_ui_capture=nullptr;\n"
        "static bool shay_failed(const std::string& name){auto it=shay_failures.find(name);if(it==shay_failures.end())return false;shay_handled_failures.insert(name);return true;}\n"
        "static double shay_number(const std::unordered_map<std::string,std::string>& values,const std::string& name){auto it=values.find(name);if(it==values.end())throw std::runtime_error(\"unknown numeric value '\"+name+\"'\");std::size_t used=0;double value=std::stod(it->second,&used);if(used!=it->second.size())throw std::runtime_error(\"value '\"+name+\"' is not numeric\");return value;}\n"
        "static double shay_div(double left,double right){if(right==0.0)throw std::runtime_error(\"division by zero\");return left/right;}\n"
-       "static void shay_runtime_write(const char* text) { if(text){std::fputs(text,stdout);std::fflush(stdout);} }\n";
+       "static void shay_runtime_write(const char* text) { if(text){if(shay_ui_capture)shay_ui_capture->append(text);else{std::fputs(text,stdout);std::fflush(stdout);}} }\n";
  out<<"static std::string shay_log_name = "<<cpp_string(ctx.log_file_name)<<";\n"
     "static std::string shay_log_extension = "<<cpp_string(ctx.log_file_extension)<<";\n"
     "static std::string shay_log_path(){std::string path=shay_log_name;auto slash=path.find_last_of(\"/\\\\\");auto dot=path.find_last_of('.');if(dot!=std::string::npos&&(slash==std::string::npos||dot>slash))path.erase(dot);return path+shay_log_extension;}\n"
@@ -552,7 +558,17 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
   }
   out<<"}\n";
  }
- out<<"extern \"C\" int "<<entry_symbol<<"() {\n try {\n std::unordered_map<std::string,std::string> values;\n";
+ if(ui_runtime){
+  std::vector<std::pair<std::string,bool>> methods;
+  std::unordered_set<std::string> emitted_methods;
+  for(const auto&event:ui_events){
+   auto fn=ctx.functions.find(event.second);
+   if(fn!=ctx.functions.end()&&emitted_methods.insert(event.second).second)
+    methods.emplace_back(event.second,fn->second.has_return);
+  }
+  shay::ui::runtime_codegen::emit(out,ui_token,methods,ui_page);
+ }
+ out<<"extern \"C\" int "<<entry_symbol<<"() {\n try {\n shay_ui_values.clear(); auto& values=shay_ui_values;\n";
  for(const auto&s:ctx.statements){
   switch(s.kind){
    case shay::StatementKind::InputVariable:
@@ -708,7 +724,7 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
         "extern \"C\" int shay_program_entry() __attribute__((weak));\n"
         "extern \"C\" int shay_program_entry(){return "<<entry_symbol<<"();}\n"
         "#endif\n";
- if(add_main)out<<"int main(){return shay_program_entry();}\n";
+ if(add_main){if(ui_runtime)out<<"int main(){int result=shay_program_entry();if(result!=0)return result;return shay_ui_serve();}\n";else out<<"int main(){return shay_program_entry();}\n";}
  return static_cast<bool>(out);
 }
 bool diagnostics_color_enabled(){
@@ -801,6 +817,9 @@ int main(int argc,char**argv){
   if(output.empty()){output=inputs.front().parent_path()/inputs.front().stem();if(object_mode)output+=".sho";}
   else if(object_mode&&output.extension()!=".sho"){std::cerr<<"gshai: -ob output must use the .sho extension\n";return 2;}
  }
+#ifdef _WIN32
+ if(!object_mode&&output.extension().empty())output += ".exe";
+#endif
  if(link_mode){
   const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();
   const fs::path wrapper=fs::temp_directory_path()/("shay-link-"+std::to_string(stamp)+".cpp");
@@ -848,17 +867,89 @@ int main(int argc,char**argv){
   print_diagnostics(context);
   for(const auto&diagnostic:context.diagnostics)if(!diagnostic.warning)return 1;
  }
+ struct UiArtifact{fs::path path;std::string content;};
+ std::vector<UiArtifact> ui_artifacts;
+ std::vector<std::pair<std::string,std::string>> ui_event_bindings;
+ bool has_shui=false;
+ std::string ui_runtime_token;
+ std::string ui_browser_page;
+ if(!object_mode){
+  for(const auto&input:inputs){
+   if(input.extension()!=".shui")continue;
+   std::ifstream app_file(input,std::ios::binary);
+   if(!app_file){std::cerr<<"gshai: cannot reopen UI source '"<<input.string()<<"' for rendering\n";return 1;}
+   const std::string app_source((std::istreambuf_iterator<char>(app_file)),{});
+   has_shui=true;
+   if(ui_runtime_token.empty())ui_runtime_token=std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())+"-"+std::to_string(app_source.size());
+   std::istringstream ui_lines(app_source);std::string ui_line;std::size_t ui_line_number=0,generated_id=0;
+   const std::regex event_pattern(R"REGEX(\*#drawui\s+<'[^']+'>\s*(?:<<'([^']+)'>>)?\s*<:onclick=([A-Za-z_][A-Za-z0-9_]*):>)REGEX");
+   const std::regex draw_pattern(R"REGEX(\*#drawui\s+<'[^']+'>)REGEX");
+   while(std::getline(ui_lines,ui_line)){
+    ++ui_line_number;if(!std::regex_search(ui_line,draw_pattern))continue;
+    std::smatch id_match,event_match;
+    const bool has_id=std::regex_search(ui_line,id_match,std::regex(R"REGEX(<<'([^']+)'>>)REGEX"));
+    const std::string element_id=has_id?id_match[1].str():"shay-element-"+std::to_string(++generated_id);
+    if(std::regex_search(ui_line,event_match,event_pattern)){
+     const std::string method=event_match[2].str();auto function=context.functions.find(method);
+     if(function==context.functions.end())diagnose(context,input,ui_line_number,"UI onclick references unknown Shay method '"+method+"'");
+     else if(!function->second.parameters.empty())diagnose(context,input,ui_line_number,"UI event method '"+method+"' must not require arguments");
+     else ui_event_bindings.emplace_back(element_id,method);
+    }
+   }
+   std::smatch adapter_match;
+   const std::regex adapter_pattern(R"REGEX(\*#uiContrl\s+"([^"]+\.shuil)")REGEX");
+   if(!std::regex_search(app_source,adapter_match,adapter_pattern)){
+    std::cerr<<input.string()<<":1: error: missing *#uiContrl adapter reference\n";return 1;
+   }
+   const fs::path adapter_path=input.parent_path()/adapter_match[1].str();
+   std::ifstream adapter_file(adapter_path,std::ios::binary);
+   if(!adapter_file){std::cerr<<input.string()<<":1: error: cannot open platform adapter '"<<adapter_path.string()<<"'\n";return 1;}
+   const std::string adapter_source((std::istreambuf_iterator<char>(adapter_file)),{});
+   shay::ui::language::AdapterConfig adapter;
+   shay::ui::language::Result adapter_result;
+   shay::ui::language::inspect_adapter(adapter_source,adapter,adapter_result);
+   if(!adapter_result.ok()){
+    for(const auto&diagnostic:adapter_result.diagnostics)
+     std::cerr<<adapter_path.string()<<":"<<diagnostic.line<<": error: "<<diagnostic.message<<"\n";
+    return 1;
+   }
+   std::string generated,generated_extension;
+   shay::ui::language::Result generation_result;
+   if(!shay::ui::language::generate_output(app_source,adapter,output.stem().string(),generated,generated_extension,generation_result,ui_runtime_token)){
+    for(const auto&diagnostic:generation_result.diagnostics)
+     std::cerr<<input.string()<<":"<<diagnostic.line<<": error: "<<diagnostic.message<<"\n";
+    return 1;
+   }
+   fs::path generated_path=output;
+   generated_path.replace_extension(generated_extension);
+   ui_artifacts.push_back({generated_path,std::move(generated)});
+   if(generated_extension==".html")ui_browser_page=fs::absolute(generated_path).string();
+   if(generated_extension==".cs"){
+    fs::path project_path=generated_path;project_path.replace_extension(".csproj");
+    const std::string project="<Project Sdk=\"Microsoft.NET.Sdk\">\n  <PropertyGroup>\n    <OutputType>WinExe</OutputType>\n    <TargetFramework>net8.0-windows</TargetFramework>\n    <UseWindowsForms>true</UseWindowsForms>\n    <EnableWindowsTargeting>true</EnableWindowsTargeting>\n    <OutputPath>.</OutputPath>\n    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>\n    <AssemblyName>"+output.stem().string()+"-ui</AssemblyName>\n    <ImplicitUsings>enable</ImplicitUsings>\n    <Nullable>enable</Nullable>\n  </PropertyGroup>\n</Project>\n";
+    ui_artifacts.push_back({project_path,project});
+   }
+  }
+ }
  const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();const fs::path temp=fs::temp_directory_path()/("shay-build-"+std::to_string(stamp)+".cpp");
- if(!write_translation(context,temp,!object_mode,object_mode?object_entry_symbol(output):"shay_program_entry")){std::cerr<<"gshai: cannot write temporary translation unit\n";return 1;}
+ if(!write_translation(context,temp,!object_mode,object_mode?object_entry_symbol(output):"shay_program_entry",has_shui,ui_runtime_token,ui_event_bindings,ui_browser_page)){std::cerr<<"gshai: cannot write temporary translation unit\n";return 1;}
  const char*configured=std::getenv("CXX");const std::string cxx=configured&&*configured?configured:"c++";
  int status=0;
 #ifdef _WIN32
- std::vector<std::string> arguments={cxx,"-std=c++20","-O"+optimization};
- arguments.push_back("-w");
- if(object_mode)arguments.push_back("-c");
- arguments.push_back(temp.string());
- arguments.push_back("-o");
- arguments.push_back(output.string());
+ const std::string compiler_leaf=fs::path(cxx).filename().string();
+ const bool use_msvc=compiler_leaf=="cl"||compiler_leaf=="cl.exe";
+ std::vector<std::string> arguments;
+ if(use_msvc){
+  arguments={cxx,"/nologo","/std:c++20","/EHsc",optimization=="0"?"/Od":"/O2","/W0"};
+  if(object_mode){arguments.push_back("/c");arguments.push_back(temp.string());arguments.push_back("/Fo:"+output.string());}
+  else{arguments.push_back(temp.string());if(has_shui)arguments.push_back("Ws2_32.lib");arguments.push_back("/Fe:"+output.string());}
+ }else{
+  arguments={cxx,"-std=c++20","-O"+optimization,"-w"};
+  if(object_mode)arguments.push_back("-c");
+  arguments.push_back(temp.string());
+  if(has_shui&&!object_mode)arguments.push_back("-lws2_32");
+  arguments.push_back("-o");arguments.push_back(output.string());
+ }
  std::vector<const char*> compiler_argv;compiler_argv.reserve(arguments.size()+1);
  for(const auto&argument:arguments)compiler_argv.push_back(argument.c_str());
  compiler_argv.push_back(nullptr);
@@ -866,10 +957,19 @@ int main(int argc,char**argv){
 #else
  std::string command=shell_quote(cxx)+" -std=c++20 -O"+optimization+" ";
  command+="-w ";
- command+=(object_mode?"-c ":"")+shell_quote(temp.string())+" -o "+shell_quote(output.string());
+ command+=(object_mode?"-c ":"")+shell_quote(temp.string())+" ";
+  if(has_shui&&!object_mode)command+="-pthread ";
+  command+="-o "+shell_quote(output.string());
  status=std::system(command.c_str());
 #endif
  std::error_code ignored;fs::remove(temp,ignored);
  if(status!=0){fs::remove(output,ignored);std::cerr<<"gshai: native compiler/linker failed\n";return 1;}
+ for(const auto&artifact:ui_artifacts){
+  std::ofstream generated_file(artifact.path,std::ios::binary|std::ios::trunc);
+  if(!generated_file){std::cerr<<"gshai: cannot write generated UI file '"<<artifact.path.string()<<"'\n";return 1;}
+  generated_file.write(artifact.content.data(),static_cast<std::streamsize>(artifact.content.size()));
+  if(!generated_file){std::cerr<<"gshai: failed while writing generated UI file '"<<artifact.path.string()<<"'\n";return 1;}
+  std::cout<<"gshai: generated UI source "<<artifact.path.string()<<'\n';
+ }
  std::cout<<"gshai: wrote "<<(object_mode?"object file ":"executable ")<<output.string()<<'\n';return 0;
 }

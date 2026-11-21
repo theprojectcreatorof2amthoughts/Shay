@@ -6,7 +6,9 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 case "$SHAII" in /*) ;; *) SHAII="$ROOT/$SHAII";; esac
 case "$GSHAI" in /*) ;; *) GSHAI="$ROOT/$GSHAI";; esac
 TMP=$(mktemp -d)
-trap 'rm -rf "$TMP"' EXIT HUP INT TERM
+ui_pid=""
+cleanup() { if [ -n "$ui_pid" ]; then kill "$ui_pid" 2>/dev/null || true; wait "$ui_pid" 2>/dev/null || true; fi; rm -rf "$TMP"; }
+trap cleanup EXIT HUP INT TERM
 pass() { printf 'PASS: %s\n' "$1"; }
 fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
 
@@ -1106,18 +1108,21 @@ cat > "$TMP/browserutil.shuil" <<'EOF'
 finish
 EOF
 cat > "$TMP/integrated-ui.shui" <<'EOF'
+brew displayName = "Initial"
 $useentry UI(Browser)
 !%#browsElementapp <{
     *#uiContrl "browserutil.shuil"
     *!#classUideclr !u#browserCalc
         $uiSet 0
         $declrmthd doCalc
-            instxt/>"UI method belongs to Shay"
+            insval/>displayName
         finish
     finish
     *!#doUiclass <"!u#browserCalc">
     *#drawui <'square'> <<'mainPanel'>>
-    *#drawui <'buttoncircle'> <:intercative=yes:>
+    *#drawui <'buttoncircle'> <:onclick=doCalc:>
+    *#drawui <'textbox'> <<'nameInput'>> <:bind=displayName:>
+    *#drawui <'label'> <<'nameLabel'>> <:bind=displayName:>
 }>
 $dothis
 $uiFinish
@@ -1126,14 +1131,37 @@ EOF
 "$SHAII" --check "$TMP/integrated-ui.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "shaii checks integrated .shui"; }
 grep -q 'no errors' "$TMP/out" || fail "shaii .shui check message"
 out=$("$SHAII" "$TMP/integrated-ui.shui") || fail "shaii runs embedded .shui logic"
-[ "$out" = "UI method belongs to Shay" ] || fail "shaii .shui runtime output"
+[ "$out" = "Initial" ] || fail "shaii .shui runtime output"
 pass "shaii validates and interprets Shay logic embedded in .shui with its .shuil adapter"
 
 "$GSHAI" -o "$TMP/integrated-ui-app" "$TMP/integrated-ui.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "gshai compiles integrated .shui"; }
-out=$("$TMP/integrated-ui-app") || fail "run compiled .shui logic"
-[ "$out" = "UI method belongs to Shay" ] || fail "compiled .shui runtime output"
 pass "gshai compiles .shui through the shared Shay compiler and runtime"
-
+test -f "$TMP/integrated-ui-app.html" || fail "browser .shui did not emit its HTML renderer output"
+grep -q '<div id="mainPanel" class="shay-square">' "$TMP/integrated-ui-app.html" || fail "browser renderer did not emit the declared square"
+grep -q 'data-shay-onclick="doCalc"' "$TMP/integrated-ui-app.html" || fail "browser renderer did not preserve its Shay event binding"
+grep -q 'data-shay-bind="displayName"' "$TMP/integrated-ui-app.html" || fail "browser renderer did not preserve its state binding"
+pass "gshai emits browser HTML controls from .shui drawui declarations"
+token=$(sed -n 's/.*const token="\([^"]*\)";.*/\1/p' "$TMP/integrated-ui-app.html")
+[ -n "$token" ] || fail "browser HTML did not include its runtime token"
+"$TMP/integrated-ui-app" >"$TMP/ui-server-out" 2>"$TMP/ui-server-err" &
+ui_pid=$!
+ui_state=""
+for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+  if ui_state=$(curl --silent --fail "http://127.0.0.1:18765/state?token=$token" 2>/dev/null); then break; fi
+  sleep 0.1
+done
+[ "$ui_state" = '{"displayName":"Initial"}' ] || { cat "$TMP/ui-server-out" "$TMP/ui-server-err" >&2; fail "Shay UI state endpoint"; }
+curl --silent --show-error --fail -X POST --data-binary "$token|displayName=Yamen" http://127.0.0.1:18765/set >/dev/null || fail "Shay UI input binding"
+ui_state=$(curl --silent --show-error --fail "http://127.0.0.1:18765/state?token=$token")
+[ "$ui_state" = '{"displayName":"Yamen"}' ] || fail "Shay UI state update"
+ui_output=$(curl --silent --show-error --fail -X POST --data-binary "$token|doCalc" http://127.0.0.1:18765/event) || fail "Shay UI event endpoint"
+[ "$ui_output" = "Yamen" ] || fail "browser event did not invoke the Shay method with synchronized state"
+invalid_status=$(curl --silent --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:18765/state?token=invalid")
+[ "$invalid_status" = "403" ] || fail "Shay UI bridge accepted an invalid token"
+kill "$ui_pid" 2>/dev/null || true
+wait "$ui_pid" 2>/dev/null || true
+ui_pid=""
+pass "browser events call Shay methods through the authenticated local runtime bridge"
 cat > "$TMP/windowsutil.shuil" <<'EOF'
 #*$ContrlDefine <windows>
 #*!MethdUi <csharpTrans>
@@ -1148,17 +1176,21 @@ cat > "$TMP/windowsutil.shuil" <<'EOF'
 finish
 EOF
 cat > "$TMP/windows-ui.shui" <<'EOF'
+brew displayName = "Windows guest"
 $useentry UI(Windows)
 !%#csElementapp <{
     *#uiContrl "windowsutil.shuil"
     *!#classUideclr !u#desktopPanel
         $uiSet 0
         $declrmthd doCalc
-            instxt/>"Windows method belongs to Shay"
+            insval/>displayName
         finish
     finish
     *!#doUiclass <"!u#desktopPanel">
     *#drawui <'square'> <<'mainPanel'>>
+    *#drawui <'buttoncircle'> <<'launchButton'>> <:onclick=doCalc:>
+    *#drawui <'textbox'> <<'nameInput'>> <:bind=displayName:>
+    *#drawui <'label'> <<'nameLabel'>> <:bind=displayName:>
 }>
 $dothis
 $uiFinish
@@ -1166,7 +1198,15 @@ EOF
 "$SHAII" --check "$TMP/windows-ui.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "shaii checks Windows .shui"; }
 "$GSHAI" -o "$TMP/windows-ui-app" "$TMP/windows-ui.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "gshai compiles Windows .shui"; }
 out=$("$SHAII" "$TMP/windows-ui.shui") || fail "shaii runs Windows .shui logic"
-[ "$out" = "Windows method belongs to Shay" ] || fail "Windows .shui runtime output"
+[ "$out" = "Windows guest" ] || fail "Windows .shui runtime output"
 pass "browser and Windows UI class activation route through Shay's existing class runtime"
+test -f "$TMP/windows-ui-app.cs" || fail "Windows .shui did not emit its C# renderer output"
+test -f "$TMP/windows-ui-app.csproj" || fail "Windows .shui did not emit its WinForms project"
+grep -q 'new Panel' "$TMP/windows-ui-app.cs" || fail "Windows renderer did not emit a Panel"
+grep -q 'new Button' "$TMP/windows-ui-app.cs" || fail "Windows renderer did not emit a Button"
+grep -q 'PostAsync("http://127.0.0.1:18765/event"' "$TMP/windows-ui-app.cs" || fail "Windows button did not call the Shay event bridge"
+grep -q 'Tag = "displayName"' "$TMP/windows-ui-app.cs" || fail "Windows controls did not retain state bindings"
+dotnet build "$TMP/windows-ui-app.csproj" --nologo --verbosity quiet >"$TMP/dotnet-out" 2>"$TMP/dotnet-err" || { cat "$TMP/dotnet-out" "$TMP/dotnet-err" >&2; fail "generated Windows Forms project builds"; }
+pass "generated Windows Forms project compiles against the Shay runtime bridge"
 
 printf '\nAll Shay toolchain tests passed.\n'

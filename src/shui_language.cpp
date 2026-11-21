@@ -1,6 +1,7 @@
 #include "shui_language.hpp"
 #include <algorithm>
 #include <cctype>
+#include <iomanip>
 #include <regex>
 #include <set>
 #include <sstream>
@@ -94,8 +95,12 @@ Result validate_shui(const std::string& source) {
     for (const auto& [number, line] : lines) {
         if (line.empty()) continue;
         if (!entry) {
+            if (matches(line, R"(brew\s+.+)") ||
+                matches(line, R"(\$shaiiport\s+.+)") ||
+                matches(line, R"(\$shazport\s+.+)"))
+                continue;
             if (!matches(line, R"(\$useentry\s+UI\([A-Za-z_][A-Za-z0-9_]*\))"))
-                error(result, number, "expected '$useentry UI(Target)' before the UI app");
+                error(result, number, "expected Shay declarations/imports or '$useentry UI(Target)' before the UI app");
             else {
                 std::smatch target_match;
                 if (std::regex_search(line, target_match, std::regex(R"REGEX(UI\(([A-Za-z_][A-Za-z0-9_]*)\))REGEX")))
@@ -252,7 +257,8 @@ bool inspect_adapter(const std::string& source, AdapterConfig& config, Result& r
 }
 bool generate_output(const std::string& app_source, const AdapterConfig& adapter,
                      const std::string& app_name, std::string& output,
-                     std::string& output_extension, Result& result) {
+                     std::string& output_extension, Result& result,
+                     const std::string& runtime_token) {
     const auto elements = elements_of(app_source);
     if (adapter.platform == "browser" && adapter.method == "javasTrans") {
         output_extension = ".html";
@@ -284,20 +290,39 @@ bool generate_output(const std::string& app_source, const AdapterConfig& adapter
             if (element.kind == "checkbox") html << " type=\"checkbox\"";
             if (element.metadata_key == "intercative" && element.metadata_value == "yes")
                 html << " data-intercative=\"yes\"";
+            if (element.metadata_key == "onclick")
+                html << " data-shay-onclick=\"" << html_escape(element.metadata_value) << "\"";
+            if (element.metadata_key == "bind")
+                html << " data-shay-bind=\"" << html_escape(element.metadata_value) << "\"";
             if (tag == "input") html << " />";
             else html << ">" << text << "</" << tag << ">";
             html << "\n";
         }
-        html << "</main>\n</body>\n</html>\n";
+        html << "</main>\n";
+        if (!runtime_token.empty()) {
+            html << "<pre id=\"shay-output\" role=\"status\" aria-live=\"polite\"></pre>\n"
+                 << "<script>\n(() => {\n"
+                 << "const token=" << std::quoted(runtime_token) << ";\n"
+                 << "const base='http://127.0.0.1:18765';\n"
+                 << "const output=document.getElementById('shay-output');\n"
+                 << "async function sync(){try{const r=await fetch(base+'/state?token='+encodeURIComponent(token));if(!r.ok)return;const state=await r.json();document.querySelectorAll('[data-shay-bind]').forEach(el=>{const key=el.dataset.shayBind;if(!(key in state))return;if(el.type==='checkbox')el.checked=state[key]==='true';else if('value' in el){if(document.activeElement!==el)el.value=state[key];}else el.textContent=state[key];});}catch(_){}}\n"
+                 << "document.querySelectorAll('[data-shay-onclick]').forEach(el=>el.addEventListener('click',async()=>{try{for(const input of document.querySelectorAll('[data-shay-bind]')){if(input.tagName!=='INPUT')continue;const value=input.type==='checkbox'?String(input.checked):input.value;await fetch(base+'/set',{method:'POST',headers:{'Content-Type':'text/plain'},body:token+'|'+input.dataset.shayBind+'='+encodeURIComponent(value)});}const r=await fetch(base+'/event',{method:'POST',headers:{'Content-Type':'text/plain'},body:token+'|'+el.dataset.shayOnclick});const value=await r.text();if(output)output.textContent=value;await sync();}catch(_){if(output)output.textContent='Shay runtime is not running. Start the compiled app first.';}}));\n"
+                 << "document.querySelectorAll('[data-shay-bind]').forEach(el=>{if(el.tagName!=='INPUT')return;el.addEventListener(el.type==='checkbox'?'change':'input',async()=>{const value=el.type==='checkbox'?String(el.checked):el.value;try{await fetch(base+'/set',{method:'POST',headers:{'Content-Type':'text/plain'},body:token+'|'+el.dataset.shayBind+'='+encodeURIComponent(value)});}catch(_){}});});\n"
+                 << "sync();\n})();\n</script>\n";
+        }
+        html << "</body>\n</html>\n";
         output = html.str();
         return result.ok();
     }
     if (adapter.platform == "windows" && adapter.method == "csharpTrans") {
         output_extension = ".cs";
         std::ostringstream cs;
-        cs << "using System;\nusing System.Drawing;\nusing System.Windows.Forms;\n\n"
+        cs << "using System;\nusing System.Drawing;\nusing System.Diagnostics;\nusing System.IO;\nusing System.Net.Http;\nusing System.Text.Json;\nusing System.Threading.Tasks;\nusing System.Windows.Forms;\n\n"
            << "namespace ShayGeneratedUI\n{\n"
            << "    internal sealed class MainForm : Form\n    {\n"
+           << "        private static readonly HttpClient ShayClient = new HttpClient();\n"
+           << "        private const string ShayToken = " << std::quoted(runtime_token) << ";\n"
+           << "        private bool _syncing;\n"
            << "        public MainForm()\n        {\n"
            << "            Text = \"" << csharp_escape(app_name) << "\";\n"
            << "            StartPosition = FormStartPosition.CenterScreen;\n"
@@ -337,14 +362,39 @@ bool generate_output(const std::string& app_source, const AdapterConfig& adapter
                << "                Size = new Size(" << width << ", " << height << ")\n"
                << "            };\n"
                << "            Controls.Add(control" << index << ");\n";
+            if (element.metadata_key == "bind") {
+                cs << "            control" << index << ".Tag = " << std::quoted(element.metadata_value) << ";\n";
+                if (element.kind == "textbox")
+                    cs << "            control" << index << ".TextChanged += async (_, __) => { if (!_syncing) await SendStateAsync(" << std::quoted(element.metadata_value) << ", control" << index << ".Text); };\n";
+                else if (element.kind == "checkbox")
+                    cs << "            control" << index << ".CheckedChanged += async (_, __) => { if (!_syncing) await SendStateAsync(" << std::quoted(element.metadata_value) << ", control" << index << ".Checked.ToString().ToLowerInvariant()); };\n";
+            }
+            if (element.metadata_key == "onclick" && element.kind == "buttoncircle") {
+                cs << "            control" << index << ".Click += async (_, __) => { try { foreach (Control bound in Controls) { if (bound.Tag is string name) { var value = bound is TextBox box ? box.Text : bound is CheckBox check ? check.Checked.ToString().ToLowerInvariant() : bound is Label label ? label.Text : \"\"; await SendStateAsync(name, value); } } var response = await ShayClient.PostAsync(\"http://127.0.0.1:18765/event\", new StringContent(ShayToken + \"|\" + " << std::quoted(element.metadata_value) << ")); var message = await response.Content.ReadAsStringAsync(); if (!String.IsNullOrWhiteSpace(message)) MessageBox.Show(message, \"Shay\"); await SyncStateAsync(); } catch (Exception error) { MessageBox.Show(error.Message, \"Shay UI bridge\"); } };\n";
+            }
             ++index;
         }
-        cs << "        }\n    }\n\n"
+        cs << "            Shown += async (_, __) => await SyncStateAsync();\n"
+           << "        }\n"
+           << "        private async Task SendStateAsync(string name, string value)\n        {\n"
+           << "            try { var body = ShayToken + \"|\" + Uri.EscapeDataString(name) + \"=\" + Uri.EscapeDataString(value); await ShayClient.PostAsync(\"http://127.0.0.1:18765/set\", new StringContent(body)); } catch { }\n"
+           << "        }\n"
+           << "        private async Task SyncStateAsync()\n        {\n"
+           << "            JsonDocument? document = null;\n"
+           << "            for (int attempt = 0; attempt < 30 && document == null; ++attempt) { try { var json = await ShayClient.GetStringAsync(\"http://127.0.0.1:18765/state?token=\" + Uri.EscapeDataString(ShayToken)); document = JsonDocument.Parse(json); } catch { await Task.Delay(100); } }\n"
+           << "            if (document == null) return;\n"
+           << "            try { _syncing = true; foreach (Control control in Controls) { if (control.Tag is string name && document.RootElement.TryGetProperty(name, out var item)) { var value = item.GetString() ?? \"\"; if (control is TextBox box && !box.Focused) box.Text = value; else if (control is CheckBox check) check.Checked = value == \"true\"; else if (control is Label label) label.Text = value; } } } finally { _syncing = false; document.Dispose(); }\n"
+           << "        }\n"
+           << "    }\n\n"
            << "    internal static class Program\n    {\n"
            << "        [STAThread]\n        private static void Main()\n        {\n"
            << "            Application.EnableVisualStyles();\n"
            << "            Application.SetCompatibleTextRenderingDefault(false);\n"
-           << "            Application.Run(new MainForm());\n"
+           << "            var runtimePath = Path.Combine(AppContext.BaseDirectory, " << std::quoted(app_name + ".exe") << ");\n"
+           << "            if (!File.Exists(runtimePath)) { MessageBox.Show(\"Missing compiled Shay runtime: \" + runtimePath); return; }\n"
+           << "            var runtime = Process.Start(new ProcessStartInfo(runtimePath) { UseShellExecute = false, CreateNoWindow = true });\n"
+           << "            try { Application.Run(new MainForm()); }\n"
+           << "            finally { if (runtime != null && !runtime.HasExited) runtime.Kill(true); }\n"
            << "        }\n    }\n}\n";
         output = cs.str();
         return result.ok();

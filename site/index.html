@@ -177,22 +177,25 @@ instxt/&gt;<span class="string">"You did it!"</span>
         <h2>Shay UI</h2>
         <p>Shay UI is designed to live inside the Shay language. A <code>.shui</code> file combines ordinary Shay logic with UI declarations, while a <code>.shuil</code> file selects the platform adapter. The existing <code>gshai</code> compiler and <code>shaii</code> interpreter are the intended entry points; there is no separate UI language runtime or standalone shui executable.</p>
         <pre class="code"><span class="comment">## Browser UI source — integration example</span>
+brew displayName = "Guest"
 $useentry UI(Browser)
 !%#browsElementapp &lt;{
     *#uiContrl "browserutil.shuil"
     *!#classUideclr !u#browserCalc
         $uiSet 0
         $declrmthd doCalc
-            instxt/&gt;<span class="string">"Shay owns this logic"</span>
+            insval/&gt;displayName
         finish
     finish
     *#drawui &lt;'square'&gt; &lt;&lt;'mainPanel'&gt;&gt;
-    *#drawui &lt;'buttoncircle'&gt; &lt;:intercative=yes:&gt;
+    *#drawui &lt;'buttoncircle'&gt; &lt;:onclick=doCalc:&gt;
+    *#drawui &lt;'textbox'&gt; &lt;&lt;'nameInput'&gt;&gt; &lt;:bind=displayName:&gt;
+    *#drawui &lt;'label'&gt; &lt;&lt;'nameLabel'&gt;&gt; &lt;:bind=displayName:&gt;
 }&gt;
 $dothis
 $uiFinish</pre>
         <p><strong>Architecture:</strong> Shay owns application behavior and state. Browser JavaScript and Windows C# are platform adapters only; UI events must call into the Shay runtime, and runtime state must flow back to controls.</p>
-        <p><strong>Implementation status:</strong> the syntax and adapter format are documented, but compiler/interpreter execution and the bidirectional event/state bridge are still being integrated. The examples are a design reference, not a claim that interactive UI execution is complete.</p>
+        <p><strong>Implementation status:</strong> Browser and Windows Forms controls use the same authenticated loopback bridge into the compiled Shay runtime. <code>onclick</code> dispatches no-argument Shay methods; <code>bind</code> synchronizes declared values with text boxes, checkboxes and labels. Browser builds open their generated page when a desktop session is available. Windows builds emit a C# project whose form starts and stops the compiled Shay process; CI builds that project and exercises the Windows event endpoint.</p>
         <p><a href="https://github.com/theprojectcreatorof2amthoughts/Shay/blob/main/docs/SHUI_SPEC.md">Read the Shay UI specification →</a></p>
       </section>
 

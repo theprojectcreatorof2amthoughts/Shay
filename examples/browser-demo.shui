@@ -1,3 +1,4 @@
+brew displayName = "Guest"
 $useentry UI(Browser)
 
 !%#browsElementapp <{
@@ -5,12 +6,12 @@ $useentry UI(Browser)
     *!#classUideclr !u#browserCalc
         $uiSet 0
         $declrmthd doCalc
-            instxt/>"Browser action handled by Shay"
+            insval/>displayName
         finish
     finish
     *!#doUiclass <"!u#browserCalc">
     *#drawui <'square'> <<'568xx654'>>
-    *#drawui <'buttoncircle'> <:intercative=yes:>
+    *#drawui <'buttoncircle'> <:onclick=doCalc:>
 }>
 $dothis
 $uiFinish

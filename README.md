@@ -223,10 +223,16 @@ Shay UI is a source format within Shay, not a separate language. Pass `.shui` fi
 ./build/shaii --check examples/browser-demo.shui
 ./build/shaii examples/browser-demo.shui
 ./build/gshai -o build/browser-demo examples/browser-demo.shui
+./build/browser-demo
+# On a desktop, Shay opens build/browser-demo.html automatically
+
+./build/gshai -o build/windows-demo examples/windows-demo.shui
+dotnet build build/windows-demo.csproj
+# Run build/windows-demo-ui.exe
 ```
 
-The shared frontend validates the UI entry target and the referenced `.shuil` adapter, then routes the embedded Shay statements through the ordinary Shay parser, interpreter, or native compiler. UI class methods use the existing Shay class/method runtime. The UI envelope and drawing declarations are not a second execution engine.
+The shared frontend validates the UI entry target and referenced `.shuil` adapter, then routes embedded Shay statements through the ordinary Shay parser, interpreter, or native compiler. UI class methods use the existing Shay runtime.
 
-**Current implementation boundary:** `.shui` parsing, adapter validation, and embedded Shay logic compilation/interpreting are integrated. Rendering controls into a live browser or native Windows window, dispatching UI events into Shay methods, and synchronizing runtime state back to controls are not implemented yet. The JavaScript/C# adapters must remain bridges to Shay—not independent implementations of Shay behavior.
+Browser and Windows Forms `.shui` builds share the same loopback runtime bridge. `<:onclick=method:>` routes clicks into no-argument Shay methods, and `<:bind=variable:>` synchronizes declared Shay values with text boxes, checkboxes, and labels. Windows output includes a `.cs` file and `.csproj`; build it with `dotnet build build/windows-demo.csproj`. The generated Windows app starts the compiled Shay runtime beside it. Browser apps start the compiled executable; it opens the generated `.html` file automatically when a desktop session is available. The adapters remain bridges to Shay—not separate Shay runtimes.
 
 See [the SHAY UI specification](docs/SHUI_SPEC.md) and the [browser](examples/browser-demo.shui) and [Windows](examples/windows-demo.shui) examples.
