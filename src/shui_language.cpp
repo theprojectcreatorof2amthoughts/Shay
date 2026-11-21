@@ -165,7 +165,7 @@ Result validate_shuil(const std::string& source) {
     bool platform = false, method = false, language = false;
     bool translator_class_seen = false, translator_class_open = false;
     bool in_method = false, translator_loaded = false, translator_run = false;
-    std::string selected_method;
+    std::string selected_method, loaded_translator;
     for (const auto& [number, line] : lines) {
         if (line.empty()) continue;
         std::smatch match;
@@ -197,7 +197,7 @@ Result validate_shuil(const std::string& source) {
         if (translator_class_open && matches(line, R"(\$uiset\s+[A-Za-z0-9_]+)")) continue;
         if (in_method && matches(line, R"(\$mthdset\s+[A-Za-z0-9_]+)")) continue;
         if (in_method && matches(line, R"(#\*\$(javasport|csharpsport)\s+(\[[A-Za-z0-9_./-]+\]|\["[^"]+\.(js|cs)"\]))")) {
-            translator_loaded = true; continue;
+            translator_loaded = true; loaded_translator = match[1].str(); continue;
         }
         if (in_method && (line == "#*$doJavaScript" || line == "#*$doCSharp")) {
             if (!translator_loaded) error(result, number, "load the platform translator before running it");
@@ -218,6 +218,10 @@ Result validate_shuil(const std::string& source) {
         error(result, 1, "javasTrans requires '#*$doJavaScript'");
     if (selected_method == "csharpTrans" && source.find("#*$doCSharp") == std::string::npos)
         error(result, 1, "csharpTrans requires '#*$doCSharp'");
+    if (selected_method == "javasTrans" && loaded_translator != "javasport")
+        error(result, 1, "javasTrans must load its translator with '#*$javasport'");
+    if (selected_method == "csharpTrans" && loaded_translator != "csharpsport")
+        error(result, 1, "csharpTrans must load its translator with '#*$csharpsport'");
     if (selected_method != "javasTrans" && selected_method != "csharpTrans" && !selected_method.empty())
         error(result, 1, "unsupported translation method '" + selected_method + "'");
     return result;
@@ -233,6 +237,10 @@ bool inspect_adapter(const std::string& source, AdapterConfig& config, Result& r
     config.platform = capture(source, R"(#\*\$ContrlDefine\s+<([A-Za-z][A-Za-z0-9_-]*)>)");
     config.method = capture(source, R"(#\*!MethdUi\s+<([A-Za-z][A-Za-z0-9_-]*)>)");
     config.language = capture(source, R"(#\*!LangUI\s+<([A-Za-z][A-Za-z0-9_-]*)>)");
+    if ((config.platform == "browser" && config.method != "javasTrans") ||
+        (config.platform == "windows" && config.method != "csharpTrans") ||
+        (config.platform != "browser" && config.platform != "windows"))
+        error(result, 1, "platform and translation method do not match a supported backend");
     return result.ok();
 }
 bool generate_output(const std::string& app_source, const AdapterConfig& adapter,
