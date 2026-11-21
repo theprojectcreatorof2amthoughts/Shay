@@ -95,6 +95,7 @@
       <a href="#getting-started">Get started</a>
       <a href="#syntax">Syntax</a>
       <a href="#tools">Tools</a>
+      <a href="#ui">Shay UI</a>
       <a href="#documentation">Documentation</a>
       <a href="https://github.com/theprojectcreatorof2amthoughts/Shay">GitHub ↗</a>
     </nav>
@@ -105,7 +106,7 @@
   <div class="intro">
     <div class="eyebrow">A programming language project</div>
     <h1>A language of its own.</h1>
-    <p>Shay is an independent hybrid programming language with original syntax, a dedicated interpreter, and a native compiler toolchain. It is built in the open and evolving one feature at a time.</p>
+    <p>Shay is an independent hybrid programming language with original syntax, a dedicated interpreter, and a native compiler toolchain. Its UI system is designed as part of the same language and runtime—not as a separate compiler.</p>
     <div class="quicklinks">
       <a href="https://github.com/theprojectcreatorof2amthoughts/Shay">Explore the source code →</a>
       <a href="#getting-started">Start using Shay →</a>
@@ -140,14 +141,14 @@ make test</pre>
         <p>Shay uses its own keywords for declarations, output, functions, and control flow. Here is a small example:</p>
         <pre class="code"><span class="comment">## A first Shay program</span>
 <span class="keyword">brew</span> name = <span class="string">"world"</span>
-instxt-<span class="string">"Hello, "</span>
-insval-name
+instxt/&gt;<span class="string">"Hello, "</span>
+insval/&gt;name
 
 <span class="keyword">brew</span> score = 42
 <span class="keyword">ifit</span> score >= 40
-<span class="text-purple-500">instxt-<span class="string">"You did it!"</span></span>
+instxt/&gt;<span class="string">"You did it!"</span>
 <span class="keyword">exec</span></pre>
-        <p>For the complete and current syntax, use the syntax reference in the repository.</p>
+        <p>For the complete and current syntax, use the syntax reference in the repository. Shay statements use the same grammar in <code>.shay</code> and the embedded logic portions of <code>.shui</code>.</p>
       </section>
 
       <div class="rule"></div>
@@ -165,9 +166,34 @@ insval-name
           </article>
           <article class="feature">
             <h3>Libraries and task files</h3>
-            <p>Shay's ecosystem includes <code>.shaii</code> libraries and <code>.shaz</code> task files.</p>
+            <p>Shay's ecosystem includes <code>.shaii</code> libraries, <code>.shaz</code> task files, and the integrated <code>.shui</code>/<code>.shuil</code> UI source and adapter formats.</p>
           </article>
         </div>
+      </section>
+
+      <div class="rule"></div>
+
+      <section id="ui">
+        <h2>Shay UI</h2>
+        <p>Shay UI is designed to live inside the Shay language. A <code>.shui</code> file combines ordinary Shay logic with UI declarations, while a <code>.shuil</code> file selects the platform adapter. The existing <code>gshai</code> compiler and <code>shaii</code> interpreter are the intended entry points; there is no separate UI language runtime.</p>
+        <pre class="code"><span class="comment">## Browser UI source — integration example</span>
+$useentry UI(Browser)
+!%#browsElementapp &lt;{
+    *#uiContrl "browserutil.shuil"
+    *!#classUideclr !u#browserCalc
+        $uiSet 0
+        $declrmthd doCalc
+            instxt/&gt;<span class="string">"Shay owns this logic"</span>
+        finish
+    finish
+    *#drawui &lt;'square'&gt; &lt;&lt;'mainPanel'&gt;&gt;
+    *#drawui &lt;'buttoncircle'&gt; &lt;:intercative=yes:&gt;
+}&gt;
+$dothis
+$uiFinish</pre>
+        <p><strong>Architecture:</strong> Shay owns application behavior and state. Browser JavaScript and Windows C# are platform adapters only; UI events must call into the Shay runtime, and runtime state must flow back to controls.</p>
+        <p><strong>Implementation status:</strong> the syntax and adapter format are documented, but compiler/interpreter execution and the bidirectional event/state bridge are still being integrated. The examples are a design reference, not a claim that interactive UI execution is complete.</p>
+        <p><a href="https://github.com/theprojectcreatorof2amthoughts/Shay/blob/main/docs/SHUI_SPEC.md">Read the Shay UI specification →</a></p>
       </section>
 
       <div class="rule"></div>
@@ -200,6 +226,8 @@ insval-name
         <li>Source files: <code>.shay</code></li>
         <li>Library files: <code>.shaii</code></li>
         <li>Task files: <code>.shaz</code></li>
+        <li>UI source: <code>.shui</code></li>
+        <li>UI adapters: <code>.shuil</code></li>
         <li>Object files: <code>.sho</code></li>
       </ul>
       <div class="rule"></div>
