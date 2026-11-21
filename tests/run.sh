@@ -1179,7 +1179,6 @@ $useentry UI(Browser)
     *!#doUiclass <"!u#browserCalc">
     *#drawui <'square'> <<'mainPanel'>>
     *#drawui <'buttoncircle'> <:intercative=yes:>
-    instxt/>"embedded Shay logic"
 }>
 $dothis
 $uiFinish
@@ -1188,12 +1187,12 @@ EOF
 "$SHAII" --check "$TMP/integrated-ui.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "shaii checks integrated .shui"; }
 grep -q 'no errors' "$TMP/out" || fail "shaii .shui check message"
 out=$("$SHAII" "$TMP/integrated-ui.shui") || fail "shaii runs embedded .shui logic"
-[ "$out" = "embedded Shay logic" ] || fail "shaii .shui runtime output"
+[ "$out" = "UI method belongs to Shay" ] || fail "shaii .shui runtime output"
 pass "shaii validates and interprets Shay logic embedded in .shui with its .shuil adapter"
 
 "$GSHAI" -o "$TMP/integrated-ui-app" "$TMP/integrated-ui.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "gshai compiles integrated .shui"; }
 out=$("$TMP/integrated-ui-app") || fail "run compiled .shui logic"
-[ "$out" = "embedded Shay logic" ] || fail "compiled .shui runtime output"
+[ "$out" = "UI method belongs to Shay" ] || fail "compiled .shui runtime output"
 pass "gshai compiles .shui through the shared Shay compiler and runtime"
 
 cat > "$TMP/windowsutil.shuil" <<'EOF'
@@ -1227,6 +1226,8 @@ $uiFinish
 EOF
 "$SHAII" --check "$TMP/windows-ui.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "shaii checks Windows .shui"; }
 "$GSHAI" -o "$TMP/windows-ui-app" "$TMP/windows-ui.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "gshai compiles Windows .shui"; }
-pass "both Shay tools accept the Windows/C# .shuil adapter through the same source path"
+out=$("$SHAII" "$TMP/windows-ui.shui") || fail "shaii runs Windows .shui logic"
+[ "$out" = "Windows method belongs to Shay" ] || fail "Windows .shui runtime output"
+pass "browser and Windows UI class activation route through Shay's existing class runtime"
 
 printf '\nAll Shay toolchain tests passed.\n'
