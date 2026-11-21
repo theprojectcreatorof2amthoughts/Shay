@@ -4,6 +4,7 @@
 #include "lexer.hpp"
 #include "parser.hpp"
 #include "runtime.h"
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -13,6 +14,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 namespace fs=std::filesystem;
 namespace {
 constexpr char StringMarker='\x01';
@@ -151,7 +153,8 @@ bool execute_statements(const std::vector<shay::Statement>&statements,Context&ct
       else if(!ctx.check_only)for(const auto&entry:map->second)shay_runtime_write((entry.first+" = "+entry.second+"\n").c_str());
       continue;
      }
-     auto set=ctx.sets.find(name);
+          if(s.output_keyed){failure="unknown map '"+name+"'";success=false;break;}
+auto set=ctx.sets.find(name);
      if(set!=ctx.sets.end()){if(!ctx.check_only)for(const auto&item:set->second)shay_runtime_write((item+"\n").c_str());continue;}
      auto list=ctx.lists.find(name);
      if(list!=ctx.lists.end()){
@@ -355,7 +358,8 @@ void execute_file(const fs::path&input,Context&ctx){
       else if(!ctx.check_only)for(const auto&entry:map->second)shay_runtime_write((entry.first+" = "+entry.second+"\n").c_str());
       continue;
      }
-     auto set=ctx.sets.find(name);
+          if(s.output_keyed){diagnose(ctx,input,s.line,"unknown map '"+name+"'");break;}
+auto set=ctx.sets.find(name);
      if(set!=ctx.sets.end()){if(!ctx.check_only)for(const auto&item:set->second)shay_runtime_write((item+"\n").c_str());continue;}
      auto list=ctx.lists.find(name);
      if(list!=ctx.lists.end()){
