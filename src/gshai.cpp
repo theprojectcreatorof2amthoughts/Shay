@@ -439,7 +439,7 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
    case shay::StatementKind::ProcessRun:{
     out<<indent<<"shay_runtime_write((std::to_string(shay_run_process("<<cpp_string(s.path)<<", {";
     for(std::size_t i=0;i<s.arguments.size();++i){if(i)out<<", ";out<<cpp_string(s.arguments[i]);}
-    out<<"})) + "<<cpp_string("\n")<<").c_str());\\n";
+    out<<"})) + "<<cpp_string("\n")<<").c_str());\n";
     break;
    }
    case shay::StatementKind::ThrowError:
@@ -621,7 +621,7 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
    case shay::StatementKind::ProcessRun:{
     out<<"shay_runtime_write((std::to_string(shay_run_process("<<cpp_string(s.path)<<", {";
     for(std::size_t i=0;i<s.arguments.size();++i){if(i)out<<", ";out<<cpp_string(s.arguments[i]);}
-    out<<"})) + "<<cpp_string("\n")<<").c_str());\\n";
+    out<<"})) + "<<cpp_string("\n")<<").c_str());\n";
     break;
    }
    case shay::StatementKind::ThrowError:
