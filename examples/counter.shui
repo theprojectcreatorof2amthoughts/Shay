@@ -1,0 +1,36 @@
+$app "Shay Counter" {
+    window main {
+        title: "Counter"
+        size: 480 x 320
+        layout: column
+        gap: 12
+
+        text heading {
+            value: "Counter"
+            style: title
+        }
+
+        text count {
+            bind: counter
+        }
+
+        button increment {
+            label: "Add one"
+            on_click: increment_counter
+        }
+
+        text_input name {
+            label: "Your name"
+            bind: user_name
+            placeholder: "Type your name"
+        }
+    }
+
+    logic {
+        brew counter = 0
+
+        $declr increment_counter()
+            counter = counter + 1
+        finish
+    }
+}

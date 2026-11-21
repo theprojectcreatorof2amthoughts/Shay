@@ -109,3 +109,46 @@ The implementation should integrate with the existing `gshai`, `shaii`, and proj
 6. Packaging and project-build integration.
 
 A feature is not considered cross-platform complete until the same sample passes on both targets.
+
+
+## Implemented parser/browser slice
+
+The initial `shui` command now implements a small, validated subset of this format:
+
+```shay
+$app "Counter" {
+    window main {
+        title: "Counter"
+        size: 480 x 320
+        layout: column
+
+        text heading {
+            value: "Counter"
+            style: title
+        }
+
+        text count {
+            bind: counter
+        }
+
+        button increment {
+            label: "Add one"
+            on_click: increment_counter
+        }
+    }
+
+    logic {
+        brew counter = 0
+        $declr increment_counter()
+            counter = counter + 1
+        finish
+    }
+}
+```
+
+Commands:
+
+- `shui validate app.shui` parses and validates the UI tree.
+- `shui build app.shui --target web -o app.html` emits a standalone HTML/CSS page.
+
+The first browser output includes semantic controls and dispatches `shay:action` and `shay:input` browser events. The logic block is preserved as tokens for the next integration milestone; this first slice does **not** execute Shay logic in the browser yet. The Windows native renderer is also not implemented in this milestone.
