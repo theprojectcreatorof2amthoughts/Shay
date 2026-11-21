@@ -19,7 +19,7 @@ cat > "$TMP/unused-variable.shay" <<'EOF'
 brew unused_result = "unused"
 instxt/>"Compiler still succeeds"
 EOF
-"$GSHAI" --shaywall --shaywextra -o "$TMP/unused-variable-app" "$TMP/unused-variable.shay" >"$TMP/out" 2>"$TMP/err" || fail "unused-variable warning stopped compilation"
+"$GSHAI" --shaywall --shaywextra -o "$TMP/unused-variable-app" "$TMP/unused-variable.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "unused-variable warning stopped compilation"; }
 grep -q ": warning: variable 'unused_result' is never used" "$TMP/err" || fail "Shay unused-variable warning"
 grep -q 'brew unused_result = "unused"' "$TMP/err" || fail "unused-variable source line"
 grep -q '~~~~~~~~~~~~^' "$TMP/err" || fail "unused-variable caret underline"
@@ -46,7 +46,7 @@ out=$("$SHAII" "$TMP/multi-output.shay") || fail "interpreter multiple-variable 
 [ "$out" = "$expected" ] || fail "interpreter multiple-variable output order"
 pass "insval/> outputs multiple variables in order in the interpreter"
 
-CXX="${CXX:-c++}" "$GSHAI" --shaywall --shaywextra -o "$TMP/multi-output-app" "$TMP/multi-output.shay" >"$TMP/out" 2>"$TMP/err" || fail "compile multiple-variable output"
+CXX="${CXX:-c++}" "$GSHAI" --shaywall --shaywextra -o "$TMP/multi-output-app" "$TMP/multi-output.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "compile multiple-variable output"; }
 if grep -q "variable 'first' is never used\|variable 'second' is never used\|variable 'third' is never used" "$TMP/err"; then fail "multiple-variable output was not counted as variable use"; fi
 out=$("$TMP/multi-output-app") || fail "run compiled multiple-variable output"
 [ "$out" = "$expected" ] || fail "compiled multiple-variable output order"
@@ -891,5 +891,54 @@ grep -q "'\$declr' is only allowed in .shaii files" "$TMP/err" || fail "declr fi
 if "$GSHAI" -o "$TMP/illegal-declr" "$TMP/illegal-declr.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted \$declr in .shay"; fi
 grep -q "'\$declr' is only allowed in .shaii files" "$TMP/err" || fail "compiler declr file-type restriction diagnostic"
 pass "\$declr is restricted to .shaii files"
+
+
+cat > "$TMP/list-literals.shay" <<'EOF'
+brew names = ["Ada", "Grace", "Linus"]
+brew scores = [10, 20, -3, true]
+brew empty = []
+insval/>names
+insval/>scores
+insval/>empty
+EOF
+expected=$(printf 'Ada\nGrace\nLinus\n10\n20\n-3\ntrue')
+out=$("$SHAII" "$TMP/list-literals.shay") || fail "interpreter list literals"
+[ "$out" = "$expected" ] || fail "interpreter list literal output and order"
+pass "shaii parses and outputs string, numeric, boolean, and empty lists"
+
+"$GSHAI" -o "$TMP/list-literals-app" "$TMP/list-literals.shay" || fail "compile list literals"
+out=$("$TMP/list-literals-app") || fail "run compiled list literals"
+[ "$out" = "$expected" ] || fail "compiler list literal output and order"
+pass "gshai compiles list literals with matching interpreter output"
+
+
+cat > "$TMP/list-mutation.shay" <<'EOF'
+brew names = ["Ada", "Grace"]
+insval/>names[1]
+listadd/>names, "Linus"
+listset/>names, 0, "Katherine"
+listremove/>names, 1
+insval/>names
+EOF
+expected=$(printf 'Grace\nKatherine\nLinus')
+out=$("$SHAII" "$TMP/list-mutation.shay") || fail "interpreter list indexing and mutation"
+[ "$out" = "$expected" ] || fail "interpreter list indexing and mutation result"
+pass "shaii indexes, appends, replaces, and removes list items"
+
+"$GSHAI" -o "$TMP/list-mutation-app" "$TMP/list-mutation.shay" || fail "compile list indexing and mutation"
+out=$("$TMP/list-mutation-app") || fail "run compiled list indexing and mutation"
+[ "$out" = "$expected" ] || fail "compiler list indexing and mutation result"
+pass "gshai compiles list indexing and mutation consistently"
+
+cat > "$TMP/list-bounds.shay" <<'EOF'
+brew names = ["Ada"]
+insval/>names[1]
+EOF
+if "$SHAII" "$TMP/list-bounds.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpreter accepted out-of-range list index"; fi
+grep -q "list index 1 is out of range for 'names'" "$TMP/err" || fail "interpreter list bounds diagnostic"
+"$GSHAI" -o "$TMP/list-bounds-app" "$TMP/list-bounds.shay" || fail "compile list bounds test"
+if "$TMP/list-bounds-app" >"$TMP/out" 2>"$TMP/err"; then fail "compiled app accepted out-of-range list index"; fi
+grep -q "list index out of range for 'names'" "$TMP/err" || fail "compiled list bounds diagnostic"
+pass "interpreter and compiled programs reject out-of-range list indices"
 
 printf '\nAll Shay toolchain tests passed.\n'
