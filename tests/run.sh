@@ -1155,8 +1155,6 @@ curl --silent --show-error --fail -X POST --data-binary "$token|displayName=Yame
 ui_state=$(curl --silent --show-error --fail "http://127.0.0.1:18765/state?token=$token")
 [ "$ui_state" = '{"displayName":"Yamen"}' ] || fail "Shay UI state update"
 ui_output=$(curl --silent --show-error --fail -X POST --data-binary "$token|doCalc" http://127.0.0.1:18765/event) || fail "Shay UI event endpoint"
-[ "$ui_output" = "Yamen" ] || fail "browser event did not receive synchronized state"
-ui_output=$(curl --silent --show-error --fail -X POST --data-binary "$token|doCalc" http://127.0.0.1:18765/event) || fail "Shay UI event endpoint"
 [ "$ui_output" = "Yamen" ] || fail "browser event did not invoke the Shay method with synchronized state"
 invalid_status=$(curl --silent --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:18765/state?token=invalid")
 [ "$invalid_status" = "403" ] || fail "Shay UI bridge accepted an invalid token"

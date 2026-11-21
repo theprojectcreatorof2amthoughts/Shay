@@ -222,9 +222,14 @@ static int shay_ui_serve() {
                     shay_ui_reply(client, 400, "text/plain", "expected name=value");
                 } else {
                     std::lock_guard<std::mutex> guard(shay_ui_mutex);
-                    shay_ui_values[shay_ui_url_decode(change.substr(0, equals))] =
-                        shay_ui_url_decode(change.substr(equals + 1));
-                    shay_ui_reply(client, 200, "text/plain", "ok");
+                    const std::string name = shay_ui_url_decode(change.substr(0, equals));
+                    auto existing = shay_ui_values.find(name);
+                    if (existing == shay_ui_values.end()) {
+                        shay_ui_reply(client, 404, "text/plain", "unknown Shay value");
+                    } else {
+                        existing->second = shay_ui_url_decode(change.substr(equals + 1));
+                        shay_ui_reply(client, 200, "text/plain", "ok");
+                    }
                 }
             }
         } else {
