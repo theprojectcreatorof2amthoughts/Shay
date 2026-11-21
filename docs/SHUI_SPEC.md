@@ -150,5 +150,6 @@ Commands:
 
 - `shui validate app.shui` parses and validates the UI tree.
 - `shui build app.shui --target web -o app.html` emits a standalone HTML/CSS page.
+- `shui run app.shui --target desktop` launches the native Win32 renderer on Windows.
 
-The first browser output includes semantic controls and dispatches `shay:action` and `shay:input` browser events. The logic block is preserved as tokens for the next integration milestone; this first slice does **not** execute Shay logic in the browser yet. The Windows native renderer is also not implemented in this milestone.
+The browser output includes semantic controls and dispatches `shay:action` and `shay:input` browser events. The native Windows renderer is available through `shui run app.shui --target desktop`; it creates Win32 controls and currently sends button-action names to the debugger. The logic block is preserved as tokens, but neither renderer executes Shay logic or synchronizes bound state yet. That shared event/runtime bridge is the next integration milestone.
