@@ -1,6 +1,6 @@
 $useentry UI(Browser)
 
-$browsElementapp <{
+!%#browsElementapp <{
     *#uiContrl "browserutil.shuil"
     *!#classUideclr !u#browserCalc
         $uiSet 0
