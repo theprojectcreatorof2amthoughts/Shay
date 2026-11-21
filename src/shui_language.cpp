@@ -98,7 +98,7 @@ Result validate_shui(const std::string& source) {
                 error(result, number, "expected '$useentry UI(Target)' before the UI app");
             else {
                 std::smatch target_match;
-                if (std::regex_search(line, target_match, std::regex(R"REGEX(UI\\(([A-Za-z_][A-Za-z0-9_]*)\\))REGEX")))
+                if (std::regex_search(line, target_match, std::regex(R"REGEX(UI\(([A-Za-z_][A-Za-z0-9_]*)\))REGEX")))
                     entry_target = target_match[1].str();
                 entry = true;
             }
