@@ -13,7 +13,7 @@ The Truck 2 and Truck 3 roadmap is being delivered as small, tested milestones.
 - [ ] List/map/set iteration syntax and typed collection elements.
 - [ ] Typed function parameters, assignment checking, and richer inference.
 - [x] Safe process spawning with explicit argument arrays and exit-code reporting.
-- [ ] JSON parsing and serialization.
+- [ ] Full JSON value API (initial literal parsing and compact serialization are implemented; member access/mutation and dynamic values remain).
 - [ ] HTTP/HTTPS APIs.
 - [ ] Concurrency and synchronization.
 
