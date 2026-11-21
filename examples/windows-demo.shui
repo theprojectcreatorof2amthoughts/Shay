@@ -12,11 +12,9 @@ $useentry UI(Windows)
     *!#doUiclass <"!u#desktopPanel">
     *#drawui <'square'> <<'mainPanel'>>
     *#drawui <'buttoncircle'> <<'launchButton'>> <:onclick=doCalc:>
-    *#drawui <'label'> <<'statusLabel'>>
-    *#drawui <'textbox'> <<'nameInput'>>
-    *#drawui <'checkbox'> <<'enableOption'>>
+    *#drawui <'label'> <<'statusLabel'>> <:bind=displayName:>
     *#drawui <'textbox'> <<'nameInput'>> <:bind=displayName:>
-    *#drawui <'label'> <<'nameLabel'>> <:bind=displayName:>
+    *#drawui <'checkbox'> <<'enableOption'>>
 }>
 $dothis
 $uiFinish
