@@ -7,6 +7,7 @@ INSTALL ?= install
 BUILD_DIR ?= build
 INTERPRETER := $(BUILD_DIR)/shaii
 COMPILER := $(BUILD_DIR)/gshai
+SHUI := $(BUILD_DIR)/shui
 PROGRAM ?= examples/hello.shay
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
@@ -24,11 +25,12 @@ FRONTEND_OBJECTS := $(patsubst src/%.cpp,$(BUILD_DIR)/%.o,$(FRONTEND_SOURCES))
 RUNTIME_OBJECT := $(BUILD_DIR)/runtime.o
 INTERPRETER_OBJECT := $(BUILD_DIR)/shaii.o
 COMPILER_OBJECT := $(BUILD_DIR)/gshai.o
+SHUI_OBJECT := $(BUILD_DIR)/shui_main.o
 DEPFILES := $(FRONTEND_OBJECTS:.o=.d) $(RUNTIME_OBJECT:.o=.d) $(INTERPRETER_OBJECT:.o=.d) $(COMPILER_OBJECT:.o=.d)
 
 .PHONY: all build test check run compile executable clean install uninstall debug release help
 all: build
-build: $(INTERPRETER) $(COMPILER)
+build: $(INTERPRETER) $(COMPILER) $(SHUI)
 
 $(BUILD_DIR)/.dir:
 	mkdir -p "$(BUILD_DIR)"
@@ -46,10 +48,13 @@ $(INTERPRETER): $(INTERPRETER_OBJECT) $(FRONTEND_OBJECTS) $(RUNTIME_OBJECT)
 $(COMPILER): $(COMPILER_OBJECT) $(FRONTEND_OBJECTS)
 	$(CXX) $(LDFLAGS) $^ $(LDLIBS) -o "$@"
 
+$(SHUI): $(SHUI_OBJECT) $(FRONTEND_OBJECTS)
+	$(CXX) $(LDFLAGS) $^ $(LDLIBS) -o "$@"
+
 -include $(DEPFILES)
 
 test: build
-	CXX="$(CXX)" sh tests/run.sh ./$(INTERPRETER) ./$(COMPILER)
+	CXX="$(CXX)" sh tests/run.sh ./$(INTERPRETER) ./$(COMPILER) ./$(SHUI)
 
 check: $(INTERPRETER)
 	./$(INTERPRETER) --check "$(PROGRAM)"
