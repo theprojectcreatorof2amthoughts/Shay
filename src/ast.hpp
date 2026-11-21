@@ -5,11 +5,11 @@
 #include <utility>
 #include <vector>
 namespace shay {
-enum class StatementKind { ImportLibrary, ImportTask, Declare, InputVariable, OutputText, OutputTextExit, MarkFailure, OutputValue, ListAppend, ListSet, ListRemove, MapSet, MapRemove, SetAdd, SetRemove, SetContains, ReturnValue, DeclareFunction, DeclareClass, DeclareMethod, DoFunction, ExecuteClass, OutputCall, If, LogFileExtension, LogFileName, LogText, Invalid };
+enum class StatementKind { ImportLibrary, ImportTask, Declare, InputVariable, OutputText, OutputTextExit, MarkFailure, OutputValue, ListAppend, ListSet, ListRemove, MapSet, MapRemove, SetAdd, SetRemove, SetContains, ThrowError, TryCatch, ReturnValue, DeclareFunction, DeclareClass, DeclareMethod, DoFunction, ExecuteClass, OutputCall, If, LogFileExtension, LogFileName, LogText, Invalid };
 struct Statement {
     StatementKind kind = StatementKind::Invalid;
     std::size_t line = 1;
-    std::string name, value, condition, type_annotation;
+    std::string name, value, condition, type_annotation, error_category;
     std::vector<std::string> parameters, arguments, output_names;
     std::vector<Statement> body, else_body;
     bool has_return = false;
