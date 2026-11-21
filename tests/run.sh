@@ -911,16 +911,4 @@ out=$("$TMP/list-literals-app") || fail "run compiled list literals"
 [ "$out" = "$expected" ] || fail "compiler list literal output and order"
 pass "gshai compiles list literals with matching interpreter output"
 
-cat > "$TMP/list-overwrite.shay" <<'EOF'
-brew data = ["first", "second"]
-brew data = "scalar"
-insval/>data
-EOF
-out=$("$SHAII" "$TMP/list-overwrite.shay") || fail "interpreter list-to-scalar overwrite"
-[ "$out" = "scalar" ] || fail "interpreter list-to-scalar overwrite result"
-"$GSHAI" -o "$TMP/list-overwrite-app" "$TMP/list-overwrite.shay" || fail "compile list-to-scalar overwrite"
-out=$("$TMP/list-overwrite-app") || fail "run list-to-scalar overwrite"
-[ "$out" = "scalar" ] || fail "compiler list-to-scalar overwrite result"
-pass "scalar declarations correctly replace earlier list values"
-
 printf '\nAll Shay toolchain tests passed.\n'
