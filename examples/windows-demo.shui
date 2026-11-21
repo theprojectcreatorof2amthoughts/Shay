@@ -5,7 +5,7 @@ $useentry UI(Windows)
     *!#classUideclr !u#desktopPanel
         $uiSet 0
         $declrmthd doCalc
-            x*y + x*y
+            instxt/>"Windows action handled by Shay"
         finish
     finish
     *!#doUiclass <"!u#desktopPanel">
