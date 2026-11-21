@@ -165,7 +165,9 @@ Implemented:
 8. Browser and Windows runtime bridge tests, including a Windows Forms project build and a live Windows HTTP event invocation.
 9. Automatic browser-page launch when a desktop session is available; the Windows Forms host starts and stops its compiled Shay child process.
 
-Not implemented yet:
-1. Graceful browser-tab shutdown of the local Shay runtime.
+Browser lifecycle:
+- The generated browser page sends an authenticated heartbeat every three seconds.
+- If the page disappears, the runtime waits twelve seconds without a heartbeat, then closes its listener and exits cleanly. The grace period tolerates normal background-tab throttling and page reloads.
+- Windows Forms continues to own its child runtime lifecycle and does not use browser heartbeats.
 
 Platform code remains an adapter, not a second runtime. Browser and Windows Forms event/state bridges are generated from the same `.shui` bindings. The compiled Shay process owns behavior and state on both platforms. Browser builds launch the generated page automatically when a desktop session is available; Windows Forms projects are built with `dotnet build` and own the child runtime process lifecycle.
