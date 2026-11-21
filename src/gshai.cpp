@@ -519,7 +519,7 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
      out<<"}; shay_maps.erase("<<cpp_string(s.name)<<"); shay_sets.erase("<<cpp_string(s.name)<<"); values.erase("<<cpp_string(s.name)<<");\n";
     }else{
      std::string value=s.value;if(!value.empty()&&value.front()==StringMarker)value.erase(value.begin());
-     out<<" shay_lists.erase("<<cpp_string(s.name)<<"); shay_maps.erase("<<cpp_string(s.name)<<"); shay_sets.erase("<<cpp_string(s.name)<<"); values["<<cpp_string(s.name)<<"] = "<<cpp_string(value)<<";\\n";
+     out<<" shay_lists.erase("<<cpp_string(s.name)<<"); shay_maps.erase("<<cpp_string(s.name)<<"); shay_sets.erase("<<cpp_string(s.name)<<"); values["<<cpp_string(s.name)<<"] = "<<cpp_string(value)<<";\n";
     }
     break;
    }
