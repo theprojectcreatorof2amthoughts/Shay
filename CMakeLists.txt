@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_library(shay_frontend STATIC src/lexer.cpp src/parser.cpp src/shui.cpp)
+add_library(shay_frontend STATIC src/lexer.cpp src/parser.cpp src/shui.cpp src/shuil.cpp)
 target_include_directories(shay_frontend PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 add_library(shay_runtime STATIC src/runtime.c)
