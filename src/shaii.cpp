@@ -318,7 +318,13 @@ void execute_file(const fs::path&input,Context&ctx){
    case shay::StatementKind::OutputValue:{
     for(const auto&name:s.output_names){
      auto list=ctx.lists.find(name);
-     if(list!=ctx.lists.end()){if(!ctx.check_only)for(const auto&item:list->second)shay_runtime_write((item+"\n").c_str());continue;}
+     if(list!=ctx.lists.end()){
+      if(s.output_indexed){
+       if(s.list_index>=list->second.size()){diagnose(ctx,input,s.line,"list index "+std::to_string(s.list_index)+" is out of range for '"+name+"'");break;}
+       if(!ctx.check_only)shay_runtime_write((list->second[s.list_index]+"\\n").c_str());
+      }else if(!ctx.check_only)for(const auto&item:list->second)shay_runtime_write((item+"\\n").c_str());
+      continue;
+     }
      auto found=ctx.values.find(name);
      if(found==ctx.values.end())diagnose(ctx,input,s.line,"unknown variable '"+name+"'");
      else if(!ctx.check_only)shay_runtime_write((found->second+"\n").c_str());
@@ -327,6 +333,17 @@ void execute_file(const fs::path&input,Context&ctx){
    }
    case shay::StatementKind::OutputCall:{
     auto scope=ctx.numbers;call_function(s,ctx,input,scope);break;
+   }
+   case shay::StatementKind::ListAppend:
+   case shay::StatementKind::ListSet:
+   case shay::StatementKind::ListRemove:{
+    auto list=ctx.lists.find(s.name);
+    if(list==ctx.lists.end()){diagnose(ctx,input,s.line,"unknown list '"+s.name+"'");break;}
+    if(s.kind==shay::StatementKind::ListAppend){if(!ctx.check_only)list->second.push_back(s.value);}
+    else if(s.list_index>=list->second.size())diagnose(ctx,input,s.line,"list index "+std::to_string(s.list_index)+" is out of range for '"+s.name+"'");
+    else if(!ctx.check_only&&s.kind==shay::StatementKind::ListSet)list->second[s.list_index]=s.value;
+    else if(!ctx.check_only&&s.kind==shay::StatementKind::ListRemove)list->second.erase(list->second.begin()+static_cast<std::ptrdiff_t>(s.list_index));
+    break;
    }
    case shay::StatementKind::Invalid:break;
   }
