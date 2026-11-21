@@ -371,11 +371,10 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
     out<<indent<<"shay_runtime_write("<<cpp_string(s.value+"\n")<<"); throw ShayExit{};\n";break;
    case shay::StatementKind::OutputValue:
     for(const auto&name:s.output_names){
-     if(s.output_indexed){
-      out<<indent<<"{ auto it=shay_lists.find("<<cpp_string(name)<<"); if(it==shay_lists.end()) throw std::runtime_error("<<cpp_string("unknown list '"+name+"'")<<"); if("<<s.list_index<<" >= it->second.size()) throw std::out_of_range("<<cpp_string("list index out of range for '"+name+"'")<<"); shay_runtime_write((it->second["<<s.list_index<<"] + "<<cpp_string("\n")<<").c_str()); }\n";
-     }else{
-      out<<indent<<"{ auto shay_list = shay_lists.find("<<cpp_string(name)<<"); if(shay_list != shay_lists.end()) { for(const auto& item : shay_list->second) shay_runtime_write((item + "<<cpp_string("\n")<<").c_str()); } else { auto shay_value = values.find("<<cpp_string(name)<<"); if(shay_value == values.end()) throw std::runtime_error("<<cpp_string("unknown variable '"+name+"'")<<"); shay_runtime_write((shay_value->second + "<<cpp_string("\n")<<").c_str()); } }\n";
-     }
+     if(s.output_keyed)
+      out<<indent<<"{ auto m=shay_maps.find("<<cpp_string(name)<<"); if(m==shay_maps.end()) throw std::runtime_error("<<cpp_string("unknown map '"+name+"'")<<"); auto e=std::find_if(m->second.begin(),m->second.end(),[&](const auto&v){return v.first=="<<cpp_string(s.output_key)<<";}); if(e==m->second.end()) throw std::runtime_error("<<cpp_string("unknown map key '"+s.output_key+"'")<<"); shay_runtime_write((e->second + "<<cpp_string("\n")<<").c_str()); }\\n";
+     else
+      out<<indent<<"{ auto m=shay_maps.find("<<cpp_string(name)<<"); auto set=shay_sets.find("<<cpp_string(name)<<"); auto list=shay_lists.find("<<cpp_string(name)<<"); if(m!=shay_maps.end()) { for(const auto& e:m->second) shay_runtime_write((e.first + "<<cpp_string(" = ")<<" + e.second + "<<cpp_string("\n")<<").c_str()); } else if(set!=shay_sets.end()) { for(const auto& v:set->second) shay_runtime_write((v + "<<cpp_string("\n")<<").c_str()); } else if(list!=shay_lists.end()) { for(const auto& v:list->second) shay_runtime_write((v + "<<cpp_string("\n")<<").c_str()); } else { auto v=values.find("<<cpp_string(name)<<"); if(v==values.end()) throw std::runtime_error("<<cpp_string("unknown variable '"+name+"'")<<"); shay_runtime_write((v->second + "<<cpp_string("\n")<<").c_str()); } }\\n";
     }
     break;
    case shay::StatementKind::ListAppend:
@@ -386,6 +385,25 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
     else if(s.kind==shay::StatementKind::ListSet)out<<"if("<<s.list_index<<" >= it->second.size()) throw std::out_of_range("<<cpp_string("list index out of range for '"+s.name+"'")<<"); it->second["<<s.list_index<<"]="<<cpp_string(s.value)<<"; ";
     else out<<"if("<<s.list_index<<" >= it->second.size()) throw std::out_of_range("<<cpp_string("list index out of range for '"+s.name+"'")<<"); it->second.erase(it->second.begin()+"<<s.list_index<<"); ";
     out<<"}\n";break;
+   }
+   case shay::StatementKind::MapSet:
+   case shay::StatementKind::MapRemove:
+   case shay::StatementKind::SetAdd:
+   case shay::StatementKind::SetRemove:
+   case shay::StatementKind::SetContains:{
+    if(s.kind==shay::StatementKind::MapSet||s.kind==shay::StatementKind::MapRemove){
+     out<<indent<<"{ auto m=shay_maps.find("<<cpp_string(s.name)<<"); if(m==shay_maps.end()) throw std::runtime_error("<<cpp_string("unknown map '"+s.name+"'")<<"); auto e=std::find_if(m->second.begin(),m->second.end(),[&](const auto&v){return v.first=="<<cpp_string(s.output_key)<<";}); ";
+     if(s.kind==shay::StatementKind::MapSet)out<<"if(e==m->second.end()) m->second.push_back({"<<cpp_string(s.output_key)<<","<<cpp_string(s.value)<<"}); else e->second="<<cpp_string(s.value)<<"; ";
+     else out<<"if(e==m->second.end()) throw std::runtime_error("<<cpp_string("unknown map key '"+s.output_key+"'")<<"); m->second.erase(e); ";
+     out<<"}\\n";
+    }else{
+     out<<indent<<"{ auto set=shay_sets.find("<<cpp_string(s.name)<<"); if(set==shay_sets.end()) throw std::runtime_error("<<cpp_string("unknown set '"+s.name+"'")<<"); auto item=std::find(set->second.begin(),set->second.end(),"<<cpp_string(s.value)<<"); ";
+     if(s.kind==shay::StatementKind::SetAdd)out<<"if(item==set->second.end()) set->second.push_back("<<cpp_string(s.value)<<"); ";
+     else if(s.kind==shay::StatementKind::SetRemove)out<<"if(item==set->second.end()) throw std::runtime_error("<<cpp_string("unknown set item '"+s.value+"'")<<"); set->second.erase(item); ";
+     else out<<"shay_runtime_write(item==set->second.end()?"<<cpp_string("false\n")<<":"<<cpp_string("true\n")<<"); ";
+     out<<"}\\n";
+    }
+    break;
    }
    case shay::StatementKind::If:
     out<<indent<<"if ("<<cpp_condition(s.condition)<<") {\n";
@@ -499,6 +517,25 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
     else out<<"if("<<s.list_index<<" >= it->second.size()) throw std::out_of_range("<<cpp_string("list index out of range for '"+s.name+"'")<<"); it->second.erase(it->second.begin()+"<<s.list_index<<"); ";
     out<<"}\n";break;
    }
+   case shay::StatementKind::MapSet:
+   case shay::StatementKind::MapRemove:
+   case shay::StatementKind::SetAdd:
+   case shay::StatementKind::SetRemove:
+   case shay::StatementKind::SetContains:{
+    if(s.kind==shay::StatementKind::MapSet||s.kind==shay::StatementKind::MapRemove){
+     out<<"{ auto m=shay_maps.find("<<cpp_string(s.name)<<"); if(m==shay_maps.end()) throw std::runtime_error("<<cpp_string("unknown map '"+s.name+"'")<<"); auto e=std::find_if(m->second.begin(),m->second.end(),[&](const auto&v){return v.first=="<<cpp_string(s.output_key)<<";}); ";
+     if(s.kind==shay::StatementKind::MapSet)out<<"if(e==m->second.end()) m->second.push_back({"<<cpp_string(s.output_key)<<","<<cpp_string(s.value)<<"}); else e->second="<<cpp_string(s.value)<<"; ";
+     else out<<"if(e==m->second.end()) throw std::runtime_error("<<cpp_string("unknown map key '"+s.output_key+"'")<<"); m->second.erase(e); ";
+     out<<"}\\n";
+    }else{
+     out<<"{ auto set=shay_sets.find("<<cpp_string(s.name)<<"); if(set==shay_sets.end()) throw std::runtime_error("<<cpp_string("unknown set '"+s.name+"'")<<"); auto item=std::find(set->second.begin(),set->second.end(),"<<cpp_string(s.value)<<"); ";
+     if(s.kind==shay::StatementKind::SetAdd)out<<"if(item==set->second.end()) set->second.push_back("<<cpp_string(s.value)<<"); ";
+     else if(s.kind==shay::StatementKind::SetRemove)out<<"if(item==set->second.end()) throw std::runtime_error("<<cpp_string("unknown set item '"+s.value+"'")<<"); set->second.erase(item); ";
+     else out<<"shay_runtime_write(item==set->second.end()?"<<cpp_string("false\n")<<":"<<cpp_string("true\n")<<"); ";
+     out<<"}\\n";
+    }
+    break;
+   }
    case shay::StatementKind::If:
     out<<" if ("<<cpp_condition(s.condition)<<") {\n";
     emit_body(out,s.body,ctx," ");
@@ -513,10 +550,10 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
     out<<" shay_runtime_write("<<cpp_string(s.value+"\n")<<"); throw ShayExit{};\n";break;
    case shay::StatementKind::OutputValue:
     for(const auto&name:s.output_names){
-     if(s.output_indexed)
-      out<<" { auto it=shay_lists.find("<<cpp_string(name)<<"); if(it==shay_lists.end()) throw std::runtime_error("<<cpp_string("unknown list '"+name+"'")<<"); if("<<s.list_index<<" >= it->second.size()) throw std::out_of_range("<<cpp_string("list index out of range for '"+name+"'")<<"); shay_runtime_write((it->second["<<s.list_index<<"] + "<<cpp_string("\n")<<").c_str()); }\n";
+     if(s.output_keyed)
+      out<<" { auto m=shay_maps.find("<<cpp_string(name)<<"); if(m==shay_maps.end()) throw std::runtime_error("<<cpp_string("unknown map '"+name+"'")<<"); auto e=std::find_if(m->second.begin(),m->second.end(),[&](const auto&v){return v.first=="<<cpp_string(s.output_key)<<";}); if(e==m->second.end()) throw std::runtime_error("<<cpp_string("unknown map key '"+s.output_key+"'")<<"); shay_runtime_write((e->second + "<<cpp_string("\\n")<<").c_str()); }\\n";
      else
-      out<<" { auto shay_list = shay_lists.find("<<cpp_string(name)<<"); if(shay_list != shay_lists.end()) { for(const auto& item : shay_list->second) shay_runtime_write((item + "<<cpp_string("\n")<<").c_str()); } else { auto shay_value = values.find("<<cpp_string(name)<<"); if(shay_value == values.end()) throw std::runtime_error("<<cpp_string("unknown variable '"+name+"'")<<"); shay_runtime_write((shay_value->second + "<<cpp_string("\n")<<").c_str()); } }\n";
+      out<<" { auto m=shay_maps.find("<<cpp_string(name)<<"); auto set=shay_sets.find("<<cpp_string(name)<<"); auto list=shay_lists.find("<<cpp_string(name)<<"); if(m!=shay_maps.end()) { for(const auto& e:m->second) shay_runtime_write((e.first + "<<cpp_string(" = ")<<" + e.second + "<<cpp_string("\\n")<<").c_str()); } else if(set!=shay_sets.end()) { for(const auto& v:set->second) shay_runtime_write((v + "<<cpp_string("\\n")<<").c_str()); } else if(list!=shay_lists.end()) { for(const auto& v:list->second) shay_runtime_write((v + "<<cpp_string("\\n")<<").c_str()); } else { auto v=values.find("<<cpp_string(name)<<"); if(v==values.end()) throw std::runtime_error("<<cpp_string("unknown variable '"+name+"'")<<"); shay_runtime_write((v->second + "<<cpp_string("\\n")<<").c_str()); } }\\n";
     }
     break;
    case shay::StatementKind::OutputCall:{
