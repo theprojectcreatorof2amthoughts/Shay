@@ -1228,7 +1228,7 @@ finish
 EOF
 cat > "$TMP/windows-app.shui" <<'EOF'
 $useentry UI(Windows)
-!%#browsElementapp <{
+!%#csElementapp <{
     *#uiContrl "windowsutil.shuil"
     *!#classUideclr !u#desktopPanel
         $uiSet 0
