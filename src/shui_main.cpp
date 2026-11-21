@@ -1,4 +1,5 @@
 #include "shui.hpp"
+#include "shuil.hpp"
 #ifdef _WIN32
 #include "shui_win32.hpp"
 #endif
@@ -15,12 +16,28 @@ void print_errors(const fs::path&file,const std::vector<shay::LexError>&errors){
 void print_errors(const fs::path&file,const std::vector<shay::ui::ParseError>&errors){
  for(const auto&e:errors)std::cerr<<file.string()<<":"<<e.line<<":"<<e.column<<": error: "<<e.message<<"\n";
 }
+void print_errors(const fs::path&file,const std::vector<shay::ui::library::ParseError>&errors){
+ for(const auto&e:errors)std::cerr<<file.string()<<":"<<e.line<<":"<<e.column<<": error: "<<e.message<<"\n";
+}
 }
 int main(int argc,char**argv){
  if(argc<2||std::string(argv[1])=="--help"||std::string(argv[1])=="-h"){
-  std::cout<<"Usage:\n  shui validate app.shui\n  shui build app.shui --target web -o app.html\n  shui run app.shui --target desktop\n";return argc<2?2:0;
+  std::cout<<"Usage:\n  shui validate app.shui\n  shui validate-library platform.shuil\n  shui build app.shui --target web -o app.html\n  shui run app.shui --target desktop\n";return argc<2?2:0;
  }
- const std::string command=argv[1];if(command!="validate"&&command!="build"&&command!="run"){std::cerr<<"shui: expected 'validate', 'build', or 'run'\n";return 2;}
+ const std::string command=argv[1];
+ if(command=="validate-library"){
+  if(argc!=3){std::cerr<<"shui: validate-library requires exactly one .shuil file\n";return 2;}
+  fs::path input=argv[2];
+  if(input.extension()!=".shuil"){std::cerr<<"shui: library input must have the .shuil extension\n";return 2;}
+  std::ifstream stream(input,std::ios::binary);if(!stream){std::cerr<<"shui: cannot open '"<<input.string()<<"'\n";return 1;}
+  std::ostringstream buffer;buffer<<stream.rdbuf();
+  auto parsed=shay::ui::library::parse(buffer.str());
+  if(!parsed.ok()){print_errors(input,parsed.errors);return 1;}
+  std::cout<<"shui: "<<input.string()<<" is valid ("<<parsed.config.platform<<", "<<parsed.config.translation_method
+           <<", language "<<parsed.config.language<<", "<<parsed.config.methods.size()<<" method(s))\n";
+  return 0;
+ }
+ if(command!="validate"&&command!="build"&&command!="run"){std::cerr<<"shui: expected 'validate', 'validate-library', 'build', or 'run'\n";return 2;}
  if(argc<3){std::cerr<<"shui: missing .shui input file\n";return 2;}
  fs::path input=argv[2];if(input.extension()!=".shui"){std::cerr<<"shui: input must have the .shui extension\n";return 2;}
  std::ifstream stream(input,std::ios::binary);if(!stream){std::cerr<<"shui: cannot open '"<<input.string()<<"'\n";return 1;}
