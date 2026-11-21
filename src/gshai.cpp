@@ -421,15 +421,15 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
     break;
    }
    case shay::StatementKind::ThrowError:
-    out<<indent<<"throw ShayError("<<cpp_string(s.error_category)<<", "<<cpp_string(s.value)<<", "<<s.line<<");\\n";break;
+    out<<indent<<"throw ShayError("<<cpp_string(s.error_category)<<", "<<cpp_string(s.value)<<", "<<s.line<<");\n";break;
    case shay::StatementKind::TryCatch:
-    out<<indent<<"try {\\n";
+    out<<indent<<"try {\n";
     emit_body(out,s.body,ctx,indent+"    ",function_name);
-    out<<indent<<"} catch(const ShayError& shay_error) {\\n";
-    out<<indent<<"    values["<<cpp_string(s.name)<<"] = shay_error.what();\\n";
-    out<<indent<<"} catch(const std::exception& shay_error) {\\n";
-    out<<indent<<"    values["<<cpp_string(s.name)<<"] = std::string("<<cpp_string("runtime: ")<<") + shay_error.what();\\n";
-    out<<indent<<"}\\n";
+    out<<indent<<"} catch(const ShayError& shay_error) {\n";
+    out<<indent<<"    values["<<cpp_string(s.name)<<"] = shay_error.what();\n";
+    out<<indent<<"} catch(const std::exception& shay_error) {\n";
+    out<<indent<<"    values["<<cpp_string(s.name)<<"] = std::string("<<cpp_string("runtime: ")<<") + shay_error.what();\n";
+    out<<indent<<"}\n";
     emit_body(out,s.else_body,ctx,indent,function_name);
     break;
    case shay::StatementKind::If:
