@@ -39,6 +39,15 @@ Program Parser::parse(){
    statement.kind=StatementKind::MarkFailure;
    valid=consume(TokenKind::Identifier,"",program.errors,"expected a function name after '!#'");
    if(valid)statement.name=previous().text;
+  }else if(match(TokenKind::Identifier,"runproc")){
+   statement.kind=StatementKind::ProcessRun;
+   valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'runproc'");
+   if(valid)valid=consume(TokenKind::String,"",program.errors,"expected a quoted program name");
+   if(valid)statement.path=previous().text;
+   while(valid&&match(TokenKind::Symbol,",")){
+    if(!consume(TokenKind::String,"",program.errors,"process arguments must be quoted strings")){valid=false;break;}
+    statement.arguments.push_back(previous().text);
+   }
   }else if(match(TokenKind::Identifier,"fileread")||match(TokenKind::Identifier,"filewrite")||match(TokenKind::Identifier,"fileappend")||match(TokenKind::Identifier,"fileexists")||match(TokenKind::Identifier,"filedelete")||match(TokenKind::Identifier,"dircreate")||match(TokenKind::Identifier,"direxists")){
    const std::string operation=previous().text;
    statement.kind=operation=="fileread"?StatementKind::FileRead:(operation=="filewrite"?StatementKind::FileWrite:(operation=="fileappend"?StatementKind::FileAppend:(operation=="fileexists"?StatementKind::FileExists:(operation=="filedelete"?StatementKind::FileDelete:(operation=="dircreate"?StatementKind::DirectoryCreate:StatementKind::DirectoryExists)))));
