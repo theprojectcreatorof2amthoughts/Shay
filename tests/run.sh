@@ -1206,4 +1206,54 @@ if "$SHUI" validate "$TMP/bad-ui-class.shui" >"$TMP/out" 2>"$TMP/err"; then fail
 grep -q 'unrecognized .shui directive' "$TMP/err" || fail "directive UI class prefix diagnostic"
 pass "directive .shui rejects UI classes without the required !u# prefix"
 
+
+"$SHUI" build "$TMP/directive-app.shui" -o "$TMP/directive-app.html" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "directive browser generation"; }
+grep -q '<button id="568xx654"' "$TMP/directive-app.html" && grep -q '<div id="568xx654"' "$TMP/directive-app.html" && false
+grep -q '<div id="568xx654"' "$TMP/directive-app.html" || fail "browser square output"
+grep -q '<button id="568xx654"' "$TMP/directive-app.html" && fail "browser element kind/ID mapping"
+grep -q '<button id="shay-element-' "$TMP/directive-app.html" || grep -q 'buttoncircle' "$TMP/directive-app.html" || fail "browser button output"
+pass "shui generates browser HTML from directive-based UI elements"
+
+cat > "$TMP/windowsutil.shuil" <<'EOF'
+#*$ContrlDefine <windows>
+#*!MethdUi <csharpTrans>
+#*!LangUI <US>
+#*!classmethdDeclr !m#csharpMain
+    $uiset 0
+    $declrmthd TransMain
+        $mthdset 1
+        #*$csharpsport [uicontrol.cs]
+        #*$doCSharp
+    finish
+finish
+EOF
+cat > "$TMP/windows-app.shui" <<'EOF'
+$useentry UI(Windows)
+$browsElementapp <{
+    *#uiContrl "windowsutil.shuil"
+    *!#classUideclr !u#desktopPanel
+        $uiSet 0
+        $declrmthd doCalc
+            x*y + x*y
+        finish
+    finish
+    *!#doUiclass <"!u#desktopPanel">
+    *#drawui <'square'> <<'mainPanel'>>
+    *#drawui <'buttoncircle'> <<'launchButton'>> <:intercative=yes:>
+    *#drawui <'label'> <<'statusLabel'>>
+    *#drawui <'textbox'> <<'nameInput'>>
+    *#drawui <'checkbox'> <<'enableOption'>>
+}>
+$dothis
+$uiFinish
+EOF
+"$SHUI" validate "$TMP/windows-app.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "directive Windows app validation"; }
+"$SHUI" build "$TMP/windows-app.shui" -o "$TMP/windows-app.cs" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "Windows C# generation"; }
+grep -q 'using System.Windows.Forms;' "$TMP/windows-app.cs" || fail "Windows Forms C# output"
+grep -q 'new Panel' "$TMP/windows-app.cs" || fail "C# Panel mapping"
+grep -q 'new Button' "$TMP/windows-app.cs" || fail "C# Button mapping"
+grep -q 'new TextBox' "$TMP/windows-app.cs" || fail "C# TextBox mapping"
+grep -q 'UseWindowsForms' "$TMP/windows-app.csproj" || fail "Windows Forms project file"
+pass "shui generates native Windows Forms C# source and a .NET Windows project"
+
 printf '\nAll Shay toolchain tests passed.\n'
