@@ -892,4 +892,35 @@ if "$GSHAI" -o "$TMP/illegal-declr" "$TMP/illegal-declr.shay" >"$TMP/out" 2>"$TM
 grep -q "'\$declr' is only allowed in .shaii files" "$TMP/err" || fail "compiler declr file-type restriction diagnostic"
 pass "\$declr is restricted to .shaii files"
 
+
+cat > "$TMP/list-literals.shay" <<'EOF'
+brew names = ["Ada", "Grace", "Linus"]
+brew scores = [10, 20, -3, true]
+brew empty = []
+insval/>names
+insval/>scores
+insval/>empty
+EOF
+expected=$(printf 'Ada\nGrace\nLinus\n10\n20\n-3\ntrue')
+out=$("$SHAII" "$TMP/list-literals.shay") || fail "interpreter list literals"
+[ "$out" = "$expected" ] || fail "interpreter list literal output and order"
+pass "shaii parses and outputs string, numeric, boolean, and empty lists"
+
+"$GSHAI" -o "$TMP/list-literals-app" "$TMP/list-literals.shay" || fail "compile list literals"
+out=$("$TMP/list-literals-app") || fail "run compiled list literals"
+[ "$out" = "$expected" ] || fail "compiler list literal output and order"
+pass "gshai compiles list literals with matching interpreter output"
+
+cat > "$TMP/list-overwrite.shay" <<'EOF'
+brew data = ["first", "second"]
+brew data = "scalar"
+insval/>data
+EOF
+out=$("$SHAII" "$TMP/list-overwrite.shay") || fail "interpreter list-to-scalar overwrite"
+[ "$out" = "scalar" ] || fail "interpreter list-to-scalar overwrite result"
+"$GSHAI" -o "$TMP/list-overwrite-app" "$TMP/list-overwrite.shay" || fail "compile list-to-scalar overwrite"
+out=$("$TMP/list-overwrite-app") || fail "run list-to-scalar overwrite"
+[ "$out" = "scalar" ] || fail "compiler list-to-scalar overwrite result"
+pass "scalar declarations correctly replace earlier list values"
+
 printf '\nAll Shay toolchain tests passed.\n'
