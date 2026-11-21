@@ -1172,10 +1172,6 @@ $browsElementapp <{
 $dothis
 $uiFinish
 EOF
-"$SHUI" validate "$TMP/directive-app.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "directive .shui validation"; }
-grep -q 'valid (directive-based UI syntax)' "$TMP/out" || fail "directive .shui success message"
-pass "shui validates the directive-based app, UI class, drawui ID, and metadata syntax"
-
 cat > "$TMP/browserutil.shuil" <<'EOF'
 #*$ContrlDefine <browser>
 #*!MethdUi <javasTrans>
@@ -1189,6 +1185,11 @@ cat > "$TMP/browserutil.shuil" <<'EOF'
     finish
 finish
 EOF
+
+"$SHUI" validate "$TMP/directive-app.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "directive .shui validation"; }
+grep -q 'valid (directive-based UI syntax)' "$TMP/out" || fail "directive .shui success message"
+pass "shui validates the directive-based app, UI class, drawui ID, and metadata syntax"
+
 "$SHUI" validate "$TMP/browserutil.shuil" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "directive .shuil validation"; }
 grep -q 'valid (directive-based UI syntax)' "$TMP/out" || fail "directive .shuil success message"
 pass "shui validates platform, translation method, UI language, and JavaScript adapter directives"
