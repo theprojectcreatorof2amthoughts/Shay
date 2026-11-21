@@ -8,10 +8,11 @@ The Truck 2 and Truck 3 roadmap is being delivered as small, tested milestones.
 - [x] Map literals with string keys, key lookup, update, and removal.
 - [x] Set literals with duplicate elimination, add, remove, and membership checks.
 - [x] Optional scalar type annotations for `number`, `string`, and `boolean` with initializer validation.
-- [ ] List/map/set iteration syntax.
-- [ ] Typed function parameters, typed collection elements, assignment checking, and richer inference.
-- [ ] Structured error values and propagation.
-- [ ] File and process APIs.
+- [x] Structured `throwit/>` errors and nested `tryit` / `catchit` handling.
+- [x] File read, write, append, delete, existence checks, and directory create/existence APIs.
+- [ ] List/map/set iteration syntax and typed collection elements.
+- [ ] Typed function parameters, assignment checking, and richer inference.
+- [ ] Safe process spawning with explicit argument arrays.
 - [ ] JSON parsing and serialization.
 - [ ] HTTP/HTTPS APIs.
 - [ ] Concurrency and synchronization.
@@ -30,5 +31,7 @@ The Truck 2 and Truck 3 roadmap is being delivered as small, tested milestones.
 ## Current implementation boundary
 
 The browser renderer emits semantic HTML/CSS and dispatches `shay:action` / `shay:input` events. The Windows renderer creates native controls and currently reports button actions to the debugger. Neither renderer executes the `.shui` `logic` block or synchronizes bound state yet.
+
+File APIs use literal paths and content and never invoke a shell. Filesystem failures are categorized as `io` errors and can be handled by `tryit` / `catchit`.
 
 Only checked items above are implemented and merged into `main`.
