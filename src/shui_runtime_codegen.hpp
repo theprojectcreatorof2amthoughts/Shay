@@ -201,7 +201,7 @@ static int shay_ui_serve() {
         if (ready == 0) {
             if (!shay_ui_page.empty() && shay_ui_browser_seen &&
                 std::chrono::steady_clock::now() - shay_ui_last_ping >
-                    std::chrono::seconds(12)) {
+                    std::chrono::seconds(90)) {
                 std::cout << "Shay UI: browser closed; stopping runtime\\n";
                 break;
             }
