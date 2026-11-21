@@ -243,7 +243,7 @@ auto set=ctx.sets.find(name);
     break;
    }
    case shay::StatementKind::ProcessRun:{
-    if(!ctx.check_only){const int exit_code=run_process(s.path,s.arguments);shay_runtime_write((std::to_string(exit_code)+"\\n").c_str());}
+    if(!ctx.check_only){const int exit_code=run_process(s.path,s.arguments);shay_runtime_write((std::to_string(exit_code)+"\n").c_str());}
     break;
    }
    case shay::StatementKind::FileRead:{
@@ -497,7 +497,7 @@ auto set=ctx.sets.find(name);
     break;
    }
    case shay::StatementKind::ProcessRun:
-    if(!ctx.check_only){const int exit_code=run_process(s.path,s.arguments);shay_runtime_write((std::to_string(exit_code)+"\\n").c_str());}
+    if(!ctx.check_only){const int exit_code=run_process(s.path,s.arguments);shay_runtime_write((std::to_string(exit_code)+"\n").c_str());}
     break;
    case shay::StatementKind::FileRead:{
     std::ifstream fileInput(s.path,std::ios::binary);
