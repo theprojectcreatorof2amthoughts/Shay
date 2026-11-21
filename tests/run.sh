@@ -1163,6 +1163,7 @@ $useentry UI(Windows)
     finish
     *!#doUiclass <"!u#desktopPanel">
     *#drawui <'square'> <<'mainPanel'>>
+    *#drawui <'buttoncircle'> <<'launchButton'>> <:intercative=yes:>
 }>
 $dothis
 $uiFinish
