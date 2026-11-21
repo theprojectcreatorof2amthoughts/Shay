@@ -10,12 +10,12 @@ This document describes the **directive-based UI language**. It supersedes the e
 
 ## .shui application syntax
 
-The following is the current canonical browser example. Directive spelling and casing are intentional.
+The following is the canonical browser example. The Windows form uses `!%#csElementapp <{` instead. Directive spelling and casing are intentional.
 
 ```shay
 $useentry UI(Browser)
 
-$browsElementapp <{
+!%#browsElementapp <{
     *#uiContrl "browserutil.shuil"
     *!#classUideclr !u#browserCalc
         $uiSet 0
@@ -36,7 +36,9 @@ $uiFinish
 | Syntax | Role |
 |---|---|
 | `$useentry UI(Browser)` | Selects the UI entry target. `Browser` is the target in this example. |
-| `$browsElementapp <{` | Opens the browser UI application body. The closing delimiter is ` }>` (without the space). |
+| `!%#browsElementapp <{` | Opens a browser UI application body. |
+| `!%#csElementapp <{` | Opens a Windows/C# UI application body. |
+| `}>` | Closes the UI application body. |
 | `*#uiContrl "file.shuil"` | Loads the named platform control/translation file. |
 | `*!#classUideclr !u#Name` | Declares a UI class. UI class names must use the `!u#` prefix. |
 | `$uiSet value` | Marks whether the current code is UI code. This directive is valid only in `.shui`; it is not a UI state initializer. |
@@ -144,12 +146,13 @@ The `.shui` source owns app structure and Shay behavior. The `.shuil` adapter ow
 
 ## Implementation status and compatibility
 
-The repository currently contains an earlier `$app "Name" { ... }` parser and browser/Win32 renderer. That implementation is not the grammar shown above. The directive-based frontend must be introduced without breaking existing `.shaii`, `.shay`, and `.shaz` parsing, and without pretending the legacy renderer already executes the new syntax.
+The old `$app "Name" { ... }` UI format and standalone `shui` frontend are deprecated and must be removed as the integrated implementation lands. `.shui` is a Shay source extension, not a separate language or compiler input. Only `gshai` and `shaii` may process it: `gshai` compiles the Shay program and its UI, while `shaii` interprets the same program and UI. There must be no `shui` executable or independent `shui validate/build` pipeline.
 
-The directive-based work is staged:
-1. Dedicated syntax validation for `.shui` and `.shuil`.
-2. Browser HTML generation and Windows Forms C# project generation for the initial control set.
-3. Expanded controls, layout, localization, and accessibility.
-4. Runtime event/state integration between native controls and Shay methods.
+The integrated implementation is staged:
+1. Teach the shared Shay frontend to recognize `.shui` and `.shuil` syntax, including the `!%#` UI namespace, without changing ordinary `.shay` grammar.
+2. Route `.shui` through `gshai` compilation and `shaii` interpretation; reject standalone UI compilation.
+3. Execute UI methods and application state in the existing Shay runtime.
+4. Implement a bidirectional event/state bridge from browser JavaScript and Windows C# controls into that runtime.
+5. Expand controls, layout, localization, accessibility, and cross-platform conformance tests.
 
-Until each stage lands with tests, the corresponding runtime/renderer behavior is not considered implemented.
+Platform code is an adapter, not a second runtime. Browser JavaScript and Windows C# must send control events to the Shay runtime and receive state updates from it; they must never reimplement Shay methods or become the source of truth for application state. Until each stage lands with tests, the corresponding behavior is not considered implemented.
