@@ -227,6 +227,6 @@ Shay UI is a source format within Shay, not a separate language. Pass `.shui` fi
 
 The shared frontend validates the UI entry target and the referenced `.shuil` adapter, then routes the embedded Shay statements through the ordinary Shay parser, interpreter, or native compiler. UI class methods use the existing Shay class/method runtime. The UI envelope and drawing declarations are not a second execution engine.
 
-**Current implementation boundary:** `.shui` parsing, adapter validation, and embedded Shay logic compilation/interpreting are integrated. Rendering controls into a live browser or native Windows window, dispatching UI events into Shay methods, and synchronizing runtime state back to controls are not implemented yet. The JavaScript/C# adapters must remain bridges to Shay—not independent implementations of Shay behavior.
+**Current implementation boundary:** `.shui` parsing, adapter validation, embedded Shay logic compilation/interpreting, and renderer source generation are integrated. Compiling a `.shui` app with `gshai -o` also emits a sibling `.html` file for Browser apps or `.cs` file for Windows apps. These are generated UI sources, not a launched window. Browser/native event dispatch into Shay methods and runtime-state synchronization are not implemented yet. The JavaScript/C# adapters must remain bridges to Shay—not independent implementations of Shay behavior.
 
 See [the SHAY UI specification](docs/SHUI_SPEC.md) and the [browser](examples/browser-demo.shui) and [Windows](examples/windows-demo.shui) examples.

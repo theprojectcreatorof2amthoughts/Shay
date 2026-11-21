@@ -162,4 +162,4 @@ Not implemented yet:
 3. Runtime state subscriptions and updates that keep controls synchronized.
 4. Interactive end-to-end tests for both platforms.
 
-Platform code remains an adapter, not a second runtime. Do not describe the UI as interactive or production-ready until the event/state bridge and both platform renderers land with automated tests.
+Platform code remains an adapter, not a second runtime. The current generators emit browser HTML and Windows Forms C# source, but do not launch them or connect their controls to Shay methods. Do not describe the UI as interactive or production-ready until the event/state bridge and live application lifecycle land with automated tests.

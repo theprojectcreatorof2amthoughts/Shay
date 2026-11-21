@@ -1133,6 +1133,10 @@ pass "shaii validates and interprets Shay logic embedded in .shui with its .shui
 out=$("$TMP/integrated-ui-app") || fail "run compiled .shui logic"
 [ "$out" = "UI method belongs to Shay" ] || fail "compiled .shui runtime output"
 pass "gshai compiles .shui through the shared Shay compiler and runtime"
+test -f "$TMP/integrated-ui.html" || fail "browser .shui did not emit its HTML renderer output"
+grep -q '<div id="mainPanel" class="shay-square">' "$TMP/integrated-ui.html" || fail "browser renderer did not emit the declared square"
+grep -q 'data-intercative="yes"' "$TMP/integrated-ui.html" || fail "browser renderer did not preserve interactive metadata"
+pass "gshai emits browser HTML controls from .shui drawui declarations"
 
 cat > "$TMP/windowsutil.shuil" <<'EOF'
 #*$ContrlDefine <windows>
@@ -1168,5 +1172,9 @@ EOF
 out=$("$SHAII" "$TMP/windows-ui.shui") || fail "shaii runs Windows .shui logic"
 [ "$out" = "Windows method belongs to Shay" ] || fail "Windows .shui runtime output"
 pass "browser and Windows UI class activation route through Shay's existing class runtime"
+test -f "$TMP/windows-ui.cs" || fail "Windows .shui did not emit its C# renderer output"
+grep -q 'new Panel' "$TMP/windows-ui.cs" || fail "Windows renderer did not emit a Panel"
+grep -q 'new Button' "$TMP/windows-ui.cs" || fail "Windows renderer did not emit a Button"
+pass "gshai emits native Windows Forms control source from .shui drawui declarations"
 
 printf '\nAll Shay toolchain tests passed.\n'

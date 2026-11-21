@@ -848,6 +848,43 @@ int main(int argc,char**argv){
   print_diagnostics(context);
   for(const auto&diagnostic:context.diagnostics)if(!diagnostic.warning)return 1;
  }
+ struct UiArtifact{fs::path path;std::string content;};
+ std::vector<UiArtifact> ui_artifacts;
+ if(!object_mode){
+  for(const auto&input:inputs){
+   if(input.extension()!=".shui")continue;
+   std::ifstream app_file(input,std::ios::binary);
+   if(!app_file){std::cerr<<"gshai: cannot reopen UI source '"<<input.string()<<"' for rendering\n";return 1;}
+   const std::string app_source((std::istreambuf_iterator<char>(app_file)),{});
+   std::smatch adapter_match;
+   const std::regex adapter_pattern(R"REGEX(\*#uiContrl\s+"([^"]+\.shuil)")REGEX");
+   if(!std::regex_search(app_source,adapter_match,adapter_pattern)){
+    std::cerr<<input.string()<<":1: error: missing *#uiContrl adapter reference\n";return 1;
+   }
+   const fs::path adapter_path=input.parent_path()/adapter_match[1].str();
+   std::ifstream adapter_file(adapter_path,std::ios::binary);
+   if(!adapter_file){std::cerr<<input.string()<<":1: error: cannot open platform adapter '"<<adapter_path.string()<<"'\n";return 1;}
+   const std::string adapter_source((std::istreambuf_iterator<char>(adapter_file)),{});
+   shay::ui::language::AdapterConfig adapter;
+   shay::ui::language::Result adapter_result;
+   shay::ui::language::inspect_adapter(adapter_source,adapter,adapter_result);
+   if(!adapter_result.ok()){
+    for(const auto&diagnostic:adapter_result.diagnostics)
+     std::cerr<<adapter_path.string()<<":"<<diagnostic.line<<": error: "<<diagnostic.message<<"\n";
+    return 1;
+   }
+   std::string generated,generated_extension;
+   shay::ui::language::Result generation_result;
+   if(!shay::ui::language::generate_output(app_source,adapter,input.stem().string(),generated,generated_extension,generation_result)){
+    for(const auto&diagnostic:generation_result.diagnostics)
+     std::cerr<<input.string()<<":"<<diagnostic.line<<": error: "<<diagnostic.message<<"\n";
+    return 1;
+   }
+   fs::path generated_path=input;
+   generated_path.replace_extension(generated_extension);
+   ui_artifacts.push_back({generated_path,std::move(generated)});
+  }
+ }
  const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();const fs::path temp=fs::temp_directory_path()/("shay-build-"+std::to_string(stamp)+".cpp");
  if(!write_translation(context,temp,!object_mode,object_mode?object_entry_symbol(output):"shay_program_entry")){std::cerr<<"gshai: cannot write temporary translation unit\n";return 1;}
  const char*configured=std::getenv("CXX");const std::string cxx=configured&&*configured?configured:"c++";
@@ -871,5 +908,12 @@ int main(int argc,char**argv){
 #endif
  std::error_code ignored;fs::remove(temp,ignored);
  if(status!=0){fs::remove(output,ignored);std::cerr<<"gshai: native compiler/linker failed\n";return 1;}
+ for(const auto&artifact:ui_artifacts){
+  std::ofstream generated_file(artifact.path,std::ios::binary|std::ios::trunc);
+  if(!generated_file){std::cerr<<"gshai: cannot write generated UI file '"<<artifact.path.string()<<"'\n";return 1;}
+  generated_file.write(artifact.content.data(),static_cast<std::streamsize>(artifact.content.size()));
+  if(!generated_file){std::cerr<<"gshai: failed while writing generated UI file '"<<artifact.path.string()<<"'\n";return 1;}
+  std::cout<<"gshai: generated UI source "<<artifact.path.string()<<'\n';
+ }
  std::cout<<"gshai: wrote "<<(object_mode?"object file ":"executable ")<<output.string()<<'\n';return 0;
 }
