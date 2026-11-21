@@ -211,3 +211,15 @@ runproc/>"cmake", "--version"
 ```
 
 The statement prints the child process exit code. A missing executable returns `127`; arguments are passed as separate values rather than concatenated into a shell command.
+
+
+## JSON parsing and serialization
+
+```shay
+jsonparse/>"{ \"name\" : \"Ada\", \"items\" : [1, true, null] }", document
+jsonstringify/>document
+```
+
+`jsonparse/>` accepts a quoted JSON document, validates nested objects and arrays, and stores its compact JSON representation in a Shay string variable. `jsonstringify/>` writes that validated JSON representation. Malformed JSON is rejected by both `shaii` and `gshai` with a byte-offset diagnostic.
+
+This initial API is text-backed: JSON object/array member access and mutation are separate follow-up work.
