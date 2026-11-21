@@ -34,6 +34,8 @@ struct Context{
  std::unordered_set<std::string> handled_failures;
  std::vector<std::string> active_functions;
  bool exit_requested=false;
+ std::string error_category,error_message;
+ std::size_t error_line=0;
  std::string log_file_name="shay";
  std::string log_file_extension=".log";
  bool log_file_name_set=false;
@@ -208,6 +210,23 @@ auto set=ctx.sets.find(name);
      if(s.kind==shay::StatementKind::SetAdd){if(!ctx.check_only&&item==set->second.end())set->second.push_back(s.value);}
      else if(s.kind==shay::StatementKind::SetRemove){if(item==set->second.end()){failure="unknown set item '"+s.value+"'";success=false;}else if(!ctx.check_only)set->second.erase(item);}
      else if(!ctx.check_only)shay_runtime_write((item==set->second.end()?"false\n":"true\n"));
+    }
+    break;
+   }
+   case shay::StatementKind::ThrowError:
+    ctx.error_category=s.error_category;ctx.error_message=s.value;ctx.error_line=s.line;
+    failure=s.error_category+": "+s.value;success=false;break;
+   case shay::StatementKind::TryCatch:{
+    std::string nestedFailure;
+    const bool nestedOk=execute_statements(s.body,ctx,file,scope,nestedFailure,return_flow);
+    if(!nestedOk){
+     if(ctx.exit_requested||(return_flow&&return_flow->returned)){failure=nestedFailure;success=false;break;}
+     if(ctx.error_category.empty()){ctx.error_category="runtime";ctx.error_message=nestedFailure;ctx.error_line=s.line;}
+     ctx.values[s.name]=ctx.error_category+": "+ctx.error_message;
+     ctx.numbers.erase(s.name);ctx.lists.erase(s.name);ctx.maps.erase(s.name);ctx.sets.erase(s.name);
+     ctx.error_category.clear();ctx.error_message.clear();ctx.error_line=0;
+     std::string catchFailure;
+     if(!execute_statements(s.else_body,ctx,file,scope,catchFailure,return_flow)){failure=catchFailure;success=false;}
     }
     break;
    }
@@ -408,6 +427,21 @@ auto set=ctx.sets.find(name);
      if(s.kind==shay::StatementKind::SetAdd){if(!ctx.check_only&&item==set->second.end())set->second.push_back(s.value);}
      else if(s.kind==shay::StatementKind::SetRemove){if(item==set->second.end())diagnose(ctx,input,s.line,"unknown set item '"+s.value+"'");else if(!ctx.check_only)set->second.erase(item);}
      else if(!ctx.check_only)shay_runtime_write(item==set->second.end()?"false\n":"true\n");
+    }
+    break;
+   }
+   case shay::StatementKind::ThrowError:
+    diagnose(ctx,input,s.line,s.error_category+": "+s.value);break;
+   case shay::StatementKind::TryCatch:{
+    NumberScope scope;std::string nestedFailure;
+    if(!execute_statements(s.body,ctx,input,scope,nestedFailure)){
+     if(ctx.exit_requested){diagnose(ctx,input,s.line,nestedFailure);break;}
+     if(ctx.error_category.empty()){ctx.error_category="runtime";ctx.error_message=nestedFailure;ctx.error_line=s.line;}
+     ctx.values[s.name]=ctx.error_category+": "+ctx.error_message;
+     ctx.numbers.erase(s.name);ctx.lists.erase(s.name);ctx.maps.erase(s.name);ctx.sets.erase(s.name);
+     ctx.error_category.clear();ctx.error_message.clear();ctx.error_line=0;
+     std::string catchFailure;
+     if(!execute_statements(s.else_body,ctx,input,scope,catchFailure))diagnose(ctx,input,s.line,catchFailure);
     }
     break;
    }
