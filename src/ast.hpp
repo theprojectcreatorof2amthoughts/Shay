@@ -14,6 +14,8 @@ struct Statement {
     bool has_return = false;
     bool dynamic_value = false;
     bool external_import = false;
+    bool list_value = false;
+    std::vector<std::string> list_items;
 };
 struct ParseError { std::size_t line; std::size_t column; std::string message; };
 struct Program { std::vector<Statement> statements; std::vector<ParseError> errors; };
