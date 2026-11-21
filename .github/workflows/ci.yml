@@ -57,7 +57,7 @@ jobs:
             if (-not $ready) { throw "Windows Shay runtime bridge did not start" }
             Invoke-WebRequest -UseBasicParsing -Method Post -ContentType "text/plain" -Body "$token|displayName=CI" "http://127.0.0.1:18765/set" | Out-Null
             $event = Invoke-WebRequest -UseBasicParsing -Method Post -ContentType "text/plain" -Body "$token|doCalc" "http://127.0.0.1:18765/event"
-            if ($event.Content -ne "CI") { throw "Windows UI event did not execute Shay method: $($event.Content)" }
+            if ($event.Content.Trim() -ne "CI") { throw "Windows UI event did not execute Shay method: $($event.Content)" }
           } finally {
             Stop-Process -Id $runtime.Id -Force -ErrorAction SilentlyContinue
           }
