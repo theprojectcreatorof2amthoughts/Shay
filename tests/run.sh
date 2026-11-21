@@ -1157,7 +1157,7 @@ pass "runproc launches executables with explicit argv and returns their exit sta
 
 cat > "$TMP/directive-app.shui" <<'EOF'
 $useentry UI(Browser)
-$browsElementapp <{
+!%#browsElementapp <{
     *#uiContrl "browserutil.shuil"
     *!#classUideclr !u#browserCalc
         $uiSet 0
@@ -1196,7 +1196,7 @@ pass "shui validates platform, translation method, UI language, and JavaScript a
 
 cat > "$TMP/bad-ui-class.shui" <<'EOF'
 $useentry UI(Browser)
-$browsElementapp <{
+!%#browsElementapp <{
     *!#classUideclr !browserCalc
     finish
 }>
@@ -1228,7 +1228,7 @@ finish
 EOF
 cat > "$TMP/windows-app.shui" <<'EOF'
 $useentry UI(Windows)
-$browsElementapp <{
+!%#browsElementapp <{
     *#uiContrl "windowsutil.shuil"
     *!#classUideclr !u#desktopPanel
         $uiSet 0
