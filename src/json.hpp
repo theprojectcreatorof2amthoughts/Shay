@@ -17,7 +17,7 @@ private:
  void skip(){while(at_<source_.size()&&(source_[at_]==' '||source_[at_]=='\t'||source_[at_]=='\r'||source_[at_]=='\n'))++at_;}
  void set_error(const std::string&m){if(error_.empty())error_=m+" at byte "+std::to_string(at_);}
  bool fail(std::string&out,std::string&error){out.clear();error=error_;return false;}
- bool take(char c){skip();if(at_<source_.size()&&source_[at_]==c){output_+=c;++at_;return true;}return false;}
+ bool take(char c){skip();if(at_<source_.size()&&source_[at_]==c){++at_;return true;}return false;}
  bool string_value(){
   if(at_>=source_.size()||source_[at_]!='"'){set_error("expected a JSON string");return false;}
   const std::size_t start=at_++;
