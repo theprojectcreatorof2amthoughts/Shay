@@ -769,6 +769,27 @@ printf 'Linked directly from a .sho object\nSecond object contributes code\n' > 
 cmp "$TMP/multi-object-expected.txt" "$TMP/multi-object-actual.txt" || fail "multi-object execution order and output"
 pass "gshai links multiple .sho objects and executes their code in input order"
 
+cat > "$TMP/project-first.shay" <<'EOF'
+brew project_message = "Shared project variable"
+instxt/>"First source executed"
+EOF
+cat > "$TMP/project-second.shay" <<'EOF'
+insval/>project_message
+instxt/>"Second source executed"
+EOF
+"$GSHAI" -o "$TMP/multi-source-app" "$TMP/project-first.shay" "$TMP/project-second.shay" || fail "compile multiple Shay source files"
+out=$("$TMP/multi-source-app") || fail "run multiple-source executable"
+printf '%s\\n' "$out" > "$TMP/multi-source-actual.txt"
+printf 'First source executed\\nShared project variable\\nSecond source executed\\n' > "$TMP/multi-source-expected.txt"
+cmp "$TMP/multi-source-expected.txt" "$TMP/multi-source-actual.txt" || fail "multi-source execution order and shared variables"
+pass "gshai compiles multiple .shay roots into one executable with shared program state"
+
+"$GSHAI" -ob "$TMP/multi-source-project.sho" "$TMP/project-first.shay" "$TMP/project-second.shay" || fail "compile multiple Shay sources into one .sho object"
+"$GSHAI" -o "$TMP/multi-source-object-app" "$TMP/multi-source-project.sho" || fail "link multi-source .sho object"
+out=$("$TMP/multi-source-object-app") || fail "run multi-source .sho executable"
+cmp "$TMP/multi-source-expected.txt" <(printf '%s\\n' "$out") || fail "multi-source .sho output"
+pass "gshai emits one linkable .sho object from multiple source files"
+
 
 cat > "$TMP/log-variable-settings.shay" <<'EOF'
 instxt/>"Log extension (.shl):"

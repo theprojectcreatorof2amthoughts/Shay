@@ -585,8 +585,8 @@ int main(int argc,char**argv){
  }
  if(positional.size()==1&&positional[0]=="--version"){std::cout<<"gshai 0.4.0 (Shay compiler)\n";return 0;}
  if(positional.size()==1&&(positional[0]=="--help"||positional[0]=="-h")){
-  std::cout<<"Usage:\n  gshai [Shay flags] -ob [output.sho] program.shay|program.shaz   Compile a native object\n  gshai [Shay flags] -o  [output]     program.shay|program.shaz   Compile and link an executable\n  gshai [Shay flags] -o  [output]     program.sho [more.sho ...]   Link existing objects\n  gshai --version\n\n"
-           <<"-ob emits .sho object files; -o compiles source or links one or more .sho objects in order.\n"
+  std::cout<<"Usage:\n  gshai [Shay flags] -ob [output.sho] source.shay|source.shaz [more sources ...]\n  gshai [Shay flags] -o  [output]     source.shay|source.shaz [more sources ...]\n  gshai [Shay flags] -o  [output]     program.sho [more.sho ...]   Link existing objects\n  gshai --version\n\n"
+           <<"-ob compiles one or more source files into a .sho object; -o compiles source files or links .sho objects in order.\n"
            <<"Shay compiler flags (may appear anywhere):\n"
            <<"  --shaywall    Enable common Shay warnings, including unused variables\n"
            <<"  --shaywextra  Enable additional Shay warnings\n"
@@ -614,11 +614,11 @@ int main(int argc,char**argv){
   std::unordered_set<std::string> symbols;
   for(const auto&input:inputs)if(!symbols.insert(object_entry_symbol(input)).second){std::cerr<<"gshai: object files have colliding entry names (same filename stem)\n";return 2;}
  }else{
-  if(inputs.size()!=1){std::cerr<<"gshai: source compilation accepts exactly one .shay or .shaz input\n";return 2;}
-  const fs::path&input=inputs.front();
-  if(input.extension()!=".shay"&&input.extension()!=".shaz"){std::cerr<<"gshai: input must be a .shay, .shaz, or (with -o) .sho file\n";return 2;}
-  if(output.empty()){output=input.parent_path()/input.stem();if(object_mode)output+=".sho";}
-  else if(object_mode&&output.extension()!=".sho"){std::cerr<<"gshai: -ob output must use the .sho extension\n";return 2;}
+  if(output.empty()&&inputs.size()!=1){std::cerr<<"gshai: multiple source files require an explicit output path\\n";return 2;}
+  for(const auto&input:inputs)
+   if(input.extension()!=".shay"&&input.extension()!=".shaz"){std::cerr<<"gshai: source inputs must be .shay or .shaz files\\n";return 2;}
+  if(output.empty()){output=inputs.front().parent_path()/inputs.front().stem();if(object_mode)output+=".sho";}
+  else if(object_mode&&output.extension()!=".sho"){std::cerr<<"gshai: -ob output must use the .sho extension\\n";return 2;}
  }
  if(link_mode){
   const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();
@@ -651,8 +651,8 @@ int main(int argc,char**argv){
   if(status!=0){fs::remove(output,ignored);std::cerr<<"gshai: native linker failed\n";return 1;}
   std::cout<<"gshai: linked executable "<<output.string()<<" from "<<inputs.size()<<" .sho object(s)\n";return 0;
  }
- const fs::path&input=inputs.front();
- BuildContext context;load_file(input,context);
+ BuildContext context;
+ for(const auto&input:inputs)load_file(input,context);
  for(const auto&entry:context.pending_function_validation){
   const auto&file=entry.first;const auto&s=entry.second;
   std::unordered_set<std::string> parameters(s.parameters.begin(),s.parameters.end());

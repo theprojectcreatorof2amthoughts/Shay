@@ -141,6 +141,10 @@ Imports first resolve beside the importing file. `$shaiiport` additionally searc
 - `gshai -o program.shay` emits a standalone executable named `program`.
 - `gshai -o output-path program.shay` chooses the executable path.
 - `gshai -ob output.sho program.shay` chooses the object path.
+- `gshai -o output src/main.shay src/ui.shay src/tasks.shaz` compiles multiple source roots into one executable in the supplied order.
+- `gshai -ob output.sho src/main.shay src/ui.shay` compiles multiple source roots into one relocatable object.
+
+When multiple source roots are supplied, they share one program namespace and runtime state. Imports are resolved relative to the file that contains each import, and duplicate imports are loaded once. An explicit output path is required for multi-source compilation.
 
 The compiler currently translates the supported Shay statement subset into native C++ code and invokes the host C++ compiler/linker. It embeds the small runtime write primitive into generated outputs. This is a native compilation workflow, but it is not yet a direct machine-code backend.
 
