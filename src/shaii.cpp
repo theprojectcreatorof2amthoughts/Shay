@@ -144,7 +144,7 @@ bool execute_statements(const std::vector<shay::Statement>&statements,Context&ct
    case shay::StatementKind::OutputValue:{
     for(const auto&name:s.output_names){
      auto list=ctx.lists.find(name);
-     if(list!=ctx.lists.end()){if(!ctx.check_only)for(const auto&item:list->second)shay_runtime_write((item+"\\n").c_str());continue;}
+     if(list!=ctx.lists.end()){if(!ctx.check_only)for(const auto&item:list->second)shay_runtime_write((item+"\n").c_str());continue;}
      auto number=scope.find(name);
      if(number!=scope.end()){
       if(!ctx.check_only)shay_runtime_write((number_text(number->second)+"\n").c_str());
@@ -301,10 +301,10 @@ void execute_file(const fs::path&input,Context&ctx){
    case shay::StatementKind::OutputValue:{
     for(const auto&name:s.output_names){
      auto list=ctx.lists.find(name);
-     if(list!=ctx.lists.end()){if(!ctx.check_only)for(const auto&item:list->second)shay_runtime_write((item+"\\n").c_str());continue;}
+     if(list!=ctx.lists.end()){if(!ctx.check_only)for(const auto&item:list->second)shay_runtime_write((item+"\n").c_str());continue;}
      auto found=ctx.values.find(name);
      if(found==ctx.values.end())diagnose(ctx,input,s.line,"unknown variable '"+name+"'");
-     else if(!ctx.check_only)shay_runtime_write((found->second+"\\n").c_str());
+     else if(!ctx.check_only)shay_runtime_write((found->second+"\n").c_str());
     }
     break;
    }
