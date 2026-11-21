@@ -423,6 +423,10 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
     }
     break;
    }
+   case shay::StatementKind::JsonParse:
+    out<<indent<<"values["<<cpp_string(s.name)<<"] = "<<cpp_string(s.value)<<";\\n";break;
+   case shay::StatementKind::JsonStringify:
+    out<<indent<<"{ auto shay_json = values.find("<<cpp_string(s.name)<<"); if(shay_json == values.end()) throw std::runtime_error("<<cpp_string("unknown JSON variable '"+s.name+"'")<<"); shay_runtime_write((shay_json->second + "<<cpp_string("\\n")<<").c_str()); }\\n";break;
    case shay::StatementKind::FileRead:
     out<<indent<<"{ std::ifstream shay_file("<<cpp_string(s.path)<<", std::ios::binary); if(!shay_file) throw ShayError("<<cpp_string("io")<<", "<<cpp_string("cannot read file '"+s.path+"'")<<", "<<s.line<<"); std::ostringstream shay_contents; shay_contents<<shay_file.rdbuf(); values["<<cpp_string(s.name)<<"]=shay_contents.str(); }\n";break;
    case shay::StatementKind::FileWrite:
