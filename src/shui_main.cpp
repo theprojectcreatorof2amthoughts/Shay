@@ -40,7 +40,7 @@ int main(int argc,char**argv){
   for(const auto&e:checked.diagnostics)std::cerr<<input.string()<<":"<<e.line<<":1: error: "<<e.message<<"\n";
   if(!checked.ok())return 1;
   std::smatch adapter_match;
-  if(!std::regex_search(source,adapter_match,std::regex(R"(\*#uiContrl\s+"([^"]+\.shuil)")"))){
+  if(!std::regex_search(source,adapter_match,std::regex(R"REGEX(\*#uiContrl\s+"([^"]+\.shuil)")REGEX"))){
    std::cerr<<"shui: .shui app must select a .shuil adapter with *#uiContrl\n";return 1;
   }
   fs::path adapter_path=input.parent_path()/adapter_match[1].str();
