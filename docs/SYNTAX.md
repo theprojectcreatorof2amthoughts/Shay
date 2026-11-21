@@ -12,13 +12,17 @@ brew username = "Alex"
 insval/>username
 ```
 
-The parser accepts string, numeric (including negative), and boolean literals for `brew`. It also accepts list literals containing strings, numbers, and booleans; `insval/>` prints list items in order, one per line. Empty lists are valid.
+The parser accepts string, numeric (including negative), and boolean literals for `brew`. It also accepts list literals containing strings, numbers, and booleans; `insval/>` prints list items in order, one per line. Empty lists are valid. List values support zero-based indexing with `insval/>items[0]`, appending with `listadd/>items, "value"`, replacing with `listset/>items, 0, "value"`, and removing with `listremove/>items, 0`. Out-of-range indices produce runtime errors.
 
 ```shay
 brew names = ["Ada", "Grace", "Linus"]
 brew scores = [10, 20, -3, true]
 insval/>names
 insval/>scores
+insval/>names[0]
+listadd/>names, "Linus"
+listset/>names, 1, "Grace Hopper"
+listremove/>names, 0
 ``` String escapes currently supported are `\\n`, `\\t`, `\\r`, `\\\\`, and `\\"`. Zeccurs files (`.shaz`) are variable-free.
 
 ## Log files
