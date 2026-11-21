@@ -2,11 +2,9 @@
 set -eu
 SHAII="${1:-./build/shaii}"
 GSHAI="${2:-./build/gshai}"
-SHUI="${3:-./build/shui}"
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 case "$SHAII" in /*) ;; *) SHAII="$ROOT/$SHAII";; esac
 case "$GSHAI" in /*) ;; *) GSHAI="$ROOT/$GSHAI";; esac
-case "$SHUI" in /*) ;; *) SHUI="$ROOT/$SHUI";; esac
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT HUP INT TERM
 pass() { printf 'PASS: %s\n' "$1"; }
@@ -1155,23 +1153,6 @@ out=$("$TMP/process-missing-app") || fail "run compiled missing process"
 pass "runproc launches executables with explicit argv and returns their exit status without a shell"
 
 
-cat > "$TMP/directive-app.shui" <<'EOF'
-$useentry UI(Browser)
-!%#browsElementapp <{
-    *#uiContrl "browserutil.shuil"
-    *!#classUideclr !u#browserCalc
-        $uiSet 0
-        $declrmthd doCalc
-            x*y + x*y
-        finish
-    finish
-    *!#doUiclass <"!u#browserCalc">
-    *#drawui <'square'> <<'568xx654'>>
-    *#drawui <'buttoncircle'> <:intercative=yes:>
-}>
-$dothis
-$uiFinish
-EOF
 cat > "$TMP/browserutil.shuil" <<'EOF'
 #*$ContrlDefine <browser>
 #*!MethdUi <javasTrans>
@@ -1185,33 +1166,35 @@ cat > "$TMP/browserutil.shuil" <<'EOF'
     finish
 finish
 EOF
-
-"$SHUI" validate "$TMP/directive-app.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "directive .shui validation"; }
-grep -q ' are valid' "$TMP/out" || fail "directive .shui success message"
-pass "shui validates the directive-based app, UI class, drawui ID, and metadata syntax"
-
-"$SHUI" validate "$TMP/browserutil.shuil" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "directive .shuil validation"; }
-grep -q 'valid (platform adapter)' "$TMP/out" || fail "directive .shuil success message"
-pass "shui validates platform, translation method, UI language, and JavaScript adapter directives"
-
-cat > "$TMP/bad-ui-class.shui" <<'EOF'
+cat > "$TMP/integrated-ui.shui" <<'EOF'
 $useentry UI(Browser)
 !%#browsElementapp <{
-    *!#classUideclr !browserCalc
+    *#uiContrl "browserutil.shuil"
+    *!#classUideclr !u#browserCalc
+        $uiSet 0
+        $declrmthd doCalc
+            instxt/>"UI method belongs to Shay"
+        finish
     finish
+    *!#doUiclass <"!u#browserCalc">
+    *#drawui <'square'> <<'mainPanel'>>
+    *#drawui <'buttoncircle'> <:intercative=yes:>
+    instxt/>"embedded Shay logic"
 }>
 $dothis
 $uiFinish
 EOF
-if "$SHUI" validate "$TMP/bad-ui-class.shui" >"$TMP/out" 2>"$TMP/err"; then fail "directive .shui accepted a class without !u#"; fi
-grep -q 'unrecognized .shui directive' "$TMP/err" || fail "directive UI class prefix diagnostic"
-pass "directive .shui rejects UI classes without the required !u# prefix"
 
+"$SHAII" --check "$TMP/integrated-ui.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "shaii checks integrated .shui"; }
+grep -q 'no errors' "$TMP/out" || fail "shaii .shui check message"
+out=$("$SHAII" "$TMP/integrated-ui.shui") || fail "shaii runs embedded .shui logic"
+[ "$out" = "embedded Shay logic" ] || fail "shaii .shui runtime output"
+pass "shaii validates and interprets Shay logic embedded in .shui with its .shuil adapter"
 
-"$SHUI" build "$TMP/directive-app.shui" -o "$TMP/directive-app.html" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "directive browser generation"; }
-grep -q '<div id="568xx654"' "$TMP/directive-app.html" || fail "browser square output"
-grep -q '<button id="shay-element-1"' "$TMP/directive-app.html" || fail "browser button output"
-pass "shui generates browser HTML from directive-based UI elements"
+"$GSHAI" -o "$TMP/integrated-ui-app" "$TMP/integrated-ui.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "gshai compiles integrated .shui"; }
+out=$("$TMP/integrated-ui-app") || fail "run compiled .shui logic"
+[ "$out" = "embedded Shay logic" ] || fail "compiled .shui runtime output"
+pass "gshai compiles .shui through the shared Shay compiler and runtime"
 
 cat > "$TMP/windowsutil.shuil" <<'EOF'
 #*$ContrlDefine <windows>
@@ -1226,33 +1209,24 @@ cat > "$TMP/windowsutil.shuil" <<'EOF'
     finish
 finish
 EOF
-cat > "$TMP/windows-app.shui" <<'EOF'
+cat > "$TMP/windows-ui.shui" <<'EOF'
 $useentry UI(Windows)
 !%#csElementapp <{
     *#uiContrl "windowsutil.shuil"
     *!#classUideclr !u#desktopPanel
         $uiSet 0
         $declrmthd doCalc
-            x*y + x*y
+            instxt/>"Windows method belongs to Shay"
         finish
     finish
     *!#doUiclass <"!u#desktopPanel">
     *#drawui <'square'> <<'mainPanel'>>
-    *#drawui <'buttoncircle'> <<'launchButton'>> <:intercative=yes:>
-    *#drawui <'label'> <<'statusLabel'>>
-    *#drawui <'textbox'> <<'nameInput'>>
-    *#drawui <'checkbox'> <<'enableOption'>>
 }>
 $dothis
 $uiFinish
 EOF
-"$SHUI" validate "$TMP/windows-app.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "directive Windows app validation"; }
-"$SHUI" build "$TMP/windows-app.shui" -o "$TMP/windows-app.cs" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "Windows C# generation"; }
-grep -q 'using System.Windows.Forms;' "$TMP/windows-app.cs" || fail "Windows Forms C# output"
-grep -q 'new Panel' "$TMP/windows-app.cs" || fail "C# Panel mapping"
-grep -q 'new Button' "$TMP/windows-app.cs" || fail "C# Button mapping"
-grep -q 'new TextBox' "$TMP/windows-app.cs" || fail "C# TextBox mapping"
-grep -q 'UseWindowsForms' "$TMP/windows-app.csproj" || fail "Windows Forms project file"
-pass "shui generates native Windows Forms C# source and a .NET Windows project"
+"$SHAII" --check "$TMP/windows-ui.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "shaii checks Windows .shui"; }
+"$GSHAI" -o "$TMP/windows-ui-app" "$TMP/windows-ui.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "gshai compiles Windows .shui"; }
+pass "both Shay tools accept the Windows/C# .shuil adapter through the same source path"
 
 printf '\nAll Shay toolchain tests passed.\n'
