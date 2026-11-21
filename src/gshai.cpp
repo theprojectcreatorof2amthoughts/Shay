@@ -614,9 +614,9 @@ int main(int argc,char**argv){
   std::unordered_set<std::string> symbols;
   for(const auto&input:inputs)if(!symbols.insert(object_entry_symbol(input)).second){std::cerr<<"gshai: object files have colliding entry names (same filename stem)\n";return 2;}
  }else{
-  if(output.empty()&&inputs.size()!=1){std::cerr<<"gshai: multiple source files require an explicit output path\\n";return 2;}
+  if(output.empty()&&inputs.size()!=1){std::cerr<<"gshai: multiple source files require an explicit output path\n";return 2;}
   for(const auto&input:inputs)
-   if(input.extension()!=".shay"&&input.extension()!=".shaz"){std::cerr<<"gshai: source inputs must be .shay or .shaz files\\n";return 2;}
+   if(input.extension()!=".shay"&&input.extension()!=".shaz"){std::cerr<<"gshai: source inputs must be .shay or .shaz files\n";return 2;}
   if(output.empty()){output=inputs.front().parent_path()/inputs.front().stem();if(object_mode)output+=".sho";}
   else if(object_mode&&output.extension()!=".sho"){std::cerr<<"gshai: -ob output must use the .sho extension\\n";return 2;}
  }
