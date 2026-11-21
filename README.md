@@ -13,7 +13,7 @@ Shay has its own original grammar and vocabulary, including `brew` for variable 
 |---|---|
 | `.shay` | Shay program |
 | `.shaii` | Shay library |
-| `.shaz` | Zeccur task file |
+| `.shaz` | Zeccur task file |\n| `.shui` | UI application source |\n| `.shuil` | Platform UI translation/control adapter |
 | `.sho` | Compiled Shay object file (native relocatable object) |
 
 ## Vocabulary
@@ -211,3 +211,10 @@ The long-term goal is to grow Shay into a complete, practical, general-purpose p
 - Make/CMake builds and automated regression/diagnostic tests.
 
 These are target capabilities, not claims that the bootstrap currently implements them.
+
+
+## UI applications
+
+Shay UI projects use `.shui` application files and `.shuil` platform adapters. The directive-based syntax uses `$useentry UI(Target)`, `$browsElementapp <{`, UI classes named with `!u#`, and `*#drawui` elements. Platform adapters select a target, translation method, and human UI language. See [`docs/SHUI_SPEC.md`](docs/SHUI_SPEC.md) and the samples [`examples/browser-demo.shui`](examples/browser-demo.shui) and [`examples/browserutil.shuil`](examples/browserutil.shuil).
+
+The `shui validate file.shui` and `shui validate file.shuil` commands validate the directive-based syntax. The legacy `$app { ... }` format still supports the existing browser/Win32 prototype. Directive-based translation and app execution are not yet enabled; the validator reports this explicitly if `build` or `run` is requested for a directive-based file.
