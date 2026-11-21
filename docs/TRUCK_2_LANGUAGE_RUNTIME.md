@@ -110,3 +110,8 @@ A feature is complete only when:
 - Tests cover valid use, invalid use, edge cases, and error behavior.
 - Existing regression tests pass.
 - The implementation has no platform-specific behavior leaking into shared language semantics.
+
+
+## Initial JSON slice
+
+The current parser accepts `jsonparse/>` with a quoted JSON literal and a destination variable, then stores the validated compact JSON text. `jsonstringify/>` emits that text. This validates JSON grammar, nested arrays/objects, strings, numbers, booleans, and null, but it is not yet a typed JSON value tree and does not yet expose member access or mutation.

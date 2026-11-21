@@ -1,4 +1,5 @@
 #include "parser.hpp"
+#include "json.hpp"
 #include <filesystem>
 #include <functional>
 #include <unordered_set>
@@ -48,6 +49,20 @@ Program Parser::parse(){
     if(!consume(TokenKind::String,"",program.errors,"process arguments must be quoted strings")){valid=false;break;}
     statement.arguments.push_back(previous().text);
    }
+  }else if(match(TokenKind::Identifier,"jsonparse")){
+   statement.kind=StatementKind::JsonParse;
+   valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'jsonparse'");
+   if(valid)valid=consume(TokenKind::String,"",program.errors,"expected a quoted JSON document");
+   if(valid)statement.value=previous().text;
+   if(valid)valid=consume(TokenKind::Symbol,",",program.errors,"expected ',' after JSON document");
+   if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected a variable name to receive parsed JSON");
+   if(valid)statement.name=previous().text;
+   if(valid){std::string compact,error_message;if(!json::compact(statement.value,compact,error_message)){error(program.errors,"invalid JSON: "+error_message);valid=false;}else statement.value=std::move(compact);}
+  }else if(match(TokenKind::Identifier,"jsonstringify")){
+   statement.kind=StatementKind::JsonStringify;
+   valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'jsonstringify'");
+   if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected a JSON variable name");
+   if(valid)statement.name=previous().text;
   }else if(match(TokenKind::Identifier,"fileread")||match(TokenKind::Identifier,"filewrite")||match(TokenKind::Identifier,"fileappend")||match(TokenKind::Identifier,"fileexists")||match(TokenKind::Identifier,"filedelete")||match(TokenKind::Identifier,"dircreate")||match(TokenKind::Identifier,"direxists")){
    const std::string operation=previous().text;
    statement.kind=operation=="fileread"?StatementKind::FileRead:(operation=="filewrite"?StatementKind::FileWrite:(operation=="fileappend"?StatementKind::FileAppend:(operation=="fileexists"?StatementKind::FileExists:(operation=="filedelete"?StatementKind::FileDelete:(operation=="dircreate"?StatementKind::DirectoryCreate:StatementKind::DirectoryExists)))));
