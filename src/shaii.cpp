@@ -246,6 +246,16 @@ auto set=ctx.sets.find(name);
     if(!ctx.check_only){const int exit_code=run_process(s.path,s.arguments);shay_runtime_write((std::to_string(exit_code)+"\n").c_str());}
     break;
    }
+   case shay::StatementKind::JsonParse:{
+    ctx.values[s.name]=s.value;ctx.numbers.erase(s.name);ctx.lists.erase(s.name);ctx.maps.erase(s.name);ctx.sets.erase(s.name);
+    break;
+   }
+   case shay::StatementKind::JsonStringify:{
+    auto found=ctx.values.find(s.name);
+    if(found==ctx.values.end()){failure="unknown JSON variable '"+s.name+"'";success=false;}
+    else if(!ctx.check_only)shay_runtime_write((found->second+"\\n").c_str());
+    break;
+   }
    case shay::StatementKind::FileRead:{
     std::ifstream input(s.path,std::ios::binary);
     if(!input){ctx.error_category="io";ctx.error_message="cannot read file '"+s.path+"'";ctx.error_line=s.line;failure=ctx.error_category+": "+ctx.error_message;success=false;break;}
