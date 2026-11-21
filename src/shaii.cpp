@@ -147,8 +147,8 @@ bool execute_statements(const std::vector<shay::Statement>&statements,Context&ct
      if(list!=ctx.lists.end()){
       if(s.output_indexed){
        if(s.list_index>=list->second.size()){failure="list index "+std::to_string(s.list_index)+" is out of range for '"+name+"'";success=false;break;}
-       if(!ctx.check_only)shay_runtime_write((list->second[s.list_index]+"\\n").c_str());
-      }else if(!ctx.check_only)for(const auto&item:list->second)shay_runtime_write((item+"\\n").c_str());
+       if(!ctx.check_only)shay_runtime_write((list->second[s.list_index]+"\n").c_str());
+      }else if(!ctx.check_only)for(const auto&item:list->second)shay_runtime_write((item+"\n").c_str());
       continue;
      }
      auto number=scope.find(name);
@@ -321,8 +321,8 @@ void execute_file(const fs::path&input,Context&ctx){
      if(list!=ctx.lists.end()){
       if(s.output_indexed){
        if(s.list_index>=list->second.size()){diagnose(ctx,input,s.line,"list index "+std::to_string(s.list_index)+" is out of range for '"+name+"'");break;}
-       if(!ctx.check_only)shay_runtime_write((list->second[s.list_index]+"\\n").c_str());
-      }else if(!ctx.check_only)for(const auto&item:list->second)shay_runtime_write((item+"\\n").c_str());
+       if(!ctx.check_only)shay_runtime_write((list->second[s.list_index]+"\n").c_str());
+      }else if(!ctx.check_only)for(const auto&item:list->second)shay_runtime_write((item+"\n").c_str());
       continue;
      }
      auto found=ctx.values.find(name);
