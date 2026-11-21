@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <regex>
 #include <sstream>
 
 namespace fs=std::filesystem;
@@ -26,21 +27,60 @@ int main(int argc,char**argv){
  fs::path input=argv[2];if(input.extension()!=".shui"&&input.extension()!=".shuil"){std::cerr<<"shui: input must have the .shui or .shuil extension\n";return 2;}
  std::ifstream stream(input,std::ios::binary);if(!stream){std::cerr<<"shui: cannot open '"<<input.string()<<"'\n";return 1;}
  std::ostringstream buffer;buffer<<stream.rdbuf();const std::string source=buffer.str();
- const bool directive_syntax=input.extension()==".shuil"||source.find("$useentry UI(")!=std::string::npos;
- if(directive_syntax){
-  const auto checked=shay::ui::language::validate_source(source,input.extension().string());
+ if(input.extension()==".shuil"){
+  const auto checked=shay::ui::language::validate_source(source,".shuil");
   for(const auto&e:checked.diagnostics)std::cerr<<input.string()<<":"<<e.line<<":1: error: "<<e.message<<"\n";
   if(!checked.ok())return 1;
-  if(command!="validate"){
-   std::cerr<<"shui: directive-based .shui/.shuil syntax validation is implemented; translation/build and runtime execution are the next stage\n";
-   return 2;
-  }
-  std::cout<<"shui: "<<input.string()<<" is valid (directive-based UI syntax)\n";
-  return 0;
+  if(command!="validate"){std::cerr<<"shui: pass the .shui application file to build; .shuil is its platform adapter\n";return 2;}
+  std::cout<<"shui: "<<input.string()<<" is valid (platform adapter)\n";return 0;
  }
- if(input.extension()==".shuil"){
-  std::cerr<<"shui: .shuil files support validation only\\n";
-  return 2;
+ const bool directive_syntax=source.find("$useentry UI(")!=std::string::npos;
+ if(directive_syntax){
+  const auto checked=shay::ui::language::validate_source(source,".shui");
+  for(const auto&e:checked.diagnostics)std::cerr<<input.string()<<":"<<e.line<<":1: error: "<<e.message<<"\n";
+  if(!checked.ok())return 1;
+  std::smatch adapter_match;
+  if(!std::regex_search(source,adapter_match,std::regex(R"(\*#uiContrl\s+"([^"]+\.shuil)")"))){
+   std::cerr<<"shui: .shui app must select a .shuil adapter with *#uiContrl\n";return 1;
+  }
+  fs::path adapter_path=input.parent_path()/adapter_match[1].str();
+  std::ifstream adapter_stream(adapter_path,std::ios::binary);
+  if(!adapter_stream){std::cerr<<"shui: cannot open platform adapter '"<<adapter_path.string()<<"'\n";return 1;}
+  std::ostringstream adapter_buffer;adapter_buffer<<adapter_stream.rdbuf();
+  const std::string adapter_source=adapter_buffer.str();
+  shay::ui::language::AdapterConfig adapter;
+  shay::ui::language::Result adapter_result;
+  if(!shay::ui::language::inspect_adapter(adapter_source,adapter,adapter_result)){
+   for(const auto&e:adapter_result.diagnostics)std::cerr<<adapter_path.string()<<":"<<e.line<<":1: error: "<<e.message<<"\n";
+   return 1;
+  }
+  if(command=="validate"){
+   std::cout<<"shui: "<<input.string()<<" and "<<adapter_path.string()<<" are valid\n";return 0;
+  }
+  if(command=="run"){
+   std::cerr<<"shui: run is not available for directive-based apps yet; build the generated project first\n";return 2;
+  }
+  std::string target=adapter.platform;
+  fs::path output_path;
+  for(int i=3;i<argc;++i){
+   const std::string arg=argv[i];
+   if(arg=="--target"&&i+1<argc)target=argv[++i];
+   else if(arg=="-o"&&i+1<argc)output_path=argv[++i];
+   else{std::cerr<<"shui: unknown or incomplete option '"<<arg<<"'\n";return 2;}
+  }
+  if(target!=adapter.platform){std::cerr<<"shui: selected target '"<<target<<"' does not match adapter platform '"<<adapter.platform<<"'\n";return 2;}
+  std::string generated,extension;
+  shay::ui::language::Result generation;
+  if(!shay::ui::language::generate_output(source,adapter,input.stem().string(),generated,extension,generation)){
+   for(const auto&e:generation.diagnostics)std::cerr<<input.string()<<":"<<e.line<<":1: error: "<<e.message<<"\n";
+   return 1;
+  }
+  if(output_path.empty())output_path=input.parent_path()/(input.stem().string()+extension);
+  std::ofstream generated_file(output_path,std::ios::binary);
+  if(!generated_file){std::cerr<<"shui: cannot write '"<<output_path.string()<<"'\n";return 1;}
+  generated_file<<generated;
+  if(!generated_file){std::cerr<<"shui: failed while writing '"<<output_path.string()<<"'\n";return 1;}
+  std::cout<<"shui: generated "<<adapter.platform<<" UI source "<<output_path.string()<<"\n";return 0;
  }
  shay::Lexer lexer(source);const auto tokens=lexer.scan();if(!lexer.errors().empty()){print_errors(input,lexer.errors());return 1;}
  auto parsed=shay::ui::parse(tokens);if(!parsed.ok()){print_errors(input,parsed.errors);return 1;}
