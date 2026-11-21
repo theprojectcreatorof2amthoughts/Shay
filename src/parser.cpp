@@ -273,6 +273,15 @@ Program Parser::parse(){
    statement.kind=StatementKind::OutputValue;valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'insval'");
    if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected a variable or function name after 'insval/>'");
    if(valid){statement.name=previous().text;statement.output_names.push_back(statement.name);}
+   if(valid&&match(TokenKind::Symbol,"[")){
+    if(!consume(TokenKind::Number,"",program.errors,"expected a non-negative integer list index"))valid=false;
+    else{
+     const std::string index=previous().text;
+     if(index.find_first_not_of("0123456789")!=std::string::npos){error(program.errors,"list index must be a non-negative integer");valid=false;}
+     else{try{statement.list_index=static_cast<std::size_t>(std::stoull(index));statement.output_indexed=true;}catch(...){error(program.errors,"list index is too large");valid=false;}}
+    }
+    if(valid)valid=consume(TokenKind::Symbol,"]",program.errors,"expected ']' after list index");
+   }
    if(valid&&match(TokenKind::Symbol,"(")){
     statement.kind=StatementKind::OutputCall;
     statement.output_names.clear();
@@ -300,6 +309,33 @@ Program Parser::parse(){
       break;
      }
      statement.output_names.push_back(previous().text);
+    }
+   }
+  }else if(match(TokenKind::Identifier,"listadd")||match(TokenKind::Identifier,"listset")||match(TokenKind::Identifier,"listremove")){
+   const std::string operation=previous().text;
+   statement.kind=operation=="listadd"?StatementKind::ListAppend:(operation=="listset"?StatementKind::ListSet:StatementKind::ListRemove);
+   valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after '"+operation+"'");
+   if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected a list variable name");
+   if(valid)statement.name=previous().text;
+   if(valid)valid=consume(TokenKind::Symbol,",",program.errors,"expected ',' after the list variable name");
+   if(valid&&statement.kind==StatementKind::ListAppend){
+    if(match(TokenKind::String))statement.value=previous().text;
+    else if(match(TokenKind::Number)||match(TokenKind::Identifier,"true")||match(TokenKind::Identifier,"false"))statement.value=previous().text;
+    else if(match(TokenKind::Symbol,"-")){if(match(TokenKind::Number))statement.value="-"+previous().text;else{error(program.errors,"expected digits after unary '-'");valid=false;}}
+    else{error(program.errors,"listadd value must be a string, number, or boolean literal");valid=false;}
+   }else if(valid){
+    if(!consume(TokenKind::Number,"",program.errors,"expected a non-negative integer list index"))valid=false;
+    else{
+     const std::string index=previous().text;
+     if(index.find_first_not_of("0123456789")!=std::string::npos){error(program.errors,"list index must be a non-negative integer");valid=false;}
+     else{try{statement.list_index=static_cast<std::size_t>(std::stoull(index));}catch(...){error(program.errors,"list index is too large");valid=false;}}
+    }
+    if(valid&&statement.kind==StatementKind::ListSet){
+     valid=consume(TokenKind::Symbol,",",program.errors,"expected ',' after list index");
+     if(valid&&match(TokenKind::String))statement.value=previous().text;
+     else if(valid&&(match(TokenKind::Number)||match(TokenKind::Identifier,"true")||match(TokenKind::Identifier,"false")))statement.value=previous().text;
+     else if(valid&&match(TokenKind::Symbol,"-")){if(match(TokenKind::Number))statement.value="-"+previous().text;else{error(program.errors,"expected digits after unary '-'");valid=false;}}
+     else if(valid){error(program.errors,"listset value must be a string, number, or boolean literal");valid=false;}
     }
    }
   }else{error(program.errors,"unrecognized Shay statement");valid=false;}
