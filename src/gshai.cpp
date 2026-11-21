@@ -436,6 +436,12 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
     out<<indent<<"{ std::error_code ec; std::filesystem::create_directories("<<cpp_string(s.path)<<",ec); if(ec) throw ShayError("<<cpp_string("io")<<", "<<cpp_string("cannot create directory '"+s.path+"'")<<", "<<s.line<<"); shay_runtime_write(std::filesystem::is_directory("<<cpp_string(s.path)<<")?"<<cpp_string("true\n")<<":"<<cpp_string("false\n")<<"); }\n";break;
    case shay::StatementKind::DirectoryExists:
     out<<indent<<"shay_runtime_write(std::filesystem::is_directory("<<cpp_string(s.path)<<")?"<<cpp_string("true\n")<<":"<<cpp_string("false\n")<<");\n";break;
+   case shay::StatementKind::ProcessRun:{
+    out<<indent<<"shay_runtime_write((std::to_string(shay_run_process("<<cpp_string(s.path)<<", {";
+    for(std::size_t i=0;i<s.arguments.size();++i){if(i)out<<", ";out<<cpp_string(s.arguments[i]);}
+    out<<"})) + "<<cpp_string("\n")<<").c_str());\n";
+    break;
+   }
    case shay::StatementKind::ThrowError:
     out<<indent<<"throw ShayError("<<cpp_string(s.error_category)<<", "<<cpp_string(s.value)<<", "<<s.line<<");\n";break;
    case shay::StatementKind::TryCatch:
@@ -495,9 +501,18 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
 }
 bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,const std::string&entry_symbol){
  std::ofstream out(path,std::ios::binary);if(!out)return false;
- out<<"#include <algorithm>\n#include <cstdio>\n#include <exception>\n#include <fstream>\n#include <filesystem>\n#include <iomanip>\n#include <iostream>\n#include <sstream>\n#include <stdexcept>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n#include <utility>\n#include <vector>\n"
+ out<<"#include <algorithm>\n#include <cstdio>\n#include <exception>\n#include <fstream>\n#include <filesystem>\n#include <cerrno>\n#include <cstdint>\n#ifdef _WIN32\n#include <process.h>\n#else\n#include <sys/types.h>\n#include <sys/wait.h>\n#include <unistd.h>\n#endif\n#include <iomanip>\n#include <iostream>\n#include <sstream>\n#include <stdexcept>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n#include <utility>\n#include <vector>\n"
        "struct ShayExit {};\n"
        "struct ShayError : std::runtime_error { std::string category; std::size_t line; ShayError(std::string c, std::string m, std::size_t l) : std::runtime_error(c + \": \" + m), category(std::move(c)), line(l) {} };\n"
+       "static int shay_run_process(const std::string& program, const std::vector<std::string>& arguments) {\n"
+       " std::vector<std::string> storage; storage.reserve(arguments.size()+1); storage.push_back(program); storage.insert(storage.end(),arguments.begin(),arguments.end());\n"
+       " std::vector<char*> argv; argv.reserve(storage.size()+1); for(auto& arg:storage) argv.push_back(const_cast<char*>(arg.c_str())); argv.push_back(nullptr);\n"
+       "#ifdef _WIN32\n"
+       " const std::intptr_t result=_spawnvp(_P_WAIT,program.c_str(),argv.data()); return result<0?127:static_cast<int>(result);\n"
+       "#else\n"
+       " const pid_t child=fork(); if(child<0)return 127; if(child==0){execvp(program.c_str(),argv.data());_exit(127);} int status=0; while(waitpid(child,&status,0)<0){if(errno!=EINTR)return 127;} if(WIFEXITED(status))return WEXITSTATUS(status); if(WIFSIGNALED(status))return 128+WTERMSIG(status); return 127;\n"
+       "#endif\n"
+       "}\n"
        "[[maybe_unused]] static std::unordered_map<std::string,std::vector<std::string>> shay_lists;\n"
        "[[maybe_unused]] static std::unordered_map<std::string,std::vector<std::pair<std::string,std::string>>> shay_maps;\n"
        "[[maybe_unused]] static std::unordered_map<std::string,std::vector<std::string>> shay_sets;\n"
@@ -603,6 +618,12 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
     out<<"{ std::error_code ec; std::filesystem::create_directories("<<cpp_string(s.path)<<",ec); if(ec) throw ShayError("<<cpp_string("io")<<", "<<cpp_string("cannot create directory '"+s.path+"'")<<", "<<s.line<<"); shay_runtime_write(std::filesystem::is_directory("<<cpp_string(s.path)<<")?"<<cpp_string("true\n")<<":"<<cpp_string("false\n")<<"); }\n";break;
    case shay::StatementKind::DirectoryExists:
     out<<"shay_runtime_write(std::filesystem::is_directory("<<cpp_string(s.path)<<")?"<<cpp_string("true\n")<<":"<<cpp_string("false\n")<<");\n";break;
+   case shay::StatementKind::ProcessRun:{
+    out<<"shay_runtime_write((std::to_string(shay_run_process("<<cpp_string(s.path)<<", {";
+    for(std::size_t i=0;i<s.arguments.size();++i){if(i)out<<", ";out<<cpp_string(s.arguments[i]);}
+    out<<"})) + "<<cpp_string("\n")<<").c_str());\n";
+    break;
+   }
    case shay::StatementKind::ThrowError:
     out<<" throw ShayError("<<cpp_string(s.error_category)<<", "<<cpp_string(s.value)<<", "<<s.line<<");\n";break;
    case shay::StatementKind::TryCatch:

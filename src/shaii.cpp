@@ -5,6 +5,15 @@
 #include "parser.hpp"
 #include "runtime.h"
 #include <algorithm>
+#include <cerrno>
+#include <cstdint>
+#ifdef _WIN32
+#include <process.h>
+#else
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#endif
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -42,6 +51,26 @@ struct Context{
  bool log_file_extension_set=false;
 };
 using NumberScope=std::unordered_map<std::string,double>;
+int run_process(const std::string&program,const std::vector<std::string>&arguments){
+ std::vector<std::string> storage;storage.reserve(arguments.size()+1);storage.push_back(program);
+ storage.insert(storage.end(),arguments.begin(),arguments.end());
+ std::vector<char*> argv;argv.reserve(storage.size()+1);
+ for(auto&arg:storage)argv.push_back(const_cast<char*>(arg.c_str()));
+ argv.push_back(nullptr);
+#ifdef _WIN32
+ const std::intptr_t result=_spawnvp(_P_WAIT,program.c_str(),argv.data());
+ return result<0?127:static_cast<int>(result);
+#else
+ const pid_t child=fork();
+ if(child<0)return 127;
+ if(child==0){execvp(program.c_str(),argv.data());_exit(127);}
+ int status=0;
+ while(waitpid(child,&status,0)<0){if(errno!=EINTR)return 127;}
+ if(WIFEXITED(status))return WEXITSTATUS(status);
+ if(WIFSIGNALED(status))return 128+WTERMSIG(status);
+ return 127;
+#endif
+}
 struct ReturnFlow{bool returned=false;double value=0;};
 void diagnose(Context&ctx,const fs::path&file,std::size_t line,const std::string&message){ctx.diagnostics.push_back({file,line,message});}
 bool evaluate(const std::string&source,const NumberScope&values,double&result,std::string&error){
@@ -211,6 +240,10 @@ auto set=ctx.sets.find(name);
      else if(s.kind==shay::StatementKind::SetRemove){if(item==set->second.end()){failure="unknown set item '"+s.value+"'";success=false;}else if(!ctx.check_only)set->second.erase(item);}
      else if(!ctx.check_only)shay_runtime_write((item==set->second.end()?"false\n":"true\n"));
     }
+    break;
+   }
+   case shay::StatementKind::ProcessRun:{
+    if(!ctx.check_only){const int exit_code=run_process(s.path,s.arguments);shay_runtime_write((std::to_string(exit_code)+"\n").c_str());}
     break;
    }
    case shay::StatementKind::FileRead:{
@@ -463,6 +496,9 @@ auto set=ctx.sets.find(name);
     }
     break;
    }
+   case shay::StatementKind::ProcessRun:
+    if(!ctx.check_only){const int exit_code=run_process(s.path,s.arguments);shay_runtime_write((std::to_string(exit_code)+"\n").c_str());}
+    break;
    case shay::StatementKind::FileRead:{
     std::ifstream fileInput(s.path,std::ios::binary);
     if(!fileInput){diagnose(ctx,input,s.line,"io: cannot read file '"+s.path+"'");break;}

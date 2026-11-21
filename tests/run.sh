@@ -1132,4 +1132,26 @@ out=$("$TMP/file-error-app") || fail "run caught file error"
 [ "$out" = "$expected" ] || fail "compiler file error category"
 pass "filesystem failures become catchable structured io errors"
 
+
+cat > "$TMP/process-api.shay" <<'EOF'
+runproc/>"cmake", "--version"
+EOF
+out=$("$SHAII" "$TMP/process-api.shay") || fail "interpreter runproc"
+last=$(printf '%s\n' "$out" | tail -n 1)
+[ "$last" = "0" ] || fail "interpreter runproc exit code"
+"$GSHAI" -o "$TMP/process-api-app" "$TMP/process-api.shay" || fail "compile runproc"
+out=$("$TMP/process-api-app") || fail "run compiled runproc"
+last=$(printf '%s\n' "$out" | tail -n 1)
+[ "$last" = "0" ] || fail "compiler runproc exit code"
+
+cat > "$TMP/process-missing.shay" <<'EOF'
+runproc/>"shay-program-that-does-not-exist-xyz"
+EOF
+out=$("$SHAII" "$TMP/process-missing.shay") || fail "interpreter missing process result"
+[ "$out" = "127" ] || fail "interpreter missing process exit code"
+"$GSHAI" -o "$TMP/process-missing-app" "$TMP/process-missing.shay" || fail "compile missing process"
+out=$("$TMP/process-missing-app") || fail "run compiled missing process"
+[ "$out" = "127" ] || fail "compiler missing process exit code"
+pass "runproc launches executables with explicit argv and returns their exit status without a shell"
+
 printf '\nAll Shay toolchain tests passed.\n'
