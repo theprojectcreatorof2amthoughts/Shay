@@ -93,7 +93,7 @@ Result validate_shui(const std::string& source) {
     for (const auto& [number, line] : lines) {
         if (line.empty()) continue;
         if (!entry) {
-            if (!matches(line, R"(\$useentry\s+UI\([A-Za-z_][A-Za-z0-9_]*\))")
+            if (!matches(line, R"(\$useentry\s+UI\([A-Za-z_][A-Za-z0-9_]*\))"))
                 error(result, number, "expected '$useentry UI(Target)' before the UI app");
             else entry = true;
             continue;
@@ -125,7 +125,7 @@ Result validate_shui(const std::string& source) {
             in_class = true;
             continue;
         }
-        if (std::regex_match(line, match, std::regex(R"(\*!#doUiclass\s+<"(!u#[A-Za-z_][A-Za-z0-9_]*)">)"))) {
+        if (std::regex_match(line, match, std::regex(R"REGEX(\*!#doUiclass\s+<"(!u#[A-Za-z_][A-Za-z0-9_]*)">)REGEX"))) {
             if (classes.count(match[1].str()) == 0)
                 error(result, number, "unknown UI class '" + match[1].str() + "'");
             continue;
@@ -196,7 +196,7 @@ Result validate_shuil(const std::string& source) {
         }
         if (translator_class_open && matches(line, R"(\$uiset\s+[A-Za-z0-9_]+)")) continue;
         if (in_method && matches(line, R"(\$mthdset\s+[A-Za-z0-9_]+)")) continue;
-        if (in_method && std::regex_match(line, match, std::regex(R"(#\*\$(javasport|csharpsport)\s+(\[[A-Za-z0-9_./-]+\]|\["[^"]+\.(js|cs)"\]))"))) {
+        if (in_method && std::regex_match(line, match, std::regex(R"REGEX(#\*\$(javasport|csharpsport)\s+(\[[A-Za-z0-9_./-]+\]|\["[^"]+\.(js|cs)"\]))REGEX"))) {
             translator_loaded = true; loaded_translator = match[1].str(); continue;
         }
         if (in_method && (line == "#*$doJavaScript" || line == "#*$doCSharp")) {
