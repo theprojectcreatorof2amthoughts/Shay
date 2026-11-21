@@ -26,7 +26,11 @@ RUNTIME_OBJECT := $(BUILD_DIR)/runtime.o
 INTERPRETER_OBJECT := $(BUILD_DIR)/shaii.o
 COMPILER_OBJECT := $(BUILD_DIR)/gshai.o
 SHUI_OBJECT := $(BUILD_DIR)/shui_main.o
-DEPFILES := $(FRONTEND_OBJECTS:.o=.d) $(RUNTIME_OBJECT:.o=.d) $(INTERPRETER_OBJECT:.o=.d) $(COMPILER_OBJECT:.o=.d) $(SHUI_OBJECT:.o=.d)
+ifeq ($(OS),Windows_NT)
+SHUI_PLATFORM_OBJECTS := $(BUILD_DIR)/shui_win32.o
+SHUI_PLATFORM_LIBS := -luser32 -lgdi32
+endif
+DEPFILES := $(FRONTEND_OBJECTS:.o=.d) $(RUNTIME_OBJECT:.o=.d) $(INTERPRETER_OBJECT:.o=.d) $(COMPILER_OBJECT:.o=.d) $(SHUI_OBJECT:.o=.d) $(SHUI_PLATFORM_OBJECTS:.o=.d)
 
 .PHONY: all build test check run compile executable clean install uninstall debug release help
 all: build
@@ -48,8 +52,8 @@ $(INTERPRETER): $(INTERPRETER_OBJECT) $(FRONTEND_OBJECTS) $(RUNTIME_OBJECT)
 $(COMPILER): $(COMPILER_OBJECT) $(FRONTEND_OBJECTS)
 	$(CXX) $(LDFLAGS) $^ $(LDLIBS) -o "$@"
 
-$(SHUI): $(SHUI_OBJECT) $(FRONTEND_OBJECTS)
-	$(CXX) $(LDFLAGS) $^ $(LDLIBS) -o "$@"
+$(SHUI): $(SHUI_OBJECT) $(FRONTEND_OBJECTS) $(SHUI_PLATFORM_OBJECTS)
+	$(CXX) $(LDFLAGS) $^ $(LDLIBS) $(SHUI_PLATFORM_LIBS) -o "$@"
 
 -include $(DEPFILES)
 
