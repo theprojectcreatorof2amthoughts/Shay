@@ -508,7 +508,7 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
        " std::vector<std::string> storage; storage.reserve(arguments.size()+1); storage.push_back(program); storage.insert(storage.end(),arguments.begin(),arguments.end());\n"
        " std::vector<char*> argv; argv.reserve(storage.size()+1); for(auto& arg:storage) argv.push_back(const_cast<char*>(arg.c_str())); argv.push_back(nullptr);\n"
        "#ifdef _WIN32\n"
-       " const intptr_t result=_spawnvp(_P_WAIT,program.c_str(),argv.data()); return result<0?127:static_cast<int>(result);\n"
+       " const std::intptr_t result=_spawnvp(_P_WAIT,program.c_str(),argv.data()); return result<0?127:static_cast<int>(result);\n"
        "#else\n"
        " const pid_t child=fork(); if(child<0)return 127; if(child==0){execvp(program.c_str(),argv.data());_exit(127);} int status=0; while(waitpid(child,&status,0)<0){if(errno!=EINTR)return 127;} if(WIFEXITED(status))return WEXITSTATUS(status); if(WIFSIGNALED(status))return 128+WTERMSIG(status); return 127;\n"
        "#endif\n"
