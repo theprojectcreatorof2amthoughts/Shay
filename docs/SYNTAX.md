@@ -12,7 +12,14 @@ brew username = "Alex"
 insval/>username
 ```
 
-The parser accepts string, numeric (including negative), and boolean literals for `brew`. String escapes currently supported are `\\n`, `\\t`, `\\r`, `\\\\`, and `\\"`. Zeccurs files (`.shaz`) are variable-free.
+The parser accepts string, numeric (including negative), and boolean literals for `brew`. It also accepts list literals containing strings, numbers, and booleans; `insval/>` prints list items in order, one per line. Empty lists are valid.
+
+```shay
+brew names = ["Ada", "Grace", "Linus"]
+brew scores = [10, 20, -3, true]
+insval/>names
+insval/>scores
+``` String escapes currently supported are `\\n`, `\\t`, `\\r`, `\\\\`, and `\\"`. Zeccurs files (`.shaz`) are variable-free.
 
 ## Log files
 
