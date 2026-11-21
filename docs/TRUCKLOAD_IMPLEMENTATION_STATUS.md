@@ -12,7 +12,7 @@ The Truck 2 and Truck 3 roadmap is being delivered as small, tested milestones.
 - [x] File read, write, append, delete, existence checks, and directory create/existence APIs.
 - [ ] List/map/set iteration syntax and typed collection elements.
 - [ ] Typed function parameters, assignment checking, and richer inference.
-- [ ] Safe process spawning with explicit argument arrays.
+- [x] Safe process spawning with explicit argument arrays and exit-code reporting.
 - [ ] JSON parsing and serialization.
 - [ ] HTTP/HTTPS APIs.
 - [ ] Concurrency and synchronization.
@@ -32,6 +32,6 @@ The Truck 2 and Truck 3 roadmap is being delivered as small, tested milestones.
 
 The browser renderer emits semantic HTML/CSS and dispatches `shay:action` / `shay:input` events. The Windows renderer creates native controls and currently reports button actions to the debugger. Neither renderer executes the `.shui` `logic` block or synchronizes bound state yet.
 
-File APIs use literal paths and content and never invoke a shell. Filesystem failures are categorized as `io` errors and can be handled by `tryit` / `catchit`.
+File APIs use literal paths and content and never invoke a shell. Filesystem failures are categorized as `io` errors and can be handled by `tryit` / `catchit`. `runproc/>` launches a program directly with a separate argv list (no shell concatenation) and reports its exit code.
 
 Only checked items above are implemented and merged into `main`.
