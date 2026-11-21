@@ -6,7 +6,9 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 case "$SHAII" in /*) ;; *) SHAII="$ROOT/$SHAII";; esac
 case "$GSHAI" in /*) ;; *) GSHAI="$ROOT/$GSHAI";; esac
 TMP=$(mktemp -d)
-trap 'rm -rf "$TMP"' EXIT HUP INT TERM
+ui_pid=""
+cleanup() { if [ -n "$ui_pid" ]; then kill "$ui_pid" 2>/dev/null || true; wait "$ui_pid" 2>/dev/null || true; fi; rm -rf "$TMP"; }
+trap cleanup EXIT HUP INT TERM
 pass() { printf 'PASS: %s\n' "$1"; }
 fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
 
@@ -1117,7 +1119,7 @@ $useentry UI(Browser)
     finish
     *!#doUiclass <"!u#browserCalc">
     *#drawui <'square'> <<'mainPanel'>>
-    *#drawui <'buttoncircle'> <:intercative=yes:>
+    *#drawui <'buttoncircle'> <:onclick=doCalc:>
 }>
 $dothis
 $uiFinish
@@ -1135,8 +1137,26 @@ out=$("$TMP/integrated-ui-app") || fail "run compiled .shui logic"
 pass "gshai compiles .shui through the shared Shay compiler and runtime"
 test -f "$TMP/integrated-ui.html" || fail "browser .shui did not emit its HTML renderer output"
 grep -q '<div id="mainPanel" class="shay-square">' "$TMP/integrated-ui.html" || fail "browser renderer did not emit the declared square"
-grep -q 'data-intercative="yes"' "$TMP/integrated-ui.html" || fail "browser renderer did not preserve interactive metadata"
+grep -q 'data-shay-onclick="doCalc"' "$TMP/integrated-ui.html" || fail "browser renderer did not preserve its Shay event binding"
 pass "gshai emits browser HTML controls from .shui drawui declarations"
+token=$(sed -n 's/.*const token="\\([^"]*\\)";.*/\\1/p' "$TMP/integrated-ui.html")
+[ -n "$token" ] || fail "browser HTML did not include its runtime token"
+"$TMP/integrated-ui-app" >"$TMP/ui-server-out" 2>"$TMP/ui-server-err" &
+ui_pid=$!
+ui_state=""
+for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+  if ui_state=$(curl --silent --fail "http://127.0.0.1:18765/state?token=$token" 2>/dev/null); then break; fi
+  sleep 0.1
+done
+[ "$ui_state" = "{}" ] || { cat "$TMP/ui-server-out" "$TMP/ui-server-err" >&2; fail "Shay UI state endpoint"; }
+ui_output=$(curl --silent --show-error --fail -X POST --data-binary "$token|doCalc" http://127.0.0.1:18765/event) || fail "Shay UI event endpoint"
+[ "$ui_output" = "UI method belongs to Shay" ] || fail "browser event did not invoke the Shay method"
+invalid_status=$(curl --silent --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:18765/state?token=invalid")
+[ "$invalid_status" = "403" ] || fail "Shay UI bridge accepted an invalid token"
+kill "$ui_pid" 2>/dev/null || true
+wait "$ui_pid" 2>/dev/null || true
+ui_pid=""
+pass "browser events call Shay methods through the authenticated local runtime bridge"
 
 cat > "$TMP/windowsutil.shuil" <<'EOF'
 #*$ContrlDefine <windows>

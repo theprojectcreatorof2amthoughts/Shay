@@ -46,7 +46,9 @@ $uiFinish
 | `*!#doUiclass <"!u#Name">` | Invokes the named UI class. References use the same `!u#` prefix. |
 | `*#drawui <'kind'>` | Declares/draws a UI element of the given kind. |
 | `<<'id'>>` | Optional explicit element ID following a `drawui` element kind. |
-| `<:key=value:>` | Optional element metadata. The spelling `intercative` in the example is preserved as supplied; its accepted values and event semantics are not yet finalized. |
+| `<:onclick=method:>` | Binds a browser control click to a no-argument Shay method declared in the UI class. The call runs in the compiled Shay process. |
+| `<:bind=variable:>` | Binds a browser input/checkbox to a named Shay runtime value; the value is sent to the runtime and reflected back after events. |
+| `<:intercative=yes:>` | Legacy metadata spelling retained for compatibility; it does not itself choose an event handler. |
 | `$dothis` | Executes the application. |
 | `$uiFinish` | Marks the end of the UI application lifecycle. |
 
@@ -133,7 +135,7 @@ Pass `.shui` directly to the existing Shay tools; there is no separate UI execut
 ./build/gshai -o build/windows-demo examples/windows-demo.shui
 ```
 
-Both tools accept `.shui` directly. The shared frontend validates the UI envelope and referenced `.shuil` adapter, strips only the platform declaration layer, and sends embedded Shay statements through the same parser/runtime or native compiler path used by `.shay` files. These commands execute the embedded Shay logic; they do not yet launch a browser or native Windows window.
+Both tools accept `.shui` directly. The shared frontend validates the UI envelope and referenced `.shuil` adapter, strips only the platform declaration layer, and sends embedded Shay statements through the same parser/runtime or native compiler path used by `.shay` files. `gshai -o` emits browser HTML and compiles a loopback HTTP event/state bridge into the executable. Start the compiled executable first, then open the generated HTML page. The bridge binds only to `127.0.0.1:18765` and requires the per-build token embedded in the page.
 
 ## Translation pipeline
 
@@ -156,10 +158,13 @@ Implemented:
 3. Embedded Shay statements and UI class methods are routed through the existing compiler/interpreter frontend and runtime.
 4. Make, CMake, installation, and regression tests no longer build or invoke a standalone `shui` program.
 
-Not implemented yet:
-1. Actual browser DOM and native Windows Forms control rendering from `drawui`.
-2. A bidirectional browser JavaScript / Windows C# event bridge into the running Shay runtime.
-3. Runtime state subscriptions and updates that keep controls synchronized.
-4. Interactive end-to-end tests for both platforms.
+Implemented:
+5. Browser DOM generation and browser click/input requests through an authenticated loopback bridge into the compiled Shay runtime.
+6. Browser state snapshots and updates for controls using `<:bind=variable:>`.
+7. Browser bridge regression tests that start the compiled runtime, invoke a Shay method over HTTP, and reject an invalid token.
 
-Platform code remains an adapter, not a second runtime. The current generators emit browser HTML and Windows Forms C# source, but do not launch them or connect their controls to Shay methods. Do not describe the UI as interactive or production-ready until the event/state bridge and live application lifecycle land with automated tests.
+Not implemented yet:
+1. Native Windows Forms event dispatch and state synchronization through the runtime bridge.
+2. Automatic browser launch and a unified UI lifecycle manager.
+
+Platform code remains an adapter, not a second runtime. Browser event dispatch is implemented and tested; Windows Forms remains a generated source backend without its live bridge. Do not describe the cross-platform UI as complete until Windows event/state tests and the unified application lifecycle land.

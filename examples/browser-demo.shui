@@ -10,7 +10,7 @@ $useentry UI(Browser)
     finish
     *!#doUiclass <"!u#browserCalc">
     *#drawui <'square'> <<'568xx654'>>
-    *#drawui <'buttoncircle'> <:intercative=yes:>
+    *#drawui <'buttoncircle'> <:onclick=doCalc:>
 }>
 $dothis
 $uiFinish

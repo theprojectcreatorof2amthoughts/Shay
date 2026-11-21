@@ -192,7 +192,7 @@ $useentry UI(Browser)
 $dothis
 $uiFinish</pre>
         <p><strong>Architecture:</strong> Shay owns application behavior and state. Browser JavaScript and Windows C# are platform adapters only; UI events must call into the Shay runtime, and runtime state must flow back to controls.</p>
-        <p><strong>Implementation status:</strong> <code>gshai -o</code> compiles embedded Shay logic and emits browser HTML or Windows Forms C# source from <code>drawui</code> declarations. The generated source is not launched automatically, and live event dispatch/state synchronization between controls and Shay methods is still in development. The examples are not yet production-ready interactive apps.</p>
+        <p><strong>Implementation status:</strong> Browser HTML is connected to the compiled Shay runtime through an authenticated loopback event/state bridge. Start the compiled app, then open its generated HTML page; <code>onclick</code> calls Shay methods and <code>bind</code> synchronizes named values. Windows Forms is still generated C# source without its live event bridge.</p>
         <p><a href="https://github.com/theprojectcreatorof2amthoughts/Shay/blob/main/docs/SHUI_SPEC.md">Read the Shay UI specification →</a></p>
       </section>
 
