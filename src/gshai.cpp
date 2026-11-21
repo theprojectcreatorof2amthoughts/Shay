@@ -84,6 +84,12 @@ void collect_statement_uses(const shay::Statement&s,const BuildContext&ctx,const
   case shay::StatementKind::OutputCall:
    for(const auto&arg:s.arguments)collect_expression_uses(arg,ctx,locals,used);
    break;
+  case shay::StatementKind::TryCatch:{
+   collect_statement_uses(s.body,ctx,locals,used);
+   auto catchLocals=locals;catchLocals.insert(s.name);
+   collect_statement_uses(s.else_body,ctx,catchLocals,used);
+   break;
+  }
   case shay::StatementKind::MapSet:
   case shay::StatementKind::MapRemove:
   case shay::StatementKind::SetAdd:
@@ -414,6 +420,18 @@ void emit_body(std::ostream&out,const std::vector<shay::Statement>&body,const Bu
     }
     break;
    }
+   case shay::StatementKind::ThrowError:
+    out<<indent<<"throw ShayError("<<cpp_string(s.error_category)<<", "<<cpp_string(s.value)<<", "<<s.line<<");\\n";break;
+   case shay::StatementKind::TryCatch:
+    out<<indent<<"try {\\n";
+    emit_body(out,s.body,ctx,indent+"    ",function_name);
+    out<<indent<<"} catch(const ShayError& shay_error) {\\n";
+    out<<indent<<"    values["<<cpp_string(s.name)<<"] = shay_error.what();\\n";
+    out<<indent<<"} catch(const std::exception& shay_error) {\\n";
+    out<<indent<<"    values["<<cpp_string(s.name)<<"] = std::string("<<cpp_string("runtime: ")<<") + shay_error.what();\\n";
+    out<<indent<<"}\\n";
+    emit_body(out,s.else_body,ctx,indent,function_name);
+    break;
    case shay::StatementKind::If:
     out<<indent<<"if ("<<cpp_condition(s.condition)<<") {\n";
     emit_body(out,s.body,ctx,indent+" ",function_name);
@@ -463,6 +481,7 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
  std::ofstream out(path,std::ios::binary);if(!out)return false;
  out<<"#include <algorithm>\n#include <cstdio>\n#include <exception>\n#include <fstream>\n#include <iomanip>\n#include <iostream>\n#include <sstream>\n#include <stdexcept>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n#include <utility>\n#include <vector>\n"
        "struct ShayExit {};\n"
+       "struct ShayError : std::runtime_error { std::string category; std::size_t line; ShayError(std::string c, std::string m, std::size_t l) : std::runtime_error(c + \": \" + m), category(std::move(c)), line(l) {} };\n"
        "[[maybe_unused]] static std::unordered_map<std::string,std::vector<std::string>> shay_lists;\n"
        "[[maybe_unused]] static std::unordered_map<std::string,std::vector<std::pair<std::string,std::string>>> shay_maps;\n"
        "[[maybe_unused]] static std::unordered_map<std::string,std::vector<std::string>> shay_sets;\n"
@@ -555,6 +574,14 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
     else out<<"if("<<s.list_index<<" >= it->second.size()) throw std::out_of_range("<<cpp_string("list index out of range for '"+s.name+"'")<<"); it->second.erase(it->second.begin()+"<<s.list_index<<"); ";
     out<<"}\n";break;
    }
+   case shay::StatementKind::ThrowError:
+    out<<" throw ShayError("<<cpp_string(s.error_category)<<", "<<cpp_string(s.value)<<", "<<s.line<<");\\n";break;
+   case shay::StatementKind::TryCatch:
+    out<<" try {\\n";
+    emit_body(out,s.body,ctx,"    ");
+    out<<" } catch(const ShayError& shay_error) { values["<<cpp_string(s.name)<<"] = shay_error.what(); } catch(const std::exception& shay_error) { values["<<cpp_string(s.name)<<"] = std::string("<<cpp_string("runtime: ")<<") + shay_error.what(); }\\n";
+    emit_body(out,s.else_body,ctx,"");
+    break;
    case shay::StatementKind::If:
     out<<" if ("<<cpp_condition(s.condition)<<") {\n";
     emit_body(out,s.body,ctx," ");
