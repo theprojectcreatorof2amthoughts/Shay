@@ -88,6 +88,7 @@ Result validate_shui(const std::string& source) {
     Result result;
     const auto lines = lines_of(source);
     bool entry = false, app = false, app_closed = false, do_this = false, ui_finish = false;
+    std::string entry_target;
     bool in_class = false, in_method = false;
     std::set<std::string> classes, ids;
     for (const auto& [number, line] : lines) {
@@ -99,8 +100,9 @@ Result validate_shui(const std::string& source) {
             continue;
         }
         if (!app) {
-            if (line != "$browsElementapp <{")
-                error(result, number, "expected '$browsElementapp <{' after the UI entry");
+            const std::string expected = entry_target == "Windows" ? "!%#csElementapp <{" : "!%#browsElementapp <{";
+            if (line != expected)
+                error(result, number, "expected '" + expected + "' after the UI entry");
             else app = true;
             continue;
         }
