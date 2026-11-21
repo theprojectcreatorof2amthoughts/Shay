@@ -46,7 +46,7 @@ out=$("$SHAII" "$TMP/multi-output.shay") || fail "interpreter multiple-variable 
 [ "$out" = "$expected" ] || fail "interpreter multiple-variable output order"
 pass "insval/> outputs multiple variables in order in the interpreter"
 
-CXX="${CXX:-c++}" "$GSHAI" --shaywall --shaywextra -o "$TMP/multi-output-app" "$TMP/multi-output.shay" >"$TMP/out" 2>"$TMP/err" || fail "compile multiple-variable output"
+CXX="${CXX:-c++}" "$GSHAI" --shaywall --shaywextra -o "$TMP/multi-output-app" "$TMP/multi-output.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "compile multiple-variable output"; }
 if grep -q "variable 'first' is never used\|variable 'second' is never used\|variable 'third' is never used" "$TMP/err"; then fail "multiple-variable output was not counted as variable use"; fi
 out=$("$TMP/multi-output-app") || fail "run compiled multiple-variable output"
 [ "$out" = "$expected" ] || fail "compiled multiple-variable output order"
