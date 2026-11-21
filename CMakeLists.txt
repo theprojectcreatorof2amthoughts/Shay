@@ -21,6 +21,10 @@ target_link_libraries(gshai PRIVATE shay_frontend)
 
 add_executable(shui src/shui_main.cpp)
 target_link_libraries(shui PRIVATE shay_frontend)
+if(WIN32)
+    target_sources(shui PRIVATE src/shui_win32.cpp)
+    target_link_libraries(shui PRIVATE user32 gdi32)
+endif()
 
 foreach(target shaii gshai shui shay_frontend shay_runtime)
     target_compile_options(${target} PRIVATE

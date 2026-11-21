@@ -997,4 +997,11 @@ if "$SHUI" validate "$TMP/invalid.shui" >"$TMP/out" 2>"$TMP/err"; then fail "shu
 grep -q "requires 'on_click'" "$TMP/err" || fail "shui button validation diagnostic"
 pass "shui reports invalid UI elements with source locations"
 
+if "$SHUI" run "$ROOT/examples/counter.shui" --target desktop >"$TMP/out" 2>"$TMP/err"; then
+    fail "non-Windows shui unexpectedly launched the desktop backend"
+fi
+grep -q "desktop target requires Windows" "$TMP/err" || fail "shui desktop platform diagnostic"
+pass "shui clearly gates the native desktop renderer to Windows"
+
+
 printf '\nAll Shay toolchain tests passed.\n'
