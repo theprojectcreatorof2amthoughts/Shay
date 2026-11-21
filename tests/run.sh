@@ -911,4 +911,34 @@ out=$("$TMP/list-literals-app") || fail "run compiled list literals"
 [ "$out" = "$expected" ] || fail "compiler list literal output and order"
 pass "gshai compiles list literals with matching interpreter output"
 
+
+cat > "$TMP/list-mutation.shay" <<'EOF'
+brew names = ["Ada", "Grace"]
+insval/>names[1]
+listadd/>names, "Linus"
+listset/>names, 0, "Katherine"
+listremove/>names, 1
+insval/>names
+EOF
+expected=$(printf 'Grace\nKatherine\nLinus')
+out=$("$SHAII" "$TMP/list-mutation.shay") || fail "interpreter list indexing and mutation"
+[ "$out" = "$expected" ] || fail "interpreter list indexing and mutation result"
+pass "shaii indexes, appends, replaces, and removes list items"
+
+"$GSHAI" -o "$TMP/list-mutation-app" "$TMP/list-mutation.shay" || fail "compile list indexing and mutation"
+out=$("$TMP/list-mutation-app") || fail "run compiled list indexing and mutation"
+[ "$out" = "$expected" ] || fail "compiler list indexing and mutation result"
+pass "gshai compiles list indexing and mutation consistently"
+
+cat > "$TMP/list-bounds.shay" <<'EOF'
+brew names = ["Ada"]
+insval/>names[1]
+EOF
+if "$SHAII" "$TMP/list-bounds.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpreter accepted out-of-range list index"; fi
+grep -q "list index 1 is out of range for 'names'" "$TMP/err" || fail "interpreter list bounds diagnostic"
+"$GSHAI" -o "$TMP/list-bounds-app" "$TMP/list-bounds.shay" || fail "compile list bounds test"
+if "$TMP/list-bounds-app" >"$TMP/out" 2>"$TMP/err"; then fail "compiled app accepted out-of-range list index"; fi
+grep -q "list index out of range for 'names'" "$TMP/err" || fail "compiled list bounds diagnostic"
+pass "interpreter and compiled programs reject out-of-range list indices"
+
 printf '\nAll Shay toolchain tests passed.\n'
