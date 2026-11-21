@@ -4,12 +4,12 @@ The Truck 2 and Truck 3 roadmap is being delivered as small, tested milestones.
 
 ## Truck 2: language/runtime
 
-- [x] List literals in `brew`: strings, numbers, booleans, negative numbers, and empty lists.
-- [x] List output in both `shaii` and `gshai`-generated executables.
-- [x] Zero-based list indexing, append, replacement, removal, and bounds diagnostics.
-- [ ] List iteration syntax.
-- [ ] Maps and sets.
-- [ ] Optional static typing.
+- [x] List literals, zero-based indexing, append, replacement, removal, and bounds diagnostics.
+- [x] Map literals with string keys, key lookup, update, and removal.
+- [x] Set literals with duplicate elimination, add, remove, and membership checks.
+- [x] Optional scalar type annotations for `number`, `string`, and `boolean` with initializer validation.
+- [ ] List/map/set iteration syntax.
+- [ ] Typed function parameters, typed collection elements, assignment checking, and richer inference.
 - [ ] Structured error values and propagation.
 - [ ] File and process APIs.
 - [ ] JSON parsing and serialization.
