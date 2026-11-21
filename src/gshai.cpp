@@ -516,6 +516,25 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
     }
     break;
    }
+   case shay::StatementKind::MapSet:
+   case shay::StatementKind::MapRemove:
+   case shay::StatementKind::SetAdd:
+   case shay::StatementKind::SetRemove:
+   case shay::StatementKind::SetContains:{
+    if(s.kind==shay::StatementKind::MapSet||s.kind==shay::StatementKind::MapRemove){
+     out<<" { auto m=shay_maps.find("<<cpp_string(s.name)<<"); if(m==shay_maps.end()) throw std::runtime_error("<<cpp_string("unknown map '"+s.name+"'")<<"); auto e=std::find_if(m->second.begin(),m->second.end(),[&](const auto&v){return v.first=="<<cpp_string(s.output_key)<<";}); ";
+     if(s.kind==shay::StatementKind::MapSet)out<<"if(e==m->second.end()) m->second.push_back({"<<cpp_string(s.output_key)<<","<<cpp_string(s.value)<<"}); else e->second="<<cpp_string(s.value)<<"; ";
+     else out<<"if(e==m->second.end()) throw std::runtime_error("<<cpp_string("unknown map key '"+s.output_key+"'")<<"); m->second.erase(e); ";
+     out<<"}\\n";
+    }else{
+     out<<" { auto set=shay_sets.find("<<cpp_string(s.name)<<"); if(set==shay_sets.end()) throw std::runtime_error("<<cpp_string("unknown set '"+s.name+"'")<<"); auto item=std::find(set->second.begin(),set->second.end(),"<<cpp_string(s.value)<<"); ";
+     if(s.kind==shay::StatementKind::SetAdd)out<<"if(item==set->second.end()) set->second.push_back("<<cpp_string(s.value)<<"); ";
+     else if(s.kind==shay::StatementKind::SetRemove)out<<"if(item==set->second.end()) throw std::runtime_error("<<cpp_string("unknown set item '"+s.value+"'")<<"); set->second.erase(item); ";
+     else out<<"shay_runtime_write(item==set->second.end()?"<<cpp_string("false\\n")<<":"<<cpp_string("true\\n")<<"); ";
+     out<<"}\\n";
+    }
+    break;
+   }
    case shay::StatementKind::If:
     out<<" if ("<<cpp_condition(s.condition)<<") {\n";
     emit_body(out,s.body,ctx," ");
