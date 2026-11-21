@@ -39,6 +39,46 @@ Program Parser::parse(){
    statement.kind=StatementKind::MarkFailure;
    valid=consume(TokenKind::Identifier,"",program.errors,"expected a function name after '!#'");
    if(valid)statement.name=previous().text;
+  }else if(match(TokenKind::Identifier,"throwit")){
+   statement.kind=StatementKind::ThrowError;
+   valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'throwit'");
+   if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected an error category after 'throwit/>'");
+   if(valid)statement.error_category=previous().text;
+   if(valid)valid=consume(TokenKind::Symbol,",",program.errors,"expected ',' after error category");
+   if(valid)valid=consume(TokenKind::String,"",program.errors,"expected a quoted error message");
+   if(valid)statement.value=previous().text;
+  }else if(match(TokenKind::Identifier,"tryit")){
+   statement.kind=StatementKind::TryCatch;
+   if(peek().kind!=TokenKind::Newline&&!atEnd()){error(program.errors,"unexpected token after 'tryit'");valid=false;}
+   if(peek().kind==TokenKind::Newline)++current_;
+   std::vector<Token> tryTokens,catchTokens;bool foundCatch=false,foundEnd=false;int tryDepth=1;
+   while(!atEnd()){
+    if(peek().kind==TokenKind::Identifier&&peek().text=="tryit"){
+     ++tryDepth;(foundCatch?catchTokens:tryTokens).push_back(peek());++current_;continue;
+    }
+    if(peek().kind==TokenKind::Identifier&&peek().text=="endtry"){
+     --tryDepth;
+     if(tryDepth==0){foundEnd=true;++current_;if(peek().kind==TokenKind::Newline)++current_;skipCurrentLine=false;break;}
+     (foundCatch?catchTokens:tryTokens).push_back(peek());++current_;continue;
+    }
+    if(tryDepth==1&&!foundCatch&&peek().kind==TokenKind::Identifier&&peek().text=="catchit"){
+     foundCatch=true;++current_;
+     if(!consume(TokenKind::Identifier,"",program.errors,"expected an error variable name after 'catchit'")){valid=false;break;}
+     statement.name=previous().text;
+     if(peek().kind!=TokenKind::Newline&&!atEnd()){error(program.errors,"unexpected token after catch variable name");valid=false;}
+     if(peek().kind==TokenKind::Newline)++current_;
+     continue;
+    }
+    (foundCatch?catchTokens:tryTokens).push_back(peek());++current_;
+   }
+   const Token endToken{TokenKind::End,"",peek().line,peek().column};
+   tryTokens.push_back(endToken);catchTokens.push_back(endToken);
+   if(!foundCatch){error(program.errors,"expected 'catchit' inside tryit block");valid=false;}
+   if(!foundEnd){error(program.errors,"expected 'endtry' to close tryit block");valid=false;}
+   Parser tryParser(tryTokens);Program tryProgram=tryParser.parse();
+   statement.body=std::move(tryProgram.statements);
+   for(const auto&e:tryProgram.errors)program.errors.push_back(e);
+   if(foundCatch){Parser catchParser(catchTokens);Program catchProgram=catchParser.parse();statement.else_body=std::move(catchProgram.statements);for(const auto&e:catchProgram.errors)program.errors.push_back(e);}
   }else if(match(TokenKind::Identifier,"ifit")){
    statement.kind=StatementKind::If;
    while(!atEnd()&&peek().kind!=TokenKind::Newline){statement.condition+=peek().text;statement.condition.push_back(' ');++current_;}

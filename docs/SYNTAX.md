@@ -178,3 +178,13 @@ The shared frontend tokenizes source into identifiers, numbers, strings, symbols
 ## Not yet part of the grammar
 
 Loops, nested lexical scopes, collections, typed values, general expressions outside numeric function returns, and REPL behavior are not implemented yet. Function bodies are currently limited to an optional return expression or supported statement bodies.
+
+Structured errors use a category and quoted message. `throwit/>` raises an error, and `tryit` / `catchit` / `endtry` handles it. The catch variable receives a readable `category: message` value.
+
+```shay
+tryit
+    throwit/>validation, "bad input"
+catchit problem
+    insval/>problem
+endtry
+```

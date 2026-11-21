@@ -1062,4 +1062,39 @@ if "$GSHAI" -o "$TMP/type-mismatch-app" "$TMP/type-mismatch.shay" >"$TMP/out" 2>
 grep -q "type mismatch for 'age': expected number, got string" "$TMP/err" || fail "compiler typed initializer mismatch diagnostic"
 pass "interpreter and compiler reject incompatible typed initializers"
 
+
+cat > "$TMP/try-catch.shay" <<'EOF'
+tryit
+    throwit/>validation, "bad input"
+catchit problem
+    insval/>problem
+endtry
+tryit
+    tryit
+        throwit/>inner, "first failure"
+    catchit inner_problem
+        throwit/>outer, "second failure"
+    endtry
+catchit outer_problem
+    insval/>outer_problem
+endtry
+EOF
+expected=$(printf 'validation: bad input\nouter: second failure')
+out=$("$SHAII" "$TMP/try-catch.shay") || fail "interpreter structured try/catch"
+[ "$out" = "$expected" ] || fail "interpreter structured error values"
+"$GSHAI" -o "$TMP/try-catch-app" "$TMP/try-catch.shay" || fail "compile structured try/catch"
+out=$("$TMP/try-catch-app") || fail "run compiled structured try/catch"
+[ "$out" = "$expected" ] || fail "compiler structured error values"
+pass "tryit/catchit handles categorized errors and nested catches in both runtimes"
+
+cat > "$TMP/unhandled-error.shay" <<'EOF'
+throwit/>io, "file missing"
+EOF
+if "$SHAII" "$TMP/unhandled-error.shay" >"$TMP/out" 2>"$TMP/err"; then fail "interpreter accepted an unhandled structured error"; fi
+grep -q "io: file missing" "$TMP/err" || fail "interpreter unhandled error diagnostic"
+"$GSHAI" -o "$TMP/unhandled-error-app" "$TMP/unhandled-error.shay" || fail "compile unhandled structured error"
+if "$TMP/unhandled-error-app" >"$TMP/out" 2>"$TMP/err"; then fail "compiled app accepted an unhandled structured error"; fi
+grep -q "io: file missing" "$TMP/err" || fail "compiler unhandled error diagnostic"
+pass "unhandled structured errors preserve their category and message"
+
 printf '\nAll Shay toolchain tests passed.\n'
