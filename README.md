@@ -13,7 +13,9 @@ Shay has its own original grammar and vocabulary, including `brew` for variable 
 |---|---|
 | `.shay` | Shay program |
 | `.shaii` | Shay library |
-| `.shaz` | Zeccur task file |\n| `.shui` | UI application source |\n| `.shuil` | Platform UI translation/control adapter |
+| `.shaz` | Zeccur task file |
+| `.shui` | Shay UI application source, processed by `gshai` or `shaii` |
+| `.shuil` | Shay platform UI adapter, loaded by `.shui` |
 | `.sho` | Compiled Shay object file (native relocatable object) |
 
 ## Vocabulary
@@ -215,6 +217,14 @@ These are target capabilities, not claims that the bootstrap currently implement
 
 ## UI applications
 
-Shay UI projects use `.shui` application files and `.shuil` platform adapters. The directive-based syntax uses `$useentry UI(Target)`, `$browsElementapp <{`, UI classes named with `!u#`, and `*#drawui` elements. Platform adapters select a target, translation method, and human UI language. See [`docs/SHUI_SPEC.md`](docs/SHUI_SPEC.md), the [browser sample](examples/browser-demo.shui) with its [JavaScript adapter](examples/browserutil.shuil), and the [Windows sample](examples/windows-demo.shui) with its [C# Windows Forms adapter](examples/windowsutil.shuil).
+Shay UI is part of Shay—not a separate language or compiler. A `.shui` file contains Shay code plus UI declarations, and is processed only by the existing `gshai` compiler or `shaii` interpreter. There must be no standalone `shui` executable or independent UI build/validation pipeline.
 
-The `shui validate file.shui` and `shui validate file.shuil` commands validate the directive-based syntax and its selected adapter. `shui build app.shui -o app.html` generates browser HTML; a Windows adapter generates C# Windows Forms source plus a .NET 8 `.csproj` (build it with `dotnet build app.csproj` on a Windows development setup). Initial control mappings include square, buttoncircle, label, textbox, and checkbox. Shay-to-control event/state wiring and `shui run` for the new syntax are still future work. The legacy `$app { ... }` format remains available.
+UI application blocks use a dedicated `!%#` prefix to distinguish UI syntax from ordinary Shay statements:
+
+- `!%#browsElementapp <{` opens a browser UI application.
+- `!%#csElementapp <{` opens a Windows/C# UI application.
+- `}>` closes the application block.
+
+The `.shuil` adapter selects the platform translator. Generated JavaScript or C# is only a platform-facing bridge: control events must call Shay methods through the Shay runtime, and runtime state changes must flow back to the controls. The Shay runtime—not generated platform code—owns application behavior and state.
+
+See [the SHAY UI specification](docs/SHUI_SPEC.md) and the [browser](examples/browser-demo.shui) and [Windows](examples/windows-demo.shui) examples. This integration is a staged implementation; the standalone frontend and static generators are being retired as the shared compiler/interpreter support lands.
