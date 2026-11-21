@@ -134,9 +134,9 @@ static void shay_ui_reply(ShayUiSocket client, int status,
 }
 static std::string shay_ui_shell_quote(const std::string& value) {
 #ifdef _WIN32
-    std::string out = "\\"";
-    for (char c : value) { if (c == '"') out += "\\\\"; out += c; }
-    out += "\\"";
+    std::string out = "\"";
+    for (char c : value) { if (c == '"') out += "\\\""; out += c; }
+    out += "\"";
 #else
     std::string out = "'";
     for (char c : value) { if (c == '\'') out += "'\\''"; else out += c; }
