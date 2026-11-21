@@ -172,15 +172,15 @@ Result validate_shuil(const std::string& source) {
             if (platform) error(result, number, "platform target is declared more than once");
             platform = true; continue;
         }
-        if (std::regex_match(line, match, std::regex(R"(#\*!\MethdUi\s+<([A-Za-z][A-Za-z0-9_-]*)>)"))) {
+        if (std::regex_match(line, match, std::regex(R"(#\*!MethdUi\s+<([A-Za-z][A-Za-z0-9_-]*)>)"))) {
             if (method) error(result, number, "translation method is declared more than once");
             method = true; selected_method = match[1].str(); continue;
         }
-        if (matches(line, R"(#\*!\LangUI\s+<[A-Za-z][A-Za-z0-9_-]*>)")) {
+        if (matches(line, R"(#\*!LangUI\s+<[A-Za-z][A-Za-z0-9_-]*>)")) {
             if (language) error(result, number, "UI language is declared more than once");
             language = true; continue;
         }
-        if (matches(line, R"(#\*!\classmethdDeclr\s+!m#[A-Za-z_][A-Za-z0-9_]*)")) {
+        if (matches(line, R"(#\*!classmethdDeclr\s+!m#[A-Za-z_][A-Za-z0-9_]*)")) {
             if (translator_class) error(result, number, "translator class is declared more than once");
             translator_class = true; continue;
         }
@@ -230,8 +230,8 @@ Result validate_source(const std::string& source, const std::string& extension) 
 bool inspect_adapter(const std::string& source, AdapterConfig& config, Result& result) {
     result = validate_shuil(source);
     config.platform = capture(source, R"(#\*\$ContrlDefine\s+<([A-Za-z][A-Za-z0-9_-]*)>)");
-    config.method = capture(source, R"(#\*!\MethdUi\s+<([A-Za-z][A-Za-z0-9_-]*)>)");
-    config.language = capture(source, R"(#\*!\LangUI\s+<([A-Za-z][A-Za-z0-9_-]*)>)");
+    config.method = capture(source, R"(#\*!MethdUi\s+<([A-Za-z][A-Za-z0-9_-]*)>)");
+    config.language = capture(source, R"(#\*!LangUI\s+<([A-Za-z][A-Za-z0-9_-]*)>)");
     return result.ok();
 }
 bool generate_output(const std::string& app_source, const AdapterConfig& adapter,
