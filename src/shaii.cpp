@@ -58,7 +58,7 @@ int run_process(const std::string&program,const std::vector<std::string>&argumen
  for(auto&arg:storage)argv.push_back(const_cast<char*>(arg.c_str()));
  argv.push_back(nullptr);
 #ifdef _WIN32
- const intptr_t result=_spawnvp(_P_WAIT,program.c_str(),argv.data());
+ const std::intptr_t result=_spawnvp(_P_WAIT,program.c_str(),argv.data());
  return result<0?127:static_cast<int>(result);
 #else
  const pid_t child=fork();
