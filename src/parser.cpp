@@ -231,6 +231,8 @@ Program Parser::parse(){
     while(valid&&!(peek().kind==TokenKind::Symbol&&peek().text=="}")&&!atEnd()&&peek().kind!=TokenKind::Newline){
      if(!consume(TokenKind::String,"",program.errors,"map keys must be quoted strings")){valid=false;break;}
      const std::string key=previous().text;
+     for(const auto&entry:statement.map_items)if(entry.first==key){error(program.errors,"duplicate map key '"+key+"'");valid=false;break;}
+     if(!valid)break;
      if(!consume(TokenKind::Symbol,":",program.errors,"expected ':' after map key")){valid=false;break;}
      std::string value;
      if(match(TokenKind::String))value=previous().text;
