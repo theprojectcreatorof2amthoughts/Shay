@@ -575,11 +575,11 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
     out<<"}\n";break;
    }
    case shay::StatementKind::ThrowError:
-    out<<" throw ShayError("<<cpp_string(s.error_category)<<", "<<cpp_string(s.value)<<", "<<s.line<<");\\n";break;
+    out<<" throw ShayError("<<cpp_string(s.error_category)<<", "<<cpp_string(s.value)<<", "<<s.line<<");\n";break;
    case shay::StatementKind::TryCatch:
-    out<<" try {\\n";
+    out<<" try {\n";
     emit_body(out,s.body,ctx,"    ");
-    out<<" } catch(const ShayError& shay_error) { values["<<cpp_string(s.name)<<"] = shay_error.what(); } catch(const std::exception& shay_error) { values["<<cpp_string(s.name)<<"] = std::string("<<cpp_string("runtime: ")<<") + shay_error.what(); }\\n";
+    out<<" } catch(const ShayError& shay_error) { values["<<cpp_string(s.name)<<"] = shay_error.what(); } catch(const std::exception& shay_error) { values["<<cpp_string(s.name)<<"] = std::string("<<cpp_string("runtime: ")<<") + shay_error.what(); }\n";
     emit_body(out,s.else_body,ctx,"");
     break;
    case shay::StatementKind::If:
