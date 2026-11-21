@@ -1111,7 +1111,7 @@ fileexists/>"$TMP/data.txt"
 EOF
 expected=$(printf 'Hello world\ntrue\ntrue\nfalse')
 out=$("$SHAII" "$TMP/file-api.shay") || fail "interpreter file and directory APIs"
-[ "$out" = "$expected" ] || fail "interpreter file API results"
+[ "$out" = "$expected" ] || { printf "expected:\n%s\nactual:\n%s\n" "$expected" "$out" >&2; fail "interpreter file API results"; }
 "$GSHAI" -o "$TMP/file-api-app" "$TMP/file-api.shay" || fail "compile file and directory APIs"
 out=$("$TMP/file-api-app") || fail "run compiled file and directory APIs"
 [ "$out" = "$expected" ] || fail "compiler file API results"
