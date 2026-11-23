@@ -14,8 +14,8 @@ Shay has its own original grammar and vocabulary, including `brew` for variable 
 | `.shay` | Shay program |
 | `.shaii` | Shay library |
 | `.shaz` | Zeccur task file |
-| `.shui` | Shay UI application source, processed by `gshai` or `shaii` |
-| `.shuil` | Shay platform UI adapter, loaded by `.shui`; selects JavaScript for Browser and Mouz for Windows |
+| `.shui` | Shay UI application source, processed by `gshai` or `shaii`; composes language entries |
+| `.shuil` | Shay UI adapter, loaded by `.shui`; configures the platform translator and its language backbone |
 | `.sho` | Compiled Shay object file (native relocatable object) |
 
 ## Vocabulary
@@ -39,6 +39,20 @@ $shazport [startup.shaz]         ## Zeccur task
 | `.shaii` | No | Yes |
 
 Bracketed `$shaiiport [name.shaii]` imports an implemented library, searched beside the importer and then through `siil/`. Quoted `$shaiiport "path/to/file.shaii"` imports that external file relative to the importing file (or from an absolute path) and does not search `siil/`. `$shazport` continues to use bracket syntax for Zeccur tasks. Duplicate files are loaded once and circular imports are diagnosed. Zeccurs is task-oriented and variable-free.
+
+## Language entries
+
+Shay source files can configure their language backbone with multiple lowercase $useentry directives. The system applies to .shay, .shui, and .shuil files. Entry names contain lowercase letters only and must be registered; they are not library imports.
+
+```shay
+$useentry reginit
+$useentry advsynt
+$useentry exprinit
+$useentry varinit
+$useentry funcinit
+```
+
+For UI applications, add $useentry uiinit. The .shuil adapter—not $useentry—selects Browser or Windows and its translation backend. See [the useentry specification](docs/USEENTRY_SPEC.md) for the full catalog and [the SHAY UI specification](docs/SHUI_SPEC.md) for UI source structure.
 
 ## Siil standard library
 
@@ -231,7 +245,7 @@ dotnet build build/windows-demo.csproj
 # Run build/windows-demo-ui.exe
 ```
 
-The shared frontend validates the UI entry target and referenced `.shuil` adapter, then routes embedded Shay statements through the ordinary Shay parser, interpreter, or native compiler. UI class methods use the existing Shay runtime.
+The shared frontend validates the composed lowercase `$useentry` directives and referenced `.shuil` adapter, then routes embedded Shay statements through the ordinary Shay parser, interpreter, or native compiler. The adapter selects the platform; `$useentry uiinit` enables the UI language backbone. UI class methods use the existing Shay runtime.
 
 Browser `.shui` builds use JavaScript. Windows `.shui` applications are migrating to Mouz: the Windows `.shuil` adapter selects `mozTrans` and references a `.mozf` source with `#*$mozfsport`; the Mouz compiler owns the `.mozf` → `.mozc` compilation. The legacy C# Windows adapter remains only for compatibility. The new native Mouz window generator and runtime loader are not implemented yet, and Shay refuses to silently generate C# for a Mouz adapter. Browser and legacy Windows Forms `.shui` builds share the same loopback runtime bridge. `<:onclick=method:>` routes clicks into no-argument Shay methods, and `<:bind=variable:>` synchronizes declared Shay values with text boxes, checkboxes, and labels. Windows output includes a `.cs` file and `.csproj`; build it with `dotnet build build/windows-demo.csproj`. The generated Windows app starts the compiled Shay runtime beside it. Browser apps start the compiled executable; it opens the generated `.html` file automatically when a desktop session is available. The browser sends an authenticated heartbeat, and the runtime exits cleanly ninety seconds after the last page heartbeat. The adapters remain bridges to Shay—not separate Shay runtimes.
 
