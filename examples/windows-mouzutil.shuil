@@ -1,3 +1,5 @@
+$useentry reginit
+$useentry uiinit
 #*$ContrlDefine <windows>
 #*!MethdUi <mozTrans>
 
