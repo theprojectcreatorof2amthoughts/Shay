@@ -51,15 +51,14 @@ inline bool prepare_shui_source(const std::filesystem::path& input,
     for (const auto& item : adapter_result.diagnostics)
         diagnostics.push_back({item.line, item.message});
 
-    std::smatch entry_match;
-    const std::regex entry_pattern(R"REGEX(\$useentry\s+UI\(([A-Za-z_][A-Za-z0-9_]*)\))REGEX");
-    std::string entry_target;
-    if (std::regex_search(source, entry_match, entry_pattern))
-        entry_target = entry_match[1].str();
-    const std::string expected_platform =
-        entry_target == "Windows" ? "windows" : "browser";
-    if (adapter.platform != expected_platform)
-        diagnostics.push_back({1, "UI entry target does not match its .shuil adapter"});
+    const std::string expected_envelope =
+        adapter.platform == "windows" ? "!%#csElementapp <{" : "!%#browsElementapp <{";
+    const std::string unexpected_envelope =
+        adapter.platform == "windows" ? "!%#browsElementapp <{" : "!%#csElementapp <{";
+    if (source.find(unexpected_envelope) != std::string::npos)
+        diagnostics.push_back({1, "UI app envelope does not match its .shuil adapter"});
+    if (source.find(expected_envelope) == std::string::npos)
+        diagnostics.push_back({1, "missing UI app envelope for the selected .shuil adapter"});
     if (adapter.method == "mozTrans") {
         if (adapter.source_file.empty()) {
             diagnostics.push_back({1, "Mouz adapter must declare a .mozf source with '#*$mozfsport [file.mozf]'"});
@@ -80,7 +79,7 @@ inline bool prepare_shui_source(const std::filesystem::path& input,
     const std::regex ui_do_class(
         R"REGEX(\*!#doUiclass\s+<"!u#([A-Za-z_][A-Za-z0-9_]*)">)REGEX");
     const std::regex ignored_directive(
-        R"REGEX((\$useentry\s+UI\(.+\)|!%#(brows|cs)Elementapp\s+<\{|\}>|\*#uiContrl\s+".+\.shuil"|\*#drawui\b.*|\$uiSet\s+\S+|\$dothis|\$uiFinish))REGEX");
+        R"REGEX((\$useentry\s+[a-z]+|!%#(brows|cs)Elementapp\s+<\{|\}>|\*#uiContrl\s+".+\.shuil"|\*#drawui\b.*|\$uiSet\s+\S+|\$dothis|\$uiFinish))REGEX");
     while (std::getline(lines, line)) {
         const std::string directive = std::regex_replace(
             line, std::regex(R"(^\s+|\s+$)"), "");
