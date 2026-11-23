@@ -208,10 +208,10 @@ Result validate_shuil(const std::string& source) {
         }
         if (translator_class_open && matches(line, R"(\$uiset\s+[A-Za-z0-9_]+)")) continue;
         if (in_method && matches(line, R"(\$mthdset\s+[A-Za-z0-9_]+)")) continue;
-        if (in_method && std::regex_match(line, match, std::regex(R"REGEX(#\*\$(javasport|csharpsport)\s+(\[[A-Za-z0-9_./-]+\]|\["[^"]+\.(js|cs)"\]))REGEX"))) {
+        if (in_method && std::regex_match(line, match, std::regex(R"REGEX(#\*\$(javasport|csharpsport|mozfsport)\s+(\[[A-Za-z0-9_./-]+\]|\["[^"]+\.(js|cs|mozf)"\]))REGEX"))) {
             translator_loaded = true; loaded_translator = match[1].str(); continue;
         }
-        if (in_method && (line == "#*$doJavaScript" || line == "#*$doCSharp")) {
+        if (in_method && (line == "#*$doJavaScript" || line == "#*$doCSharp" || line == "#*$doMouz")) {
             if (!translator_loaded) error(result, number, "load the platform translator before running it");
             translator_run = true; continue;
         }
@@ -230,11 +230,15 @@ Result validate_shuil(const std::string& source) {
         error(result, 1, "javasTrans requires '#*$doJavaScript'");
     if (selected_method == "csharpTrans" && source.find("#*$doCSharp") == std::string::npos)
         error(result, 1, "csharpTrans requires '#*$doCSharp'");
+    if (selected_method == "mozTrans" && source.find("#*$doMouz") == std::string::npos)
+        error(result, 1, "mozTrans requires '#*$doMouz'");
     if (selected_method == "javasTrans" && loaded_translator != "javasport")
         error(result, 1, "javasTrans must load its translator with '#*$javasport'");
     if (selected_method == "csharpTrans" && loaded_translator != "csharpsport")
         error(result, 1, "csharpTrans must load its translator with '#*$csharpsport'");
-    if (selected_method != "javasTrans" && selected_method != "csharpTrans" && !selected_method.empty())
+    if (selected_method == "mozTrans" && loaded_translator != "mozfsport")
+        error(result, 1, "mozTrans must load its Mouz source with '#*$mozfsport'");
+    if (selected_method != "javasTrans" && selected_method != "csharpTrans" && selected_method != "mozTrans" && !selected_method.empty())
         error(result, 1, "unsupported translation method '" + selected_method + "'");
     return result;
 }
@@ -250,7 +254,7 @@ bool inspect_adapter(const std::string& source, AdapterConfig& config, Result& r
     config.method = capture(source, R"(#\*!MethdUi\s+<([A-Za-z][A-Za-z0-9_-]*)>)");
     config.language = capture(source, R"(#\*!LangUI\s+<([A-Za-z][A-Za-z0-9_-]*)>)");
     if ((config.platform == "browser" && config.method != "javasTrans") ||
-        (config.platform == "windows" && config.method != "csharpTrans") ||
+        (config.platform == "windows" && config.method != "csharpTrans" && config.method != "mozTrans") ||
         (config.platform != "browser" && config.platform != "windows"))
         error(result, 1, "platform and translation method do not match a supported backend");
     return result.ok();
@@ -315,6 +319,10 @@ bool generate_output(const std::string& app_source, const AdapterConfig& adapter
         html << "</body>\n</html>\n";
         output = html.str();
         return result.ok();
+    }
+    if (adapter.platform == "windows" && adapter.method == "mozTrans") {
+        error(result, 1, "Mouz Windows adapter is recognized, but native Mouz window generation is not yet implemented; the .mozf source is validated separately and C# fallback is intentionally disabled for this adapter");
+        return false;
     }
     if (adapter.platform == "windows" && adapter.method == "csharpTrans") {
         output_extension = ".cs";
@@ -401,7 +409,7 @@ bool generate_output(const std::string& app_source, const AdapterConfig& adapter
         output = cs.str();
         return result.ok();
     }
-    error(result, 1, "adapter target/method combination is not implemented (supported: browser/javasTrans, windows/csharpTrans)");
+    error(result, 1, "adapter target/method combination is not implemented (supported: browser/javasTrans, windows/csharpTrans (legacy), windows/mozTrans (validation only))");
     return false;
 }
 }
