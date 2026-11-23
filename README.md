@@ -15,7 +15,7 @@ Shay has its own original grammar and vocabulary, including `brew` for variable 
 | `.shaii` | Shay library |
 | `.shaz` | Zeccur task file |
 | `.shui` | Shay UI application source, processed by `gshai` or `shaii` |
-| `.shuil` | Shay platform UI adapter, loaded by `.shui` |
+| `.shuil` | Shay platform UI adapter, loaded by `.shui`; selects JavaScript for Browser and Mouz for Windows |
 | `.sho` | Compiled Shay object file (native relocatable object) |
 
 ## Vocabulary
@@ -233,6 +233,6 @@ dotnet build build/windows-demo.csproj
 
 The shared frontend validates the UI entry target and referenced `.shuil` adapter, then routes embedded Shay statements through the ordinary Shay parser, interpreter, or native compiler. UI class methods use the existing Shay runtime.
 
-Browser and Windows Forms `.shui` builds share the same loopback runtime bridge. `<:onclick=method:>` routes clicks into no-argument Shay methods, and `<:bind=variable:>` synchronizes declared Shay values with text boxes, checkboxes, and labels. Windows output includes a `.cs` file and `.csproj`; build it with `dotnet build build/windows-demo.csproj`. The generated Windows app starts the compiled Shay runtime beside it. Browser apps start the compiled executable; it opens the generated `.html` file automatically when a desktop session is available. The browser sends an authenticated heartbeat, and the runtime exits cleanly ninety seconds after the last page heartbeat. The adapters remain bridges to Shay—not separate Shay runtimes.
+Browser `.shui` builds use JavaScript. Windows `.shui` applications are migrating to Mouz: the Windows `.shuil` adapter selects `mozTrans` and references a `.mozf` source with `#*$mozfsport`; the Mouz compiler owns the `.mozf` → `.mozc` compilation. The legacy C# Windows adapter remains only for compatibility. The new native Mouz window generator and runtime loader are not implemented yet, and Shay refuses to silently generate C# for a Mouz adapter. Browser and legacy Windows Forms `.shui` builds share the same loopback runtime bridge. `<:onclick=method:>` routes clicks into no-argument Shay methods, and `<:bind=variable:>` synchronizes declared Shay values with text boxes, checkboxes, and labels. Windows output includes a `.cs` file and `.csproj`; build it with `dotnet build build/windows-demo.csproj`. The generated Windows app starts the compiled Shay runtime beside it. Browser apps start the compiled executable; it opens the generated `.html` file automatically when a desktop session is available. The browser sends an authenticated heartbeat, and the runtime exits cleanly ninety seconds after the last page heartbeat. The adapters remain bridges to Shay—not separate Shay runtimes.
 
 See [the SHAY UI specification](docs/SHUI_SPEC.md) and the [browser](examples/browser-demo.shui) and [Windows](examples/windows-demo.shui) examples.
