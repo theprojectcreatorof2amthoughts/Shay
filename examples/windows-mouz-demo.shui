@@ -1,0 +1,17 @@
+brew displayName = "Windows guest"
+$useentry UI(Windows)
+
+!%#csElementapp <{
+    *#uiContrl "windows-mouzutil.shuil"
+
+    *!#classUideclr !u#desktopPanel
+        $uiSet 0
+        $declrmthd doCalc
+            insval/>displayName
+        finish
+    finish
+
+    *!#doUiclass <"!u#desktopPanel">
+}>
+$dothis
+$uiFinish
