@@ -92,6 +92,8 @@ finish
 | `#*$doJavaScript` | Runs the JavaScript translation stage. |
 | `#*$csharpsport [uicontrol.cs]` | Selects the integrated C# translator for Windows. |
 | `#*$doCSharp` | Runs the C# translation stage. |
+| `#*$mozfsport [file.mozf]` | References a Mouz source file relative to the `.shuil` adapter. | 
+| `#*$doMouz` | Selects the Mouz translation stage for Windows. |
 
 For an external JavaScript translator, use a quoted filename inside the brackets:
 
