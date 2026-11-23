@@ -1,5 +1,9 @@
 brew displayName = "Guest"
-$useentry UI(Browser)
+$useentry reginit
+$useentry advsynt
+$useentry exprinit
+$useentry varinit
+$useentry uiinit
 
 !%#browsElementapp <{
     *#uiContrl "browserutil.shuil"
