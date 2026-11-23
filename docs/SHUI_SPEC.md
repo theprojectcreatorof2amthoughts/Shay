@@ -10,7 +10,7 @@ This document describes the **directive-based UI language**. It supersedes the e
 
 ## .shui application syntax
 
-The following is the canonical browser example. The Windows form uses `!%#csElementapp <{` instead. Directive spelling and casing are intentional.
+The following is the canonical browser example. The Windows form currently uses the established `!%#csElementapp <{` envelope; this token is retained for source compatibility while the Windows rendering backend migrates from legacy C# to Mouz. Directive spelling and casing are intentional.
 
 ```shay
 $useentry UI(Browser)
@@ -37,7 +37,7 @@ $uiFinish
 |---|---|
 | `$useentry UI(Browser)` | Selects the UI entry target. `Browser` is the target in this example. |
 | `!%#browsElementapp <{` | Opens a browser UI application body. |
-| `!%#csElementapp <{` | Opens a Windows/C# UI application body. |
+| `!%#csElementapp <{` | Opens a Windows UI application body (legacy token retained for compatibility; new Windows rendering is Mouz-based). |
 | `}>` | Closes the UI application body. |
 | `*#uiContrl "file.shuil"` | Loads the named platform control/translation file. |
 | `*!#classUideclr !u#Name` | Declares a UI class. UI class names must use the `!u#` prefix. |
@@ -102,9 +102,9 @@ For an external JavaScript translator, use a quoted filename inside the brackets
 Do not confuse this with `*#uiContrl "browserutil.shuil"`, which loads a `.shuil` adapter from the application.
 
 
-### Native Windows / C# adapter
+### Legacy native Windows / C# adapter
 
-Windows uses a native Windows Forms backend, not a browser wrapper. The corresponding adapter is:
+The legacy Windows Forms backend is retained temporarily for compatibility; new Windows applications should use the Mouz adapter described above. The legacy adapter is:
 
 ```shay
 #*$ContrlDefine <windows>
@@ -121,6 +121,46 @@ finish
 ```
 
 A `.shui` app can point to this adapter with `*#uiContrl "windowsutil.shuil"`. The first generator maps `square` to a WinForms `Panel`, `buttoncircle` to `Button`, `label` to `Label`, `textbox` to `TextBox`, and `checkbox` to `CheckBox`. IDs become control names. Unsupported element kinds are reported instead of silently discarded.
+
+### Windows adapter backed by Mouz
+
+Windows UI source remains `.shui`. Its `.shuil` adapter selects Mouz as the Windows UI implementation and names a separate `.mozf` source file:
+
+```shuil
+#*$ContrlDefine <windows>
+#*!MethdUi <mozTrans>
+#*!LangUI <US>
+#*!classmethdDeclr !m#mozMain
+    $uiset 0
+    $declrmthd TransMain
+        $mthdset 1
+        #*$mozfsport [windows-main.mozf]
+        #*$doMouz
+    finish
+finish
+```
+
+The corresponding `.shui` application keeps the established Shay UI syntax and loads that adapter normally:
+
+```shui
+$useentry UI(Windows)
+
+!%#csElementapp <{
+    *#uiContrl "windows-mouzutil.shuil"
+    *!#classUideclr !u#desktopPanel
+        $uiSet 0
+    finish
+    *!#doUiclass <"!u#desktopPanel">
+}>
+$dothis
+$uiFinish
+```
+
+The referenced `.mozf` file is resolved relative to the `.shuil` adapter. The SHUI frontend checks that the file exists and that the adapter uses the matching `mozTrans` / `mozfsport` / `doMouz` declarations. The Mouz compiler remains responsible for parsing and compiling `.mozf` into `.mozc`; Shay does not parse Mouz source itself.
+
+**Implementation boundary:** this commit adds the Windows/Mouz adapter grammar and source validation. It deliberately does not emit the old C# renderer for a `mozTrans` adapter. Native Mouz window generation and loading the resulting `.mozc` into a running Windows app are not implemented yet, so `gshai -o` reports that boundary rather than silently substituting C#.
+
+The previous `csharpTrans` adapter remains available only as a legacy compatibility path while existing Windows projects migrate. New Windows UI projects should use `mozTrans`.
 
 ### Build and run embedded Shay logic
 
