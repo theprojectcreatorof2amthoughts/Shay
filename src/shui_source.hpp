@@ -51,24 +51,33 @@ inline bool prepare_shui_source(const std::filesystem::path& input,
     for (const auto& item : adapter_result.diagnostics)
         diagnostics.push_back({item.line, item.message});
 
+    bool source_compatible = true;
     const std::string expected_envelope =
         adapter.platform == "windows" ? "!%#csElementapp <{" : "!%#browsElementapp <{";
     const std::string unexpected_envelope =
         adapter.platform == "windows" ? "!%#browsElementapp <{" : "!%#csElementapp <{";
-    if (source.find(unexpected_envelope) != std::string::npos)
+    if (source.find(unexpected_envelope) != std::string::npos) {
         diagnostics.push_back({1, "UI app envelope does not match its .shuil adapter"});
-    if (source.find(expected_envelope) == std::string::npos)
+        source_compatible = false;
+    }
+    if (source.find(expected_envelope) == std::string::npos) {
         diagnostics.push_back({1, "missing UI app envelope for the selected .shuil adapter"});
+        source_compatible = false;
+    }
     if (adapter.method == "mozTrans") {
         if (adapter.source_file.empty()) {
             diagnostics.push_back({1, "Mouz adapter must declare a .mozf source with '#*$mozfsport [file.mozf]'"});
+            source_compatible = false;
         } else {
             const std::filesystem::path mouz_source = adapter_path.parent_path() / adapter.source_file;
             if (!std::filesystem::is_regular_file(mouz_source))
+            {
                 diagnostics.push_back({1, "cannot open Mouz source '" + mouz_source.string() + "'"});
+                source_compatible = false;
+            }
         }
     }
-    if (!adapter_result.ok())
+    if (!adapter_result.ok() || !source_compatible)
         return false;
 
     std::istringstream lines(source);
