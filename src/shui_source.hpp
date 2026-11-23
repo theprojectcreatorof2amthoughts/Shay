@@ -68,7 +68,7 @@ inline bool prepare_shui_source(const std::filesystem::path& input,
                 diagnostics.push_back({1, "cannot open Mouz source '" + mouz_source.string() + "'"});
         }
     }
-    if (!adapter_result.ok() || adapter.platform != expected_platform)
+    if (!adapter_result.ok())
         return false;
 
     std::istringstream lines(source);
