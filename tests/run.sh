@@ -17,6 +17,29 @@ pass "shaii interpreter version"
 "$GSHAI" --version | grep -q 'gshai' || fail "compiler version"
 pass "gshai compiler version"
 
+cat > "$TMP/useentry-valid.shay" <<'EOF'
+$useentry reginit
+$useentry advsynt
+$useentry exprinit
+$useentry varinit
+$useentry funcinit
+$useentry condinit
+$useentry loopinit
+instxt/>"Composable entries work"
+EOF
+"$SHAII" --check "$TMP/useentry-valid.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "multiple lowercase useentry directives in .shay"; }
+out=$("$SHAII" "$TMP/useentry-valid.shay") || fail "run .shay with useentry directives"
+[ "$out" = "Composable entries work" ] || fail "useentry directives changed program execution"
+pass "multiple registered lowercase useentry directives work in .shay"
+
+cat > "$TMP/useentry-invalid.shay" <<'EOF'
+$useentry Reginit
+instxt/>"must not run"
+EOF
+if "$SHAII" --check "$TMP/useentry-invalid.shay" >"$TMP/out" 2>"$TMP/err"; then fail "uppercase useentry name was accepted"; fi
+grep -q "unknown or invalid useentry 'Reginit'" "$TMP/err" || { cat "$TMP/err" >&2; fail "uppercase useentry diagnostic"; }
+pass "useentry rejects uppercase and unregistered names"
+
 cat > "$TMP/unused-variable.shay" <<'EOF'
 brew unused_result = "unused"
 instxt/>"Compiler still succeeds"
@@ -1095,6 +1118,8 @@ pass "runproc launches executables with explicit argv and returns their exit sta
 
 
 cat > "$TMP/browserutil.shuil" <<'EOF'
+$useentry reginit
+$useentry uiinit
 #*$ContrlDefine <browser>
 #*!MethdUi <javasTrans>
 #*!LangUI <US>
@@ -1109,7 +1134,11 @@ finish
 EOF
 cat > "$TMP/integrated-ui.shui" <<'EOF'
 brew displayName = "Initial"
-$useentry UI(Browser)
+$useentry reginit
+$useentry advsynt
+$useentry exprinit
+$useentry varinit
+$useentry uiinit
 !%#browsElementapp <{
     *#uiContrl "browserutil.shuil"
     *!#classUideclr !u#browserCalc
@@ -1168,6 +1197,8 @@ wait "$ui_pid" 2>/dev/null || true
 ui_pid=""
 pass "browser events call Shay methods through the authenticated local runtime bridge"
 cat > "$TMP/windowsutil.shuil" <<'EOF'
+$useentry reginit
+$useentry uiinit
 #*$ContrlDefine <windows>
 #*!MethdUi <csharpTrans>
 #*!LangUI <US>
@@ -1182,7 +1213,11 @@ finish
 EOF
 cat > "$TMP/windows-ui.shui" <<'EOF'
 brew displayName = "Windows guest"
-$useentry UI(Windows)
+$useentry reginit
+$useentry advsynt
+$useentry exprinit
+$useentry varinit
+$useentry uiinit
 !%#csElementapp <{
     *#uiContrl "windowsutil.shuil"
     *!#classUideclr !u#desktopPanel
@@ -1213,5 +1248,67 @@ grep -q 'PostAsync("http://127.0.0.1:18765/event"' "$TMP/windows-ui-app.cs" || f
 grep -q 'Tag = "displayName"' "$TMP/windows-ui-app.cs" || fail "Windows controls did not retain state bindings"
 dotnet build "$TMP/windows-ui-app.csproj" --nologo --verbosity quiet >"$TMP/dotnet-out" 2>"$TMP/dotnet-err" || { cat "$TMP/dotnet-out" "$TMP/dotnet-err" >&2; fail "generated Windows Forms project builds"; }
 pass "generated Windows Forms project compiles against the Shay runtime bridge"
+
+
+# Windows SHUI can select the independent Mouz source pipeline. The frontend
+# validates the adapter and referenced .mozf, but must never silently fall back
+# to the legacy C# renderer while native Mouz rendering is still in development.
+cat > "$TMP/windows-mouzutil.shuil" <<'EOF'
+$useentry reginit
+$useentry uiinit
+#*$ContrlDefine <windows>
+#*!MethdUi <mozTrans>
+#*!LangUI <US>
+#*!classmethdDeclr !m#mozMain
+    $uiset 0
+    $declrmthd TransMain
+        $mthdset 1
+        #*$mozfsport [windows-main.mozf]
+        #*$doMouz
+    finish
+finish
+EOF
+cat > "$TMP/windows-main.mozf" <<'EOF'
++mozUihandler |handlers/uihandle.mozhl|
++#makeUicomp [<|
+    uiStructuredef:= .NET
+    uiStat:=1
+    doComp |+*WinComp|
+EOF
+cat > "$TMP/windows-mouz-ui.shui" <<'EOF'
+brew displayName = "Windows guest"
+$useentry reginit
+$useentry advsynt
+$useentry exprinit
+$useentry varinit
+$useentry uiinit
+!%#csElementapp <{
+    *#uiContrl "windows-mouzutil.shuil"
+    *!#classUideclr !u#desktopPanel
+        $uiSet 0
+        $declrmthd doCalc
+            insval/>displayName
+        finish
+    finish
+    *!#doUiclass <"!u#desktopPanel">
+}>
+$dothis
+$uiFinish
+EOF
+"$SHAII" --check "$TMP/windows-mouz-ui.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "shaii validates Windows .shui with Mouz adapter"; }
+pass "Windows .shui validates a .shuil adapter that selects Mouz and references a .mozf source"
+if "$GSHAI" -o "$TMP/windows-mouz-ui-app" "$TMP/windows-mouz-ui.shui" >"$TMP/out" 2>"$TMP/err"; then
+    fail "gshai silently generated a legacy Windows renderer for the Mouz adapter"
+fi
+grep -q "native Mouz window generation is not yet implemented" "$TMP/err" || { cat "$TMP/err" >&2; fail "Mouz backend did not report its implementation boundary"; }
+pass "gshai refuses to silently substitute the legacy C# renderer for a Mouz Windows adapter"
+
+sed 's/windows-main.mozf/missing-window.mozf/' "$TMP/windows-mouzutil.shuil" > "$TMP/windows-missing-mouzutil.shuil"
+sed 's/windows-mouzutil.shuil/windows-missing-mouzutil.shuil/' "$TMP/windows-mouz-ui.shui" > "$TMP/windows-missing-mouz-ui.shui"
+if "$SHAII" --check "$TMP/windows-missing-mouz-ui.shui" >"$TMP/out" 2>"$TMP/err"; then
+    fail "SHUI accepted a missing Mouz source file"
+fi
+grep -q "cannot open Mouz source" "$TMP/err" || { cat "$TMP/err" >&2; fail "missing Mouz source diagnostic"; }
+pass "SHUI diagnoses missing .mozf source files referenced by the Windows adapter"
 
 printf '\nAll Shay toolchain tests passed.\n'

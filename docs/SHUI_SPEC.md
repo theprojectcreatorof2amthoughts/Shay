@@ -10,10 +10,14 @@ This document describes the **directive-based UI language**. It supersedes the e
 
 ## .shui application syntax
 
-The following is the canonical browser example. The Windows form uses `!%#csElementapp <{` instead. Directive spelling and casing are intentional.
+The following is the canonical browser example. The Windows form currently uses the established `!%#csElementapp <{` envelope; this token is retained for source compatibility while the Windows rendering backend migrates from legacy C# to Mouz. Directive spelling and casing are intentional.
 
 ```shay
-$useentry UI(Browser)
+$useentry reginit
+$useentry advsynt
+$useentry exprinit
+$useentry varinit
+$useentry uiinit
 
 !%#browsElementapp <{
     *#uiContrl "browserutil.shuil"
@@ -35,9 +39,9 @@ $uiFinish
 
 | Syntax | Role |
 |---|---|
-| `$useentry UI(Browser)` | Selects the UI entry target. `Browser` is the target in this example. |
+| `$useentry uiinit` | Enables the UI application language backbone. Other lowercase entries can be composed with it. |
 | `!%#browsElementapp <{` | Opens a browser UI application body. |
-| `!%#csElementapp <{` | Opens a Windows/C# UI application body. |
+| `!%#csElementapp <{` | Opens a Windows UI application body (legacy token retained for compatibility; new Windows rendering is Mouz-based). |
 | `}>` | Closes the UI application body. |
 | `*#uiContrl "file.shuil"` | Loads the named platform control/translation file. |
 | `*!#classUideclr !u#Name` | Declares a UI class. UI class names must use the `!u#` prefix. |
@@ -65,6 +69,8 @@ A class declaration is closed by `finish`; each method is also closed by `finish
 A `.shuil` file configures how the selected platform receives the UI and how the UI is translated.
 
 ```shay
+$useentry reginit
+$useentry uiinit
 #*$ContrlDefine <browser>
 #*!MethdUi <javasTrans>
 
@@ -92,6 +98,8 @@ finish
 | `#*$doJavaScript` | Runs the JavaScript translation stage. |
 | `#*$csharpsport [uicontrol.cs]` | Selects the integrated C# translator for Windows. |
 | `#*$doCSharp` | Runs the C# translation stage. |
+| `#*$mozfsport [file.mozf]` | References a Mouz source file relative to the `.shuil` adapter. | 
+| `#*$doMouz` | Selects the Mouz translation stage for Windows. |
 
 For an external JavaScript translator, use a quoted filename inside the brackets:
 
@@ -102,11 +110,13 @@ For an external JavaScript translator, use a quoted filename inside the brackets
 Do not confuse this with `*#uiContrl "browserutil.shuil"`, which loads a `.shuil` adapter from the application.
 
 
-### Native Windows / C# adapter
+### Legacy native Windows / C# adapter
 
-Windows uses a native Windows Forms backend, not a browser wrapper. The corresponding adapter is:
+The legacy Windows Forms backend is retained temporarily for compatibility; new Windows applications should use the Mouz adapter described above. The legacy adapter is:
 
 ```shay
+$useentry reginit
+$useentry uiinit
 #*$ContrlDefine <windows>
 #*!MethdUi <csharpTrans>
 #*!LangUI <US>
@@ -121,6 +131,52 @@ finish
 ```
 
 A `.shui` app can point to this adapter with `*#uiContrl "windowsutil.shuil"`. The first generator maps `square` to a WinForms `Panel`, `buttoncircle` to `Button`, `label` to `Label`, `textbox` to `TextBox`, and `checkbox` to `CheckBox`. IDs become control names. Unsupported element kinds are reported instead of silently discarded.
+
+### Windows adapter backed by Mouz
+
+Windows UI source remains `.shui`. Its `.shuil` adapter selects Mouz as the Windows UI implementation and names a separate `.mozf` source file:
+
+```shuil
+$useentry reginit
+$useentry uiinit
+#*$ContrlDefine <windows>
+#*!MethdUi <mozTrans>
+#*!LangUI <US>
+#*!classmethdDeclr !m#mozMain
+    $uiset 0
+    $declrmthd TransMain
+        $mthdset 1
+        #*$mozfsport [windows-main.mozf]
+        #*$doMouz
+    finish
+finish
+```
+
+The corresponding `.shui` application keeps the established Shay UI syntax and loads that adapter normally:
+
+```shui
+$useentry reginit
+$useentry advsynt
+$useentry exprinit
+$useentry varinit
+$useentry uiinit
+
+!%#csElementapp <{
+    *#uiContrl "windows-mouzutil.shuil"
+    *!#classUideclr !u#desktopPanel
+        $uiSet 0
+    finish
+    *!#doUiclass <"!u#desktopPanel">
+}>
+$dothis
+$uiFinish
+```
+
+The referenced `.mozf` file is resolved relative to the `.shuil` adapter. The SHUI frontend checks that the file exists and that the adapter uses the matching `mozTrans` / `mozfsport` / `doMouz` declarations. The Mouz compiler remains responsible for parsing and compiling `.mozf` into `.mozc`; Shay does not parse Mouz source itself.
+
+**Implementation boundary:** this commit adds the Windows/Mouz adapter grammar and source validation. It deliberately does not emit the old C# renderer for a `mozTrans` adapter. Native Mouz window generation and loading the resulting `.mozc` into a running Windows app are not implemented yet, so `gshai -o` reports that boundary rather than silently substituting C#.
+
+The previous `csharpTrans` adapter remains available only as a legacy compatibility path while existing Windows projects migrate. New Windows UI projects should use `mozTrans`.
 
 ### Build and run embedded Shay logic
 
@@ -139,14 +195,14 @@ Both tools accept `.shui` directly. The shared frontend validates the UI envelop
 
 ## Translation pipeline
 
-1. Read the `.shui` source and resolve its selected entry target.
-2. Load the matching `.shuil` adapter named by `*#uiContrl`.
-3. Validate the adapter's platform, translation method, and UI language declarations.
-4. Build a platform-neutral UI description from `drawui` declarations and UI classes.
-5. Invoke the adapter's selected translator (for example, JavaScript for Browser).
-6. Emit platform output and report unsupported controls or metadata as diagnostics.
+1. Read the `.shui` source and compose its registered `$useentry` language backbones.
+2. Load the `.shuil` adapter named by `*#uiContrl`.
+3. Use the adapter to determine the platform, translation method, and UI language.
+4. Verify that the `.shui` app envelope matches the adapter platform.
+5. Build a platform-neutral UI description from `drawui` declarations and UI classes.
+6. Invoke the adapter's selected translator and emit platform output, reporting unsupported controls or metadata as diagnostics.
 
-The `.shui` source owns app structure and Shay behavior. The `.shuil` adapter owns platform translation. A platform adapter must not silently change shared application semantics.
+The `.shui` source owns app structure and Shay behavior. Its `$useentry` directives configure the language backbone; `uiinit` is required for a UI app. The `.shuil` adapter owns platform selection and translation. A platform adapter must not silently change shared application semantics. See [the composable entry specification](USEENTRY_SPEC.md) for the registered lowercase entry catalog.
 
 ## Implementation status and compatibility
 

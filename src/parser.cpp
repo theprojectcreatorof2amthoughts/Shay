@@ -1,4 +1,5 @@
 #include "parser.hpp"
+#include "useentry.hpp"
 #include <filesystem>
 #include <functional>
 #include <unordered_set>
@@ -145,7 +146,19 @@ Program Parser::parse(){
     for(const auto&e:elseProgram.errors)program.errors.push_back(e);
    }
   }else if(match(TokenKind::Symbol,"$")){
-   if(match(TokenKind::Identifier,"shaiiport")||match(TokenKind::Identifier,"shazport")){
+   if(match(TokenKind::Identifier,"useentry")){
+    valid=false; // File-level configuration is consumed, never emitted as an executable statement.
+    if(!consume(TokenKind::Identifier,"",program.errors,"expected a lowercase useentry name after '$useentry'")){valid=false;}
+    else {
+     const std::string entry=previous().text;
+     if(!is_valid_useentry_name(entry))
+      program.errors.push_back({previous().line,previous().column,"unknown or invalid useentry '"+entry+"'; names must be registered lowercase letters only"});
+     if(peek().kind!=TokenKind::Newline&&!atEnd()){
+      error(program.errors,"unexpected content after '$useentry' name");
+      valid=false;
+     }
+    }
+   }else if(match(TokenKind::Identifier,"shaiiport")||match(TokenKind::Identifier,"shazport")){
     const bool library=previous().text=="shaiiport";statement.kind=library?StatementKind::ImportLibrary:StatementKind::ImportTask;
     const std::string ext=library?".shaii":".shaz";
     std::string filename;
@@ -281,7 +294,7 @@ Program Parser::parse(){
      for(const auto&e:nestedProgram.errors)program.errors.push_back(e);
     }
     if(valid&&peek().kind!=TokenKind::Newline&&!atEnd()){error(program.errors,"unexpected token after 'finish'");valid=false;}
-   }else{error(program.errors,"expected shaiiport, shazport, declr, classfunc, or doclass after '$'");valid=false;}
+   }else{error(program.errors,"expected useentry, shaiiport, shazport, declr, classfunc, or doclass after '$'");valid=false;}
   }else if(match(TokenKind::Identifier,"dofunc")){
    statement.kind=StatementKind::DoFunction;
    valid=consume(TokenKind::Identifier,"",program.errors,"expected a function name after 'dofunc'");
