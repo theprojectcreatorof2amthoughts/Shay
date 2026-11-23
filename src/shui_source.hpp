@@ -60,6 +60,15 @@ inline bool prepare_shui_source(const std::filesystem::path& input,
         entry_target == "Windows" ? "windows" : "browser";
     if (adapter.platform != expected_platform)
         diagnostics.push_back({1, "UI entry target does not match its .shuil adapter"});
+    if (adapter.method == "mozTrans") {
+        if (adapter.source_file.empty()) {
+            diagnostics.push_back({1, "Mouz adapter must declare a .mozf source with '#*$mozfsport [file.mozf]'"});
+        } else {
+            const std::filesystem::path mouz_source = adapter_path.parent_path() / adapter.source_file;
+            if (!std::filesystem::is_regular_file(mouz_source))
+                diagnostics.push_back({1, "cannot open Mouz source '" + mouz_source.string() + "'"});
+        }
+    }
     if (!adapter_result.ok() || adapter.platform != expected_platform)
         return false;
 
