@@ -1214,4 +1214,60 @@ grep -q 'Tag = "displayName"' "$TMP/windows-ui-app.cs" || fail "Windows controls
 dotnet build "$TMP/windows-ui-app.csproj" --nologo --verbosity quiet >"$TMP/dotnet-out" 2>"$TMP/dotnet-err" || { cat "$TMP/dotnet-out" "$TMP/dotnet-err" >&2; fail "generated Windows Forms project builds"; }
 pass "generated Windows Forms project compiles against the Shay runtime bridge"
 
+
+# Windows SHUI can select the independent Mouz source pipeline. The frontend
+# validates the adapter and referenced .mozf, but must never silently fall back
+# to the legacy C# renderer while native Mouz rendering is still in development.
+cat > "$TMP/windows-mouzutil.shuil" <<'EOF'
+#*$ContrlDefine <windows>
+#*!MethdUi <mozTrans>
+#*!LangUI <US>
+#*!classmethdDeclr !m#mozMain
+    $uiset 0
+    $declrmthd TransMain
+        $mthdset 1
+        #*$mozfsport [windows-main.mozf]
+        #*$doMouz
+    finish
+finish
+EOF
+cat > "$TMP/windows-main.mozf" <<'EOF'
++mozUihandler |handlers/uihandle.mozhl|
++#makeUicomp [<|
+    uiStructuredef:= .NET
+    uiStat:=1
+    doComp |+*WinComp|
+EOF
+cat > "$TMP/windows-mouz-ui.shui" <<'EOF'
+brew displayName = "Windows guest"
+$useentry UI(Windows)
+!%#csElementapp <{
+    *#uiContrl "windows-mouzutil.shuil"
+    *!#classUideclr !u#desktopPanel
+        $uiSet 0
+        $declrmthd doCalc
+            insval/>displayName
+        finish
+    finish
+    *!#doUiclass <"!u#desktopPanel">
+}>
+$dothis
+$uiFinish
+EOF
+"$SHAII" --check "$TMP/windows-mouz-ui.shui" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "shaii validates Windows .shui with Mouz adapter"; }
+pass "Windows .shui validates a .shuil adapter that selects Mouz and references a .mozf source"
+if "$GSHAI" -o "$TMP/windows-mouz-ui-app" "$TMP/windows-mouz-ui.shui" >"$TMP/out" 2>"$TMP/err"; then
+    fail "gshai silently generated a legacy Windows renderer for the Mouz adapter"
+fi
+grep -q "native Mouz window generation is not yet implemented" "$TMP/err" || { cat "$TMP/err" >&2; fail "Mouz backend did not report its implementation boundary"; }
+pass "gshai refuses to silently substitute the legacy C# renderer for a Mouz Windows adapter"
+
+sed 's/windows-main.mozf/missing-window.mozf/' "$TMP/windows-mouzutil.shuil" > "$TMP/windows-missing-mouzutil.shuil"
+sed 's/windows-mouzutil.shuil/windows-missing-mouzutil.shuil/' "$TMP/windows-mouz-ui.shui" > "$TMP/windows-missing-mouz-ui.shui"
+if "$SHAII" --check "$TMP/windows-missing-mouz-ui.shui" >"$TMP/out" 2>"$TMP/err"; then
+    fail "SHUI accepted a missing Mouz source file"
+fi
+grep -q "cannot open Mouz source" "$TMP/err" || { cat "$TMP/err" >&2; fail "missing Mouz source diagnostic"; }
+pass "SHUI diagnoses missing .mozf source files referenced by the Windows adapter"
+
 printf '\nAll Shay toolchain tests passed.\n'
