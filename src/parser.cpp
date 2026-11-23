@@ -147,6 +147,7 @@ Program Parser::parse(){
    }
   }else if(match(TokenKind::Symbol,"$")){
    if(match(TokenKind::Identifier,"useentry")){
+    valid=false; // File-level configuration is consumed, never emitted as an executable statement.
     if(!consume(TokenKind::Identifier,"",program.errors,"expected a lowercase useentry name after '$useentry'")){valid=false;}
     else {
      const std::string entry=previous().text;
