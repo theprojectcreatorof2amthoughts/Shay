@@ -1,4 +1,5 @@
 #include "parser.hpp"
+#include "useentry.hpp"
 #include <filesystem>
 #include <functional>
 #include <unordered_set>
@@ -145,7 +146,18 @@ Program Parser::parse(){
     for(const auto&e:elseProgram.errors)program.errors.push_back(e);
    }
   }else if(match(TokenKind::Symbol,"$")){
-   if(match(TokenKind::Identifier,"shaiiport")||match(TokenKind::Identifier,"shazport")){
+   if(match(TokenKind::Identifier,"useentry")){
+    if(!consume(TokenKind::Identifier,"",program.errors,"expected a lowercase useentry name after '$useentry'")){valid=false;}
+    else {
+     const std::string entry=previous().text;
+     if(!is_valid_useentry_name(entry))
+      program.errors.push_back({previous().line,previous().column,"unknown or invalid useentry '"+entry+"'; names must be registered lowercase letters only"});
+     if(peek().kind!=TokenKind::Newline&&!atEnd()){
+      error(program.errors,"unexpected content after '$useentry' name");
+      valid=false;
+     }
+    }
+   }else if(match(TokenKind::Identifier,"shaiiport")||match(TokenKind::Identifier,"shazport")){
     const bool library=previous().text=="shaiiport";statement.kind=library?StatementKind::ImportLibrary:StatementKind::ImportTask;
     const std::string ext=library?".shaii":".shaz";
     std::string filename;
@@ -281,7 +293,209 @@ Program Parser::parse(){
      for(const auto&e:nestedProgram.errors)program.errors.push_back(e);
     }
     if(valid&&peek().kind!=TokenKind::Newline&&!atEnd()){error(program.errors,"unexpected token after 'finish'");valid=false;}
-   }else{error(program.errors,"expected shaiiport, shazport, declr, classfunc, or doclass after '$'");valid=false;}
+   }else{error(program.errors,"expected useentry, shaiiport, shazport, declr, classfunc, or doclass after '
+  }else if(match(TokenKind::Identifier,"dofunc")){
+   statement.kind=StatementKind::DoFunction;
+   valid=consume(TokenKind::Identifier,"",program.errors,"expected a function name after 'dofunc'");
+   if(valid)statement.name=previous().text;
+  }else if(match(TokenKind::Identifier,"brew")){
+   statement.kind=StatementKind::Declare;
+   valid=consume(TokenKind::Identifier,"",program.errors,"expected a variable name after 'brew'");
+   if(valid)statement.name=previous().text;
+   if(valid&&match(TokenKind::Symbol,":")){
+    if(!consume(TokenKind::Identifier,"",program.errors,"expected a type name after ':'"))valid=false;
+    else{
+     statement.type_annotation=previous().text;
+     if(statement.type_annotation!="number"&&statement.type_annotation!="string"&&statement.type_annotation!="boolean"){
+      error(program.errors,"unknown type '"+statement.type_annotation+"'; expected number, string, or boolean");valid=false;
+     }
+    }
+   }
+   if(valid)valid=consume(TokenKind::Symbol,"=",program.errors,"expected '=' after variable name or type annotation");
+   if(valid&&match(TokenKind::Symbol,"{")){
+    statement.map_value=true;
+    while(valid&&!(peek().kind==TokenKind::Symbol&&peek().text=="}")&&!atEnd()&&peek().kind!=TokenKind::Newline){
+     if(!consume(TokenKind::String,"",program.errors,"map keys must be quoted strings")){valid=false;break;}
+     const std::string key=previous().text;
+     for(const auto&entry:statement.map_items)if(entry.first==key){error(program.errors,"duplicate map key '"+key+"'");valid=false;break;}
+     if(!valid)break;
+     if(!consume(TokenKind::Symbol,":",program.errors,"expected ':' after map key")){valid=false;break;}
+     std::string value;
+     if(match(TokenKind::String))value=previous().text;
+     else if(match(TokenKind::Number)||match(TokenKind::Identifier,"true")||match(TokenKind::Identifier,"false"))value=previous().text;
+     else if(match(TokenKind::Symbol,"-")){if(match(TokenKind::Number))value="-"+previous().text;else{error(program.errors,"expected digits after unary '-' in map value");valid=false;}}
+     else{error(program.errors,"map values must be strings, numbers, or booleans");valid=false;}
+     if(!valid)break;
+     statement.map_items.push_back({key,value});
+     if(match(TokenKind::Symbol,","))continue;
+     if(!(peek().kind==TokenKind::Symbol&&peek().text=="}")){error(program.errors,"expected ',' or '}' after map entry");valid=false;}
+    }
+    if(valid)valid=consume(TokenKind::Symbol,"}",program.errors,"expected '}' to close map literal");
+   }else if(valid&&match(TokenKind::Identifier,"set")){
+    statement.set_value=true;
+    if(!consume(TokenKind::Symbol,"[",program.errors,"expected '[' after 'set'"))valid=false;
+    while(valid&&!(peek().kind==TokenKind::Symbol&&peek().text=="]")&&!atEnd()&&peek().kind!=TokenKind::Newline){
+     std::string item;
+     if(match(TokenKind::String))item=previous().text;
+     else if(match(TokenKind::Number)||match(TokenKind::Identifier,"true")||match(TokenKind::Identifier,"false"))item=previous().text;
+     else if(match(TokenKind::Symbol,"-")){if(match(TokenKind::Number))item="-"+previous().text;else{error(program.errors,"expected digits after unary '-' in set");valid=false;break;}}
+     else{error(program.errors,"set items must be strings, numbers, or booleans");valid=false;break;}
+     statement.list_items.push_back(item);
+     if(match(TokenKind::Symbol,","))continue;
+     if(!(peek().kind==TokenKind::Symbol&&peek().text=="]")){error(program.errors,"expected ',' or ']' after set item");valid=false;}
+    }
+    if(valid)valid=consume(TokenKind::Symbol,"]",program.errors,"expected ']' to close set literal");
+   }else if(valid&&match(TokenKind::Symbol,"[")){
+    statement.list_value=true;
+    while(valid&&!(peek().kind==TokenKind::Symbol&&peek().text=="]")&&!atEnd()&&peek().kind!=TokenKind::Newline){
+     std::string item;
+     if(match(TokenKind::String))item=previous().text;
+     else if(match(TokenKind::Number)||match(TokenKind::Identifier,"true")||match(TokenKind::Identifier,"false"))item=previous().text;
+     else if(match(TokenKind::Symbol,"-")){
+      if(match(TokenKind::Number))item="-"+previous().text;
+      else{error(program.errors,"expected digits after unary '-' in list");valid=false;break;}
+     }else{error(program.errors,"list items must be strings, numbers, or booleans");valid=false;break;}
+     statement.list_items.push_back(item);
+     if(match(TokenKind::Symbol,","))continue;
+     if(!(peek().kind==TokenKind::Symbol&&peek().text=="]")){error(program.errors,"expected ',' or ']' after list item");valid=false;}
+    }
+    if(valid)valid=consume(TokenKind::Symbol,"]",program.errors,"expected ']' to close list literal");
+   }else if(valid){
+    if(match(TokenKind::String))statement.value=std::string(1,static_cast<char>(1))+previous().text;
+    else if(match(TokenKind::Number)||match(TokenKind::Identifier,"true")||match(TokenKind::Identifier,"false"))statement.value=previous().text;
+    else if(match(TokenKind::Symbol,"-")){if(match(TokenKind::Number))statement.value="-"+previous().text;else{error(program.errors,"expected digits after unary '-'");valid=false;}}
+    else{error(program.errors,"expected a string, number, or boolean literal");valid=false;}
+   }
+   if(valid&&!statement.type_annotation.empty()){
+    if(statement.list_value||statement.map_value||statement.set_value){error(program.errors,"scalar type annotations cannot be applied to list, map, or set literals");valid=false;}
+    else{
+     const std::string actual=!statement.value.empty()&&statement.value.front()==static_cast<char>(1)?"string":(statement.value=="true"||statement.value=="false"?"boolean":"number");
+     if(actual!=statement.type_annotation){error(program.errors,"type mismatch for '"+statement.name+"': expected "+statement.type_annotation+", got "+actual);valid=false;}
+    }
+   }
+  }else if(match(TokenKind::Identifier,"inpvarforw")){
+   statement.kind=StatementKind::InputVariable;
+   valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'inpvarforw'");
+   if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected a variable name after 'inpvarforw/>'");
+   if(valid)statement.name=previous().text;
+  }else if(match(TokenKind::Identifier,"forw")){
+   statement.kind=StatementKind::ReturnValue;
+   statement.value=collect_expression(tokens_,current_,"",valid);
+   if(statement.value.empty()){error(program.errors,"'forw' requires a return expression");valid=false;}
+  }else if(match(TokenKind::Identifier,"logit")){
+   statement.kind=StatementKind::LogText;
+   valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'logit'");
+   if(valid)valid=consume(TokenKind::String,"",program.errors,"expected quoted log text after 'logit/>'");
+   if(valid)statement.value=previous().text;
+  }else if(match(TokenKind::Identifier,"instxt")){
+   statement.kind=StatementKind::OutputText;valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'instxt'");
+   if(valid)valid=consume(TokenKind::String,"",program.errors,"expected quoted text after 'instxt/>'");
+   if(valid)statement.value=previous().text;
+  }else if(match(TokenKind::Identifier,"instxtexit")){
+   statement.kind=StatementKind::OutputTextExit;valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'instxtexit'");
+   if(valid)valid=consume(TokenKind::String,"",program.errors,"expected quoted text after 'instxtexit/>'");
+   if(valid)statement.value=previous().text;
+  }else if(match(TokenKind::Identifier,"insval")){
+   statement.kind=StatementKind::OutputValue;valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'insval'");
+   if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected a variable or function name after 'insval/>'");
+   if(valid){statement.name=previous().text;statement.output_names.push_back(statement.name);}
+   if(valid&&match(TokenKind::Symbol,"[")){
+    if(match(TokenKind::String)){statement.output_keyed=true;statement.output_key=previous().text;}
+    else if(consume(TokenKind::Number,"",program.errors,"expected a non-negative list index or quoted map key")){
+     const std::string index=previous().text;
+     if(index.find_first_not_of("0123456789")!=std::string::npos){error(program.errors,"list index must be a non-negative integer");valid=false;}
+     else{try{statement.list_index=static_cast<std::size_t>(std::stoull(index));statement.output_indexed=true;}catch(...){error(program.errors,"list index is too large");valid=false;}}
+    }else valid=false;
+    if(valid)valid=consume(TokenKind::Symbol,"]",program.errors,"expected ']' after collection index");
+   }
+   if(valid&&match(TokenKind::Symbol,"(")){
+    statement.kind=StatementKind::OutputCall;
+    statement.output_names.clear();
+    if(!(peek().kind==TokenKind::Symbol&&peek().text==")")){
+     while(valid){
+      auto arg=collect_expression(tokens_,current_,",",valid);
+      if(!valid||arg.empty()){error(program.errors,"expected a function argument expression");valid=false;break;}
+      statement.arguments.push_back(arg);
+      if(match(TokenKind::Symbol,","))continue;
+      break;
+     }
+    }
+    if(valid)valid=consume(TokenKind::Symbol,")",program.errors,"expected ')' after function arguments");
+   }else if(valid){
+    while(match(TokenKind::Symbol,",")){
+     if(statement.output_names.size()>=10){
+      error(program.errors,"insval/> supports a maximum of 10 variables");
+      valid=false;
+      skipLine();
+      skipCurrentLine=false;
+      break;
+     }
+     if(!consume(TokenKind::Identifier,"",program.errors,"expected a variable name after ','")){
+      valid=false;
+      break;
+     }
+     statement.output_names.push_back(previous().text);
+    }
+   }
+  }else if(match(TokenKind::Identifier,"listadd")||match(TokenKind::Identifier,"listset")||match(TokenKind::Identifier,"listremove")){
+   const std::string operation=previous().text;
+   statement.kind=operation=="listadd"?StatementKind::ListAppend:(operation=="listset"?StatementKind::ListSet:StatementKind::ListRemove);
+   valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after '"+operation+"'");
+   if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected a list variable name");
+   if(valid)statement.name=previous().text;
+   if(valid)valid=consume(TokenKind::Symbol,",",program.errors,"expected ',' after the list variable name");
+   if(valid&&statement.kind==StatementKind::ListAppend){
+    if(match(TokenKind::String))statement.value=previous().text;
+    else if(match(TokenKind::Number)||match(TokenKind::Identifier,"true")||match(TokenKind::Identifier,"false"))statement.value=previous().text;
+    else if(match(TokenKind::Symbol,"-")){if(match(TokenKind::Number))statement.value="-"+previous().text;else{error(program.errors,"expected digits after unary '-'");valid=false;}}
+    else{error(program.errors,"listadd value must be a string, number, or boolean literal");valid=false;}
+   }else if(valid){
+    if(!consume(TokenKind::Number,"",program.errors,"expected a non-negative integer list index"))valid=false;
+    else{
+     const std::string index=previous().text;
+     if(index.find_first_not_of("0123456789")!=std::string::npos){error(program.errors,"list index must be a non-negative integer");valid=false;}
+     else{try{statement.list_index=static_cast<std::size_t>(std::stoull(index));}catch(...){error(program.errors,"list index is too large");valid=false;}}
+    }
+    if(valid&&statement.kind==StatementKind::ListSet){
+     valid=consume(TokenKind::Symbol,",",program.errors,"expected ',' after list index");
+     if(valid&&match(TokenKind::String))statement.value=previous().text;
+     else if(valid&&(match(TokenKind::Number)||match(TokenKind::Identifier,"true")||match(TokenKind::Identifier,"false")))statement.value=previous().text;
+     else if(valid&&match(TokenKind::Symbol,"-")){if(match(TokenKind::Number))statement.value="-"+previous().text;else{error(program.errors,"expected digits after unary '-'");valid=false;}}
+     else if(valid){error(program.errors,"listset value must be a string, number, or boolean literal");valid=false;}
+    }
+   }
+  }else if(match(TokenKind::Identifier,"mapset")||match(TokenKind::Identifier,"mapremove")||match(TokenKind::Identifier,"setadd")||match(TokenKind::Identifier,"setremove")||match(TokenKind::Identifier,"setcontains")){
+   const std::string operation=previous().text;
+   statement.kind=operation=="mapset"?StatementKind::MapSet:(operation=="mapremove"?StatementKind::MapRemove:(operation=="setadd"?StatementKind::SetAdd:(operation=="setremove"?StatementKind::SetRemove:StatementKind::SetContains)));
+   valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after '"+operation+"'");
+   if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected a collection variable name");
+   if(valid)statement.name=previous().text;
+   if(valid)valid=consume(TokenKind::Symbol,",",program.errors,"expected ',' after collection variable name");
+   if(valid&&(statement.kind==StatementKind::MapSet||statement.kind==StatementKind::MapRemove)){
+    valid=consume(TokenKind::String,"",program.errors,"map keys must be quoted strings");
+    if(valid)statement.output_key=previous().text;
+    if(valid&&statement.kind==StatementKind::MapSet){
+     valid=consume(TokenKind::Symbol,",",program.errors,"expected ',' after map key");
+     if(valid&&match(TokenKind::String))statement.value=previous().text;
+     else if(valid&&(match(TokenKind::Number)||match(TokenKind::Identifier,"true")||match(TokenKind::Identifier,"false")))statement.value=previous().text;
+     else if(valid&&match(TokenKind::Symbol,"-")){if(match(TokenKind::Number))statement.value="-"+previous().text;else{error(program.errors,"expected digits after unary '-'");valid=false;}}
+     else if(valid){error(program.errors,"mapset value must be a string, number, or boolean literal");valid=false;}
+    }
+   }else if(valid){
+    if(match(TokenKind::String))statement.value=previous().text;
+    else if(match(TokenKind::Number)||match(TokenKind::Identifier,"true")||match(TokenKind::Identifier,"false"))statement.value=previous().text;
+    else if(match(TokenKind::Symbol,"-")){if(match(TokenKind::Number))statement.value="-"+previous().text;else{error(program.errors,"expected digits after unary '-'");valid=false;}}
+    else{error(program.errors,"set operation value must be a string, number, or boolean literal");valid=false;}
+   }
+  }else{error(program.errors,"unrecognized Shay statement");valid=false;}
+  if(skipCurrentLine&&!atEnd()&&peek().kind!=TokenKind::Newline){error(program.errors,"unexpected token after statement");valid=false;}
+  if(valid)program.statements.push_back(statement);
+  if(skipCurrentLine)skipLine();
+ }
+ return program;
+}
+}
+");valid=false;}
   }else if(match(TokenKind::Identifier,"dofunc")){
    statement.kind=StatementKind::DoFunction;
    valid=consume(TokenKind::Identifier,"",program.errors,"expected a function name after 'dofunc'");
