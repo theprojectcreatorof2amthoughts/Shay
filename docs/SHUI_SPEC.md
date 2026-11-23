@@ -13,7 +13,11 @@ This document describes the **directive-based UI language**. It supersedes the e
 The following is the canonical browser example. The Windows form currently uses the established `!%#csElementapp <{` envelope; this token is retained for source compatibility while the Windows rendering backend migrates from legacy C# to Mouz. Directive spelling and casing are intentional.
 
 ```shay
-$useentry UI(Browser)
+$useentry reginit
+$useentry advsynt
+$useentry exprinit
+$useentry varinit
+$useentry uiinit
 
 !%#browsElementapp <{
     *#uiContrl "browserutil.shuil"
@@ -35,7 +39,7 @@ $uiFinish
 
 | Syntax | Role |
 |---|---|
-| `$useentry UI(Browser)` | Selects the UI entry target. `Browser` is the target in this example. |
+| `$useentry uiinit` | Enables the UI application language backbone. Other lowercase entries can be composed with it. |
 | `!%#browsElementapp <{` | Opens a browser UI application body. |
 | `!%#csElementapp <{` | Opens a Windows UI application body (legacy token retained for compatibility; new Windows rendering is Mouz-based). |
 | `}>` | Closes the UI application body. |
@@ -145,7 +149,11 @@ finish
 The corresponding `.shui` application keeps the established Shay UI syntax and loads that adapter normally:
 
 ```shui
-$useentry UI(Windows)
+$useentry reginit
+$useentry advsynt
+$useentry exprinit
+$useentry varinit
+$useentry uiinit
 
 !%#csElementapp <{
     *#uiContrl "windows-mouzutil.shuil"
@@ -181,14 +189,14 @@ Both tools accept `.shui` directly. The shared frontend validates the UI envelop
 
 ## Translation pipeline
 
-1. Read the `.shui` source and resolve its selected entry target.
-2. Load the matching `.shuil` adapter named by `*#uiContrl`.
-3. Validate the adapter's platform, translation method, and UI language declarations.
-4. Build a platform-neutral UI description from `drawui` declarations and UI classes.
-5. Invoke the adapter's selected translator (for example, JavaScript for Browser).
-6. Emit platform output and report unsupported controls or metadata as diagnostics.
+1. Read the `.shui` source and compose its registered `$useentry` language backbones.
+2. Load the `.shuil` adapter named by `*#uiContrl`.
+3. Use the adapter to determine the platform, translation method, and UI language.
+4. Verify that the `.shui` app envelope matches the adapter platform.
+5. Build a platform-neutral UI description from `drawui` declarations and UI classes.
+6. Invoke the adapter's selected translator and emit platform output, reporting unsupported controls or metadata as diagnostics.
 
-The `.shui` source owns app structure and Shay behavior. The `.shuil` adapter owns platform translation. A platform adapter must not silently change shared application semantics.
+The `.shui` source owns app structure and Shay behavior. Its `$useentry` directives configure the language backbone; `uiinit` is required for a UI app. The `.shuil` adapter owns platform selection and translation. A platform adapter must not silently change shared application semantics. See [the composable entry specification](USEENTRY_SPEC.md) for the registered lowercase entry catalog.
 
 ## Implementation status and compatibility
 
