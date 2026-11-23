@@ -1,5 +1,9 @@
 brew displayName = "Windows guest"
-$useentry UI(Windows)
+$useentry reginit
+$useentry advsynt
+$useentry exprinit
+$useentry varinit
+$useentry uiinit
 
 !%#csElementapp <{
     *#uiContrl "windows-mouzutil.shuil"
