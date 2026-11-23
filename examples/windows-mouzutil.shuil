@@ -1,0 +1,14 @@
+#*$ContrlDefine <windows>
+#*!MethdUi <mozTrans>
+
+#*!LangUI <US>
+#*!classmethdDeclr !m#mozMain
+    $uiset 0
+
+    $declrmthd TransMain
+        $mthdset 1
+
+        #*$mozfsport [windows-main.mozf]
+        #*$doMouz
+    finish
+finish
