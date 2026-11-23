@@ -69,6 +69,8 @@ A class declaration is closed by `finish`; each method is also closed by `finish
 A `.shuil` file configures how the selected platform receives the UI and how the UI is translated.
 
 ```shay
+$useentry reginit
+$useentry uiinit
 #*$ContrlDefine <browser>
 #*!MethdUi <javasTrans>
 
@@ -113,6 +115,8 @@ Do not confuse this with `*#uiContrl "browserutil.shuil"`, which loads a `.shuil
 The legacy Windows Forms backend is retained temporarily for compatibility; new Windows applications should use the Mouz adapter described above. The legacy adapter is:
 
 ```shay
+$useentry reginit
+$useentry uiinit
 #*$ContrlDefine <windows>
 #*!MethdUi <csharpTrans>
 #*!LangUI <US>
@@ -133,6 +137,8 @@ A `.shui` app can point to this adapter with `*#uiContrl "windowsutil.shuil"`. T
 Windows UI source remains `.shui`. Its `.shuil` adapter selects Mouz as the Windows UI implementation and names a separate `.mozf` source file:
 
 ```shuil
+$useentry reginit
+$useentry uiinit
 #*$ContrlDefine <windows>
 #*!MethdUi <mozTrans>
 #*!LangUI <US>
