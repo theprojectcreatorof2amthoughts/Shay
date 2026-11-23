@@ -17,6 +17,29 @@ pass "shaii interpreter version"
 "$GSHAI" --version | grep -q 'gshai' || fail "compiler version"
 pass "gshai compiler version"
 
+cat > "$TMP/useentry-valid.shay" <<'EOF'
+$useentry reginit
+$useentry advsynt
+$useentry exprinit
+$useentry varinit
+$useentry funcinit
+$useentry condinit
+$useentry loopinit
+instxt/>"Composable entries work"
+EOF
+"$SHAII" --check "$TMP/useentry-valid.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "multiple lowercase useentry directives in .shay"; }
+out=$("$SHAII" "$TMP/useentry-valid.shay") || fail "run .shay with useentry directives"
+[ "$out" = "Composable entries work" ] || fail "useentry directives changed program execution"
+pass "multiple registered lowercase useentry directives work in .shay"
+
+cat > "$TMP/useentry-invalid.shay" <<'EOF'
+$useentry Reginit
+instxt/>"must not run"
+EOF
+if "$SHAII" --check "$TMP/useentry-invalid.shay" >"$TMP/out" 2>"$TMP/err"; then fail "uppercase useentry name was accepted"; fi
+grep -q "unknown or invalid useentry 'Reginit'" "$TMP/err" || { cat "$TMP/err" >&2; fail "uppercase useentry diagnostic"; }
+pass "useentry rejects uppercase and unregistered names"
+
 cat > "$TMP/unused-variable.shay" <<'EOF'
 brew unused_result = "unused"
 instxt/>"Compiler still succeeds"
@@ -1095,6 +1118,8 @@ pass "runproc launches executables with explicit argv and returns their exit sta
 
 
 cat > "$TMP/browserutil.shuil" <<'EOF'
+$useentry reginit
+$useentry uiinit
 #*$ContrlDefine <browser>
 #*!MethdUi <javasTrans>
 #*!LangUI <US>
@@ -1109,7 +1134,11 @@ finish
 EOF
 cat > "$TMP/integrated-ui.shui" <<'EOF'
 brew displayName = "Initial"
-$useentry UI(Browser)
+$useentry reginit
+$useentry advsynt
+$useentry exprinit
+$useentry varinit
+$useentry uiinit
 !%#browsElementapp <{
     *#uiContrl "browserutil.shuil"
     *!#classUideclr !u#browserCalc
@@ -1168,6 +1197,8 @@ wait "$ui_pid" 2>/dev/null || true
 ui_pid=""
 pass "browser events call Shay methods through the authenticated local runtime bridge"
 cat > "$TMP/windowsutil.shuil" <<'EOF'
+$useentry reginit
+$useentry uiinit
 #*$ContrlDefine <windows>
 #*!MethdUi <csharpTrans>
 #*!LangUI <US>
@@ -1182,7 +1213,11 @@ finish
 EOF
 cat > "$TMP/windows-ui.shui" <<'EOF'
 brew displayName = "Windows guest"
-$useentry UI(Windows)
+$useentry reginit
+$useentry advsynt
+$useentry exprinit
+$useentry varinit
+$useentry uiinit
 !%#csElementapp <{
     *#uiContrl "windowsutil.shuil"
     *!#classUideclr !u#desktopPanel
@@ -1219,6 +1254,8 @@ pass "generated Windows Forms project compiles against the Shay runtime bridge"
 # validates the adapter and referenced .mozf, but must never silently fall back
 # to the legacy C# renderer while native Mouz rendering is still in development.
 cat > "$TMP/windows-mouzutil.shuil" <<'EOF'
+$useentry reginit
+$useentry uiinit
 #*$ContrlDefine <windows>
 #*!MethdUi <mozTrans>
 #*!LangUI <US>
