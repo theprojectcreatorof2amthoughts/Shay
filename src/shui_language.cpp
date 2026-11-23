@@ -1,4 +1,5 @@
 #include "shui_language.hpp"
+#include "useentry.hpp"
 #include <algorithm>
 #include <cctype>
 #include <iomanip>
@@ -88,32 +89,32 @@ std::vector<Element> elements_of(const std::string& source) {
 Result validate_shui(const std::string& source) {
     Result result;
     const auto lines = lines_of(source);
-    bool entry = false, app = false, app_closed = false, do_this = false, ui_finish = false;
-    std::string entry_target;
+    bool app = false, app_closed = false, do_this = false, ui_finish = false;
+    bool ui_entry = false;
     bool in_class = false, in_method = false;
     std::set<std::string> classes, ids;
     for (const auto& [number, line] : lines) {
         if (line.empty()) continue;
-        if (!entry) {
+        if (!app) {
             if (matches(line, R"(brew\s+.+)") ||
                 matches(line, R"(\$shaiiport\s+.+)") ||
                 matches(line, R"(\$shazport\s+.+)"))
                 continue;
-            if (!matches(line, R"(\$useentry\s+UI\([A-Za-z_][A-Za-z0-9_]*\))"))
-                error(result, number, "expected Shay declarations/imports or '$useentry UI(Target)' before the UI app");
-            else {
-                std::smatch target_match;
-                if (std::regex_search(line, target_match, std::regex(R"REGEX(UI\(([A-Za-z_][A-Za-z0-9_]*)\))REGEX")))
-                    entry_target = target_match[1].str();
-                entry = true;
+            std::smatch entry_match;
+            if (std::regex_match(line, entry_match, std::regex(R"(\$useentry\s+([a-z]+))"))) {
+                const std::string name = entry_match[1].str();
+                if (!is_valid_useentry_name(name))
+                    error(result, number, "unknown or invalid useentry '" + name + "'; names must be registered lowercase letters only");
+                if (name == "uiinit") ui_entry = true;
+                continue;
             }
-            continue;
-        }
-        if (!app) {
-            const std::string expected = entry_target == "Windows" ? "!%#csElementapp <{" : "!%#browsElementapp <{";
-            if (line != expected)
-                error(result, number, "expected '" + expected + "' after the UI entry");
-            else app = true;
+            if (line == "!%#browsElementapp <{" || line == "!%#csElementapp <{") {
+                if (!ui_entry)
+                    error(result, number, "a .shui file requires '$useentry uiinit' before its UI app");
+                app = true;
+                continue;
+            }
+            error(result, number, "expected Shay declarations/imports, lowercase '$useentry' directives, or a UI app envelope");
             continue;
         }
         if (app_closed) {
@@ -164,8 +165,8 @@ Result validate_shui(const std::string& source) {
         }
         error(result, number, "unrecognized .shui directive or malformed UI element");
     }
-    if (!entry) error(result, 1, "missing '$useentry UI(Target)'");
-    if (!app) error(result, 1, "missing '$browsElementapp <{'");
+    if (!ui_entry) error(result, 1, "missing '$useentry uiinit'");
+    if (!app) error(result, 1, "missing a supported UI app envelope");
     if (!app_closed) error(result, lines.empty() ? 1 : lines.back().first, "missing '}> to close the UI app body");
     if (app_closed && !do_this) error(result, lines.empty() ? 1 : lines.back().first, "missing '$dothis' after the UI app body");
     if (do_this && !ui_finish) error(result, lines.empty() ? 1 : lines.back().first, "missing '$uiFinish' after '$dothis'");
@@ -181,6 +182,12 @@ Result validate_shuil(const std::string& source) {
     for (const auto& [number, line] : lines) {
         if (line.empty()) continue;
         std::smatch match;
+        if (std::regex_match(line, match, std::regex(R"(\$useentry\s+([a-z]+))"))) {
+            const std::string name = match[1].str();
+            if (!is_valid_useentry_name(name))
+                error(result, number, "unknown or invalid useentry '" + name + "'; names must be registered lowercase letters only");
+            continue;
+        }
         if (std::regex_match(line, match, std::regex(R"(#\*\$ContrlDefine\s+<([A-Za-z][A-Za-z0-9_-]*)>)"))) {
             if (platform) error(result, number, "platform target is declared more than once");
             platform = true; continue;
