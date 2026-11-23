@@ -1277,7 +1277,11 @@ cat > "$TMP/windows-main.mozf" <<'EOF'
 EOF
 cat > "$TMP/windows-mouz-ui.shui" <<'EOF'
 brew displayName = "Windows guest"
-$useentry UI(Windows)
+$useentry reginit
+$useentry advsynt
+$useentry exprinit
+$useentry varinit
+$useentry uiinit
 !%#csElementapp <{
     *#uiContrl "windows-mouzutil.shuil"
     *!#classUideclr !u#desktopPanel
