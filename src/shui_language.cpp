@@ -253,6 +253,7 @@ bool inspect_adapter(const std::string& source, AdapterConfig& config, Result& r
     config.platform = capture(source, R"(#\*\$ContrlDefine\s+<([A-Za-z][A-Za-z0-9_-]*)>)");
     config.method = capture(source, R"(#\*!MethdUi\s+<([A-Za-z][A-Za-z0-9_-]*)>)");
     config.language = capture(source, R"(#\*!LangUI\s+<([A-Za-z][A-Za-z0-9_-]*)>)");
+    config.source_file = capture(source, R"(#\*\$mozfsport\s+\[([A-Za-z0-9_./-]+\.mozf)\])");
     if ((config.platform == "browser" && config.method != "javasTrans") ||
         (config.platform == "windows" && config.method != "csharpTrans" && config.method != "mozTrans") ||
         (config.platform != "browser" && config.platform != "windows"))
