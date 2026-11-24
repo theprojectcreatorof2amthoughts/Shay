@@ -25,12 +25,13 @@ $useentry varinit
 $useentry funcinit
 $useentry condinit
 $useentry loopinit
+$useentry optionalmissing
 instxt/>"Composable entries work"
 EOF
 "$SHAII" --check "$TMP/useentry-valid.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "multiple lowercase useentry directives in .shay"; }
 out=$("$SHAII" "$TMP/useentry-valid.shay") || fail "run .shay with useentry directives"
 [ "$out" = "Composable entries work" ] || fail "useentry directives changed program execution"
-pass "multiple registered lowercase useentry directives work in .shay"
+pass "multiple lowercase and missing optional useentry directives work in .shay"
 
 cat > "$TMP/useentry-invalid.shay" <<'EOF'
 $useentry Reginit
