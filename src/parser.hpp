@@ -3,16 +3,17 @@
 
 #include "ast.hpp"
 #include "lexer.hpp"
+#include <unordered_set>
 
 namespace shay {
 class Parser {
 public:
-    explicit Parser(const std::vector<Token> &tokens);
+    explicit Parser(const std::vector<Token> &tokens, std::unordered_set<std::string> active_entries = {});
     Program parse();
 private:
     const std::vector<Token> &tokens_;
     std::size_t current_ = 0;
-    bool rayinit_enabled_ = false;
+    std::unordered_set<std::string> active_entries_;
     const Token &peek() const;
     const Token &previous() const;
     bool match(TokenKind kind, const std::string &text = "");
