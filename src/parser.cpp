@@ -256,7 +256,7 @@ Program Parser::parse(){
      error(program.errors,"'$raydeclr' requires '$useentry rayinit' and an installed rayinit.shaye package");
      valid=false;
     }
-    valid=consume(TokenKind::Identifier,"",program.errors,"expected a function name after '$declr");
+    if(valid)valid=consume(TokenKind::Identifier,"",program.errors,ray_ui_declaration?"expected a function name after '$raydeclr'":"expected a function name after '$declr'");
     if(valid)statement.name=previous().text;
     if(valid)valid=consume(TokenKind::Symbol,"(",program.errors,"expected '(' after function name");
     std::unordered_set<std::string> names;
