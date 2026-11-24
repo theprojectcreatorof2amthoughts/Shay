@@ -238,7 +238,7 @@ void load_file(const fs::path&input,BuildContext&ctx){
    if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'fileread' is not allowed");continue;}
    if(ctx.variables.insert(s.name).second)ctx.variable_declarations.emplace_back(input,s);
   }else if(s.kind==shay::StatementKind::DeclareFunction){
-   if(extension!=".shaii"){diagnose(ctx,input,s.line,"'$declr' is only allowed in .shaii files");continue;}
+   if(extension!=".shaii"&&!s.ray_ui_declaration){diagnose(ctx,input,s.line,"'$declr' is only allowed in .shaii files; '$raydeclr' requires rayinit");continue;}
    if(ctx.functions.count(s.name)){diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");continue;}
    ctx.functions.emplace(s.name,s);
    ctx.pending_function_validation.emplace_back(input,s);
