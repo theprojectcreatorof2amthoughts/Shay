@@ -69,12 +69,12 @@ install: build
 	$(INSTALL) -m 0755 "$(INTERPRETER)" "$(DESTDIR)$(BINDIR)/shaii"
 	$(INSTALL) -d "$(DESTDIR)$(SHAREDIR)/siil"
 	$(INSTALL) -m 0644 srchfile/siil/*.shaii "$(DESTDIR)$(SHAREDIR)/siil/"
-	$(INSTALL) -m 0644 srchfile/siil/README.md "$(DESTDIR)$(SHAREDIR)/srchfile/siil/README.md"
+	$(INSTALL) -m 0644 srchfile/siil/README.md "$(DESTDIR)$(SHAREDIR)/siil/README.md"
 
 uninstall:
 	rm -f "$(DESTDIR)$(BINDIR)/gshai" "$(DESTDIR)$(BINDIR)/shaii"
 	@for lib in srchfile/siil/*.shaii; do rm -f "$(DESTDIR)$(SHAREDIR)/siil/${lib##*/}"; done
-	rm -f "$(DESTDIR)$(SHAREDIR)/srchfile/siil/README.md"
+	rm -f "$(DESTDIR)$(SHAREDIR)/siil/README.md"
 	-rmdir "$(DESTDIR)$(SHAREDIR)/siil" "$(DESTDIR)$(SHAREDIR)"
 
 debug:
