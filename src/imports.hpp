@@ -40,7 +40,7 @@ inline fs::path resolve_import(const fs::path &importer, const std::string &file
         }
         for (const auto &root : roots) {
             ec.clear();
-            const fs::path candidate = root / "siil" / requested;
+            const fs::path candidate = root / "srchfile" / "siil" / requested;
             if (fs::is_regular_file(candidate, ec)) return candidate;
         }
     }
