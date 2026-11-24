@@ -5,8 +5,8 @@
 #include <unordered_set>
 
 namespace shay {
-inline const std::unordered_set<std::string>& useentry_registry() {
-    static const std::unordered_set<std::string> entries = {
+inline std::unordered_set<std::string>& mutable_useentry_registry() {
+    static std::unordered_set<std::string> entries = {
         "uiinit", "reginit", "advsynt", "exprinit", "varinit",
         "typeinit", "constinit", "scopeinit", "funcinit", "classinit",
         "objinit", "structinit", "enuminit", "geninit", "operinit",
@@ -18,12 +18,21 @@ inline const std::unordered_set<std::string>& useentry_registry() {
     return entries;
 }
 
-inline bool is_valid_useentry_name(const std::string& name) {
+inline bool is_lowercase_useentry_name(const std::string& name) {
     if (name.empty()) return false;
-    for (const unsigned char c : name) {
+    for (const unsigned char c : name)
         if (c < 'a' || c > 'z') return false;
-    }
-    return useentry_registry().count(name) != 0;
+    return true;
+}
+
+inline void register_useentry_name(const std::string& name) {
+    if (is_lowercase_useentry_name(name))
+        mutable_useentry_registry().insert(name);
+}
+
+inline bool is_valid_useentry_name(const std::string& name) {
+    return is_lowercase_useentry_name(name) &&
+           mutable_useentry_registry().count(name) != 0;
 }
 }
 

@@ -4,6 +4,7 @@
 #include "parser.hpp"
 #include "shui_source.hpp"
 #include "shui_runtime_codegen.hpp"
+#include "shaye.hpp"
 #include <chrono>
 #include <cctype>
 #include <cstdio>
@@ -181,11 +182,19 @@ void validate_body(BuildContext&ctx,const fs::path&file,const std::vector<shay::
 void load_file(const fs::path&input,BuildContext&ctx){
  std::error_code ec;const fs::path canonical=fs::weakly_canonical(input,ec);const std::string key=(ec?input:canonical).string();
  if(ctx.active.count(key)){diagnose(ctx,input,1,"circular import detected");return;}if(ctx.loaded.count(key))return;
- const std::string extension=input.extension().string();
- if(extension!=".shay"&&extension!=".shaz"&&extension!=".shaii"&&extension!=".shui"){diagnose(ctx,input,1,"unsupported file extension (expected .shay, .shaz, .shaii, or .shui)");return;}
- std::ifstream stream(input,std::ios::binary);if(!stream){diagnose(ctx,input,1,"cannot open source file");return;}
- const std::string raw_source((std::istreambuf_iterator<char>(stream)),std::istreambuf_iterator<char>());
+ const std::string file_extension=input.extension().string();
+ std::string extension=file_extension;
+ if(extension==".shaye")extension=".shaii";
+ if(extension!=".shay"&&extension!=".shaz"&&extension!=".shaii"&&extension!=".shui"){diagnose(ctx,input,1,"unsupported file extension (expected .shay, .shaz, .shaii, .shui, or .shaye)");return;}
+ std::string raw_source;
+ if(file_extension==".shaye"){
+  if(!shay::read_shaye(input,raw_source)){diagnose(ctx,input,1,"invalid .shaye package (expected SHAYE/1 header)");return;}
+ }else{
+  std::ifstream stream(input,std::ios::binary);if(!stream){diagnose(ctx,input,1,"cannot open source file");return;}
+  raw_source.assign(std::istreambuf_iterator<char>(stream),std::istreambuf_iterator<char>());
+ }
  std::string source=raw_source;
+ shay::discover_shaye_entries(input);
  if(extension==".shui"){
   std::vector<shay::ui::language::SourceDiagnostic> ui_diagnostics;
   if(!shay::ui::language::prepare_shui_source(input,raw_source,source,ui_diagnostics)){
@@ -203,6 +212,12 @@ void load_file(const fs::path&input,BuildContext&ctx){
  for(const auto&e:program.errors)diagnose(ctx,input,e.line,e.message,false,e.column);
  ctx.active.insert(key);
  for(const auto&s:program.statements){
+  if(s.kind==shay::StatementKind::UseEntry){
+   const auto entries=shay::discover_shaye_entries(input);
+   const auto entry=entries.find(s.name);
+   if(entry!=entries.end())load_file(entry->second,ctx);
+   continue;
+  }
   if(s.kind==shay::StatementKind::ImportLibrary||s.kind==shay::StatementKind::ImportTask){
    const bool library=s.kind==shay::StatementKind::ImportLibrary;const std::string required=library?".shaii":".shaz";
    if(extension==".shaii"&&library){diagnose(ctx,input,s.line,".shaii files cannot import other .shaii libraries");continue;}
@@ -780,9 +795,26 @@ int main(int argc,char**argv){
   else if(arg=="--shayo3")optimization="3";
   else positional.push_back(arg);
  }
+ if(positional.size()>=3&&positional[0]=="-et"){
+  const fs::path package=positional[1];
+  if(package.extension()!=".shaye"){std::cerr<<"gshai: -et output must use the .shaye extension\n";return 2;}
+  if(!shay::is_lowercase_useentry_name(package.stem().string())){std::cerr<<"gshai: .shaye filename stem must contain lowercase letters only\n";return 2;}
+  std::string source_text;
+  for(std::size_t i=2;i<positional.size();++i){
+   const fs::path source=positional[i];
+   if(source.extension()!=".shay"&&source.extension()!=".shaii"){std::cerr<<"gshai: -et inputs must be .shay or .shaii source files\n";return 2;}
+   std::ifstream input(source,std::ios::binary);
+   if(!input){std::cerr<<"gshai: cannot open entry source '"<<source.string()<<"'\n";return 1;}
+   source_text.append(std::istreambuf_iterator<char>(input),{});
+   if(source_text.empty()||source_text.back()!='\n')source_text.push_back('\n');
+  }
+  if(!shay::write_shaye(package,source_text)){std::cerr<<"gshai: cannot write entry package '"<<package.string()<<"'\n";return 1;}
+  std::cout<<"gshai: wrote .shaye entry package "<<package.string()<<" from "<<(positional.size()-2)<<" source file(s)\n";return 0;
+ }
  if(positional.size()==1&&positional[0]=="--version"){std::cout<<"gshai 0.4.0 (Shay compiler)\n";return 0;}
  if(positional.size()==1&&(positional[0]=="--help"||positional[0]=="-h")){
-  std::cout<<"Usage:\n  gshai [Shay flags] -ob [output.sho] source.shay|source.shaz|source.shui [more sources ...]\n  gshai [Shay flags] -o  [output]     source.shay|source.shaz [more sources ...]\n  gshai [Shay flags] -o  [output]     program.sho [more.sho ...]   Link existing objects\n  gshai --version\n\n"
+  std::cout<<"Usage:\n  gshai -et output.shaye source.shay|source.shaii\n  gshai [Shay flags] -ob [output.sho] source.shay|source.shaz|source.shui [more sources ...]\n  gshai [Shay flags] -o  [output]     source.shay|source.shaz [more sources ...]\n  gshai [Shay flags] -o  [output]     program.sho [more.sho ...]   Link existing objects\n  gshai --version\n\n"
+           <<"-et packages a Shay source file as a portable .shaye entry bundle.\n"
            <<"-ob compiles one or more source files into a .sho object; -o compiles source files or links .sho objects in order.\n"
            <<"Shay compiler flags (may appear anywhere):\n"
            <<"  --shaywall    Enable common Shay warnings, including unused variables\n"
