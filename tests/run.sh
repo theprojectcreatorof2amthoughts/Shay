@@ -60,7 +60,7 @@ pass "gshai and shaii discover and load optional .shaye entry packages"
 
 # rayinit enables the Ray UI declaration syntax in ordinary .shay source.
 mkdir -p "$TMP/srchfile/siil/entryinit"
-printf 'SHAYE/1\\n' > "$TMP/srchfile/siil/entryinit/rayinit.shaye"
+printf 'SHAYE/1\n' > "$TMP/srchfile/siil/entryinit/rayinit.shaye"
 cat > "$TMP/ray-ui.shaii" <<'EOF'
 $declr doUi()
     instxt/>"Ray UI callback executed"
