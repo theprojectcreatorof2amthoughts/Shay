@@ -1,7 +1,0 @@
-## Boolean literals and readable labels
-brew boolean_true = true
-brew boolean_false = false
-brew boolean_yes = "yes"
-brew boolean_no = "no"
-brew boolean_enabled = "enabled"
-brew boolean_disabled = "disabled"
