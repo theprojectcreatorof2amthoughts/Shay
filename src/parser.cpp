@@ -4,7 +4,7 @@
 #include <functional>
 #include <unordered_set>
 namespace shay {
-Parser::Parser(const std::vector<Token> &tokens):tokens_(tokens){}
+Parser::Parser(const std::vector<Token> &tokens, std::unordered_set<std::string> active_entries):tokens_(tokens),active_entries_(std::move(active_entries)){}
 const Token &Parser::peek() const{return tokens_[current_];}
 const Token &Parser::previous() const{return tokens_[current_-1];}
 bool Parser::atEnd() const{return peek().kind==TokenKind::End;}
@@ -101,10 +101,10 @@ Program Parser::parse(){
    tryTokens.push_back(endToken);catchTokens.push_back(endToken);
    if(!foundCatch){error(program.errors,"expected 'catchit' inside tryit block");valid=false;}
    if(!foundEnd){error(program.errors,"expected 'endtry' to close tryit block");valid=false;}
-   Parser tryParser(tryTokens);Program tryProgram=tryParser.parse();
+   Parser tryParser(tryTokens,active_entries_);Program tryProgram=tryParser.parse();
    statement.body=std::move(tryProgram.statements);
    for(const auto&e:tryProgram.errors)program.errors.push_back(e);
-   if(foundCatch){Parser catchParser(catchTokens);Program catchProgram=catchParser.parse();statement.else_body=std::move(catchProgram.statements);for(const auto&e:catchProgram.errors)program.errors.push_back(e);}
+   if(foundCatch){Parser catchParser(catchTokens,active_entries_);Program catchProgram=catchParser.parse();statement.else_body=std::move(catchProgram.statements);for(const auto&e:catchProgram.errors)program.errors.push_back(e);}
   }else if(match(TokenKind::Identifier,"ifit")){
    statement.kind=StatementKind::If;
    while(!atEnd()&&peek().kind!=TokenKind::Newline){statement.condition+=peek().text;statement.condition.push_back(' ');++current_;}
@@ -137,11 +137,11 @@ Program Parser::parse(){
    const Token endToken{TokenKind::End,"",peek().line,peek().column};
    bodyTokens.push_back(endToken);elseTokens.push_back(endToken);
    if(!foundExec){error(program.errors,"expected 'exec' to close the ifit block");valid=false;}
-   Parser nested(bodyTokens);Program nestedProgram=nested.parse();
+   Parser nested(bodyTokens,active_entries_);Program nestedProgram=nested.parse();
    statement.body=std::move(nestedProgram.statements);
    for(const auto&e:nestedProgram.errors)program.errors.push_back(e);
    if(seenElse){
-    Parser elseNested(elseTokens);Program elseProgram=elseNested.parse();
+    Parser elseNested(elseTokens,active_entries_);Program elseProgram=elseNested.parse();
     statement.else_body=std::move(elseProgram.statements);
     for(const auto&e:elseProgram.errors)program.errors.push_back(e);
    }
@@ -153,8 +153,7 @@ Program Parser::parse(){
      statement.name=previous().text;
      if(!is_lowercase_useentry_name(statement.name))
       program.errors.push_back({previous().line,previous().column,"unknown or invalid useentry '"+statement.name+"'; names must contain lowercase letters only"});
-     if(statement.name=="rayinit" && is_valid_useentry_name(statement.name))
-      rayinit_enabled_=true;
+     if (is_valid_useentry_name(statement.name)) active_entries_.insert(statement.name);
      if(peek().kind!=TokenKind::Newline&&!atEnd()){
       error(program.errors,"unexpected content after '$useentry' name");
       valid=false;
@@ -225,7 +224,7 @@ Program Parser::parse(){
      }
      if(!foundMethodFinish){error(program.errors,"expected 'finish' to close method '"+method.name+"'");valid=false;break;}
      methodTokens.push_back({TokenKind::End,"",peek().line,peek().column});
-     Parser methodParser(methodTokens);Program methodProgram=methodParser.parse();
+     Parser methodParser(methodTokens,active_entries_);Program methodProgram=methodParser.parse();
      method.body=std::move(methodProgram.statements);
      std::function<bool(const std::vector<Statement>&)> method_has_return=[&](const auto&items){
       for(const auto&item:items){
@@ -248,15 +247,16 @@ Program Parser::parse(){
     valid=consume(TokenKind::Symbol,"!",program.errors,"expected '!' before the class name");
     if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected a class name after '!'");
     if(valid)statement.name="!"+previous().text;
-   }else if(match(TokenKind::Identifier,"declr") || match(TokenKind::Identifier,"raydeclr")){
-    const bool ray_ui_declaration=previous().text=="raydeclr";
+   }else if(match(TokenKind::Identifier,"entrysyn") || match(TokenKind::Identifier,"entrysyndef")){
+    statement.kind=StatementKind::EntrySyntaxMetadata;
+    valid=consume(TokenKind::Identifier,"",program.errors,"expected a name after entry syntax metadata");
+    if(valid)statement.name=previous().text;
+   }else if(match(TokenKind::Identifier,"declr") ||
+            (peek().kind==TokenKind::Identifier && entry_syntax_behavior(peek().text,active_entries_)=="function" && match(TokenKind::Identifier))){
+    const bool entry_syntax_declaration=previous().text!="declr";
     statement.kind=StatementKind::DeclareFunction;
-    statement.ray_ui_declaration=ray_ui_declaration;
-    if(ray_ui_declaration&&!rayinit_enabled_){
-     error(program.errors,"'$raydeclr' requires '$useentry rayinit' and an installed rayinit.shaye package");
-     valid=false;
-    }
-    if(valid)valid=consume(TokenKind::Identifier,"",program.errors,ray_ui_declaration?"expected a function name after '$raydeclr'":"expected a function name after '$declr'");
+    statement.entry_syntax_declaration=entry_syntax_declaration;
+    if(valid)valid=consume(TokenKind::Identifier,"",program.errors,entry_syntax_declaration?"expected a function name after entry syntax":"expected a function name after '$declr'");
     if(valid)statement.name=previous().text;
     if(valid)valid=consume(TokenKind::Symbol,"(",program.errors,"expected '(' after function name");
     std::unordered_set<std::string> names;
@@ -302,7 +302,7 @@ Program Parser::parse(){
      for(const auto&e:nestedProgram.errors)program.errors.push_back(e);
     }
     if(valid&&peek().kind!=TokenKind::Newline&&!atEnd()){error(program.errors,"unexpected token after 'finish'");valid=false;}
-   }else{error(program.errors,"expected useentry, shaiiport, shazport, declr, classfunc, or doclass after '$'");valid=false;}
+   }else{error(program.errors,"expected a known directive or an enabled entry syntax after '$'");valid=false;}
   }else if(match(TokenKind::Identifier,"dofunc")){
    statement.kind=StatementKind::DoFunction;
    valid=consume(TokenKind::Identifier,"",program.errors,"expected a function name after 'dofunc'");
