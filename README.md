@@ -38,7 +38,7 @@ $shazport [startup.shaz]         ## Zeccur task
 | `.shaz` | Yes | Yes |
 | `.shaii` | No | Yes |
 
-Bracketed `$shaiiport [name.shaii]` imports an implemented library, searched beside the importer and then through `srchfile/siil/`. Quoted `$shaiiport "path/to/file.shaii"` imports that external file relative to the importing file (or from an absolute path) and does not search `siil/`. `$shazport` continues to use bracket syntax for Zeccur tasks. Duplicate files are loaded once and circular imports are diagnosed. Zeccurs is task-oriented and variable-free.
+Bracketed `$shaiiport [name.shaii]` imports an implemented library, searched beside the importer and then through `srchfile/siil/`. Quoted `$shaiiport "path/to/file.shaii"` imports that external file relative to the importing file (or from an absolute path) and does not search `srchfile/siil/`. `$shazport` continues to use bracket syntax for Zeccur tasks. Duplicate files are loaded once and circular imports are diagnosed. Zeccurs is task-oriented and variable-free.
 
 ## Language entries
 
@@ -56,7 +56,7 @@ For UI applications, add $useentry uiinit. The .shuil adapter—not $useentry—
 
 ## Siil standard library
 
-The repository includes a standard-library directory named `srchfile/siil/`. `$shaiiport` checks beside the importing file first, then checks `SHAY_STDLIB` if set, followed by `siil/` in the current working directory and ancestor directories. Set `SHAY_STDLIB` to a library directory (for example, `/usr/local/share/shay/siil`) when using an installed copy. `make install` installs the bundled libraries under `/usr/local/share/shay/siil` by default.
+The repository includes a standard-library directory named `srchfile/siil/`. `$shaiiport` checks beside the importing file first, then checks `SHAY_STDLIB` if set, followed by `srchfile/siil/` in the current working directory and ancestor directories. Set `SHAY_STDLIB` to a library directory (for example, `/usr/local/share/shay/siil`) when using an installed copy. `make install` installs the bundled libraries under `/usr/local/share/shay/siil` by default.
 
 Bundled modules include math, units, ASCII codes, text fragments, symbols, geometry, physics, time, booleans, data delimiters, messages, and numeric constants. Libraries can declare reusable functions with `$declr`, return numeric expressions with `forw`, or execute statement bodies containing `ifit` blocks and output statements. `$declr` is restricted to `.shaii` files. Classes are also declared only in `.shaii` files with `$classfunc !name`; each `$declrmthd method_name` declares one no-argument method. `finish` closes each method and then the class. In either `.shay` or `.shaii`, `dofunc function_name` executes a previously declared no-argument function, while `$doclass !name` executes every method in declaration order. `#%` starts a comment (the existing `##` comment form remains supported). See [`srchfile/siil/README.md`](srchfile/siil/README.md) for the complete list.
 
