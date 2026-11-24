@@ -36,20 +36,22 @@ gshai -et calculator.shaye calculator.shay
 
 The current portable `.shaye` container format has a `SHAYE/1` header followed by its packaged Shay source payload. The payload is parsed by the normal Shay frontend when loaded; this keeps one package usable by both the native compiler and interpreter. It is a portable source package, not a machine-code binary.
 
-## Ray UI declaration entry
+## Entry-defined syntax
 
-The bundled `rayinit.shaye` entry enables the `$raydeclr` function-declaration form in ordinary `.shay` source:
+A `.shaye` package can register additional `$` directives with the general entry-syntax mechanism:
 
 ```shay
-$useentry rayinit
-$raydeclr rayui()
-    dofunc doUi
-finish
+$entrysyn raydeclr
+$entrysyndef function
 ```
 
-`$raydeclr` uses the same function body and parameter syntax as `$declr`, but marks the function as a Ray UI declaration. The declaration is registered in the program's function table and can be invoked by Shay or by a Ray UI integration. It is rejected unless the discovered `rayinit.shaye` package has been enabled first. Both `gshai` and `shaii` support this declaration.
+`$entrysyn` names the new directive. The following `$entrysyndef` assigns its behavior. The initial supported behavior is `function`, which reuses Shay's existing function-declaration grammar and runtime. The syntax is registered to the package's filename entry name and becomes available only after that entry is selected with `$useentry`.
 
-The bundled `rayinit.shaye` is a feature-enabling entry package; the parser and runtime implement the declaration semantics. The package itself does not contain a Ray UI renderer.
+The bundled `rayinit.shaye` registers `$raydeclr` as a function declaration. Shay's parser reads that registration from the package rather than containing a special case for the keyword. Other `.shaye` packages can register their own function-declaration keywords the same way.
+
+This is a declarative syntax extension, not arbitrary native-code injection. Additional behavior types can be added as Shay gains more extension hooks.
+
+`$raydeclr` declarations are accepted in ordinary `.shay` files after `$useentry rayinit`; they are registered callable functions, ready for a Ray UI host integration. The package itself does not contain a Ray UI renderer.
 
 ## Standard library
 
