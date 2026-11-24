@@ -152,7 +152,7 @@ Program Parser::parse(){
     else {
      statement.name=previous().text;
      if(!is_lowercase_useentry_name(statement.name))
-      program.errors.push_back({previous().line,previous().column,"invalid useentry '"+statement.name+"'; names must be registered lowercase letters only"});
+      program.errors.push_back({previous().line,previous().column,"unknown or invalid useentry '"+statement.name+"'; names must contain lowercase letters only"});
      if(peek().kind!=TokenKind::Newline&&!atEnd()){
       error(program.errors,"unexpected content after '$useentry' name");
       valid=false;
