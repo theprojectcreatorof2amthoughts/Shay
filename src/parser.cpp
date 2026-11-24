@@ -147,12 +147,12 @@ Program Parser::parse(){
    }
   }else if(match(TokenKind::Symbol,"$")){
    if(match(TokenKind::Identifier,"useentry")){
-    valid=false; // File-level configuration is consumed, never emitted as an executable statement.
+    statement.kind=StatementKind::UseEntry;
     if(!consume(TokenKind::Identifier,"",program.errors,"expected a lowercase useentry name after '$useentry'")){valid=false;}
     else {
-     const std::string entry=previous().text;
-     if(!is_valid_useentry_name(entry))
-      program.errors.push_back({previous().line,previous().column,"unknown or invalid useentry '"+entry+"'; names must be registered lowercase letters only"});
+     statement.name=previous().text;
+     if(!is_valid_useentry_name(statement.name))
+      program.errors.push_back({previous().line,previous().column,"unknown or invalid useentry '"+statement.name+"'; names must be registered lowercase letters only"});
      if(peek().kind!=TokenKind::Newline&&!atEnd()){
       error(program.errors,"unexpected content after '$useentry' name");
       valid=false;
