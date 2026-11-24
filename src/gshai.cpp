@@ -808,7 +808,8 @@ int main(int argc,char**argv){
  if(positional.size()==1&&positional[0]=="--version"){std::cout<<"gshai 0.4.0 (Shay compiler)\n";return 0;}
  if(positional.size()==1&&(positional[0]=="--help"||positional[0]=="-h")){
   std::cout<<"Usage:\n  gshai -et output.shaye source.shay|source.shaii\n  gshai [Shay flags] -ob [output.sho] source.shay|source.shaz|source.shui [more sources ...]\n  gshai [Shay flags] -o  [output]     source.shay|source.shaz [more sources ...]\n  gshai [Shay flags] -o  [output]     program.sho [more.sho ...]   Link existing objects\n  gshai --version\n\n"
-           <<"-et packages a Shay source file as a portable .shaye entry bundle.\n"\n           <<"-ob compiles one or more source files into a .sho object; -o compiles source files or links .sho objects in order.\n"
+           <<"-et packages a Shay source file as a portable .shaye entry bundle.\n"
+           <<"-ob compiles one or more source files into a .sho object; -o compiles source files or links .sho objects in order.\n"
            <<"Shay compiler flags (may appear anywhere):\n"
            <<"  --shaywall    Enable common Shay warnings, including unused variables\n"
            <<"  --shaywextra  Enable additional Shay warnings\n"
