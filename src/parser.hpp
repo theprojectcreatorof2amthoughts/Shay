@@ -12,6 +12,7 @@ public:
 private:
     const std::vector<Token> &tokens_;
     std::size_t current_ = 0;
+    bool rayinit_enabled_ = false;
     const Token &peek() const;
     const Token &previous() const;
     bool match(TokenKind kind, const std::string &text = "");
