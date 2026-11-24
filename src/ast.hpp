@@ -13,6 +13,7 @@ struct Statement {
     std::vector<std::string> parameters, arguments, output_names;
     std::vector<Statement> body, else_body;
     bool has_return = false;
+    bool ray_ui_declaration = false;
     bool dynamic_value = false;
     bool external_import = false;
     bool list_value = false;
