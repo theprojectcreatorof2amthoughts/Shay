@@ -1,9 +1,0 @@
-## Time units represented in seconds
-brew time_seconds_per_minute = 60
-brew time_seconds_per_hour = 3600
-brew time_seconds_per_day = 86400
-brew time_seconds_per_week = 604800
-brew time_minutes_per_day = 1440
-brew time_hours_per_day = 24
-brew time_days_per_common_year = 365
-brew time_days_per_leap_year = 366
