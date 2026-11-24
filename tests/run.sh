@@ -40,6 +40,26 @@ if "$SHAII" --check "$TMP/useentry-invalid.shay" >"$TMP/out" 2>"$TMP/err"; then 
 grep -q "unknown or invalid useentry 'Reginit'" "$TMP/err" || { cat "$TMP/err" >&2; fail "uppercase useentry diagnostic"; }
 pass "useentry rejects uppercase and unregistered names"
 
+# A portable .shaye package is discovered only under srchfile/siil/entryinit.
+mkdir -p "$TMP/srchfile/siil/entryinit"
+cat > "$TMP/entry-source.shay" <<'EOF'
+$declr extensionhello()
+    instxt/>"Loaded from a .shaye package"
+finish
+EOF
+"$GSHAI" -et "$TMP/srchfile/siil/entryinit/extensionhello.shaye" "$TMP/entry-source.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "create .shaye package"; }
+grep -q '^SHAYE/1$' "$TMP/srchfile/siil/entryinit/extensionhello.shaye" || fail ".shaye package header"
+cat > "$TMP/entry-use.shay" <<'EOF'
+$useentry extensionhello
+dofunc extensionhello
+EOF
+out=$("$SHAII" "$TMP/entry-use.shay") || { cat "$TMP/out" "$TMP/err" >&2; fail "interpreter loads .shaye entry"; }
+[ "$out" = "Loaded from a .shaye package" ] || fail "interpreter .shaye output"
+"$GSHAI" -o "$TMP/entry-use-app" "$TMP/entry-use.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "compiler loads .shaye entry"; }
+out=$("$TMP/entry-use-app") || fail "run compiled .shaye entry"
+[ "$out" = "Loaded from a .shaye package" ] || fail "compiled .shaye output"
+pass "gshai and shaii discover and load optional .shaye entry packages"
+
 cat > "$TMP/unused-variable.shay" <<'EOF'
 brew unused_result = "unused"
 instxt/>"Compiler still succeeds"
