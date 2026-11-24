@@ -11,17 +11,16 @@
 #include <vector>
 
 namespace shay {
-namespace fs = std::filesystem;
 inline constexpr const char* shaye_magic = "SHAYE/1\n";
 
-inline std::vector<fs::path> entryinit_directories(const fs::path& source) {
-    std::vector<fs::path> roots;
+inline std::vector<std::filesystem::path> entryinit_directories(const std::filesystem::path& source) {
+    std::vector<std::filesystem::path> roots;
     std::error_code ec;
-    auto add_ancestors = [&](fs::path start) {
-        if (start.empty()) start = fs::current_path(ec);
-        start = fs::absolute(start, ec);
+    auto add_ancestors = [&](std::filesystem::path start) {
+        if (start.empty()) start = std::filesystem::current_path(ec);
+        start = std::filesystem::absolute(start, ec);
         if (ec) { ec.clear(); return; }
-        if (fs::is_regular_file(start, ec)) start = start.parent_path();
+        if (std::filesystem::is_regular_file(start, ec)) start = start.parent_path();
         while (!start.empty()) {
             roots.push_back(start / "srchfile" / "siil" / "entryinit");
             const auto parent = start.parent_path();
@@ -29,23 +28,23 @@ inline std::vector<fs::path> entryinit_directories(const fs::path& source) {
             start = parent;
         }
     };
-    add_ancestors(fs::current_path(ec));
+    add_ancestors(std::filesystem::current_path(ec));
     ec.clear();
     add_ancestors(source);
-    std::vector<fs::path> unique;
+    std::vector<std::filesystem::path> unique;
     for (const auto& path : roots)
         if (std::find(unique.begin(), unique.end(), path) == unique.end())
             unique.push_back(path);
     return unique;
 }
 
-inline std::unordered_map<std::string, fs::path>
-discover_shaye_entries(const fs::path& source) {
-    std::unordered_map<std::string, fs::path> entries;
+inline std::unordered_map<std::string, std::filesystem::path>
+discover_shaye_entries(const std::filesystem::path& source) {
+    std::unordered_map<std::string, std::filesystem::path> entries;
     for (const auto& directory : entryinit_directories(source)) {
         std::error_code ec;
-        if (!fs::is_directory(directory, ec)) continue;
-        for (fs::directory_iterator it(directory, ec), end; !ec && it != end; it.increment(ec)) {
+        if (!std::filesystem::is_directory(directory, ec)) continue;
+        for (std::filesystem::directory_iterator it(directory, ec), end; !ec && it != end; it.increment(ec)) {
             if (!it->is_regular_file(ec) || it->path().extension() != ".shaye") continue;
             const std::string name = it->path().stem().string();
             if (!is_lowercase_useentry_name(name)) continue;
@@ -56,7 +55,7 @@ discover_shaye_entries(const fs::path& source) {
     return entries;
 }
 
-inline bool read_shaye(const fs::path& path, std::string& source) {
+inline bool read_shaye(const std::filesystem::path& path, std::string& source) {
     std::ifstream input(path, std::ios::binary);
     if (!input) return false;
     std::string bytes((std::istreambuf_iterator<char>(input)), {});
@@ -66,7 +65,7 @@ inline bool read_shaye(const fs::path& path, std::string& source) {
     return true;
 }
 
-inline bool write_shaye(const fs::path& path, const std::string& source) {
+inline bool write_shaye(const std::filesystem::path& path, const std::string& source) {
     std::ofstream output(path, std::ios::binary | std::ios::trunc);
     if (!output) return false;
     output << shaye_magic;
