@@ -36,6 +36,23 @@ gshai -et calculator.shaye calculator.shay
 
 The current portable `.shaye` container format has a `SHAYE/1` header followed by its packaged Shay source payload. The payload is parsed by the normal Shay frontend when loaded; this keeps one package usable by both the native compiler and interpreter. It is a portable source package, not a machine-code binary.
 
+## Entry-defined syntax
+
+A `.shaye` package can register additional `$` directives with the general entry-syntax mechanism:
+
+```shay
+$entrysyn raydeclr
+$entrysyndef function
+```
+
+`$entrysyn` names the new directive. The following `$entrysyndef` assigns its behavior. The initial supported behavior is `function`, which reuses Shay's existing function-declaration grammar and runtime. The syntax is registered to the package's filename entry name and becomes available only after that entry is selected with `$useentry`.
+
+The bundled `rayinit.shaye` registers `$raydeclr` as a function declaration. Shay's parser reads that registration from the package rather than containing a special case for the keyword. Other `.shaye` packages can register their own function-declaration keywords the same way.
+
+This is a declarative syntax extension, not arbitrary native-code injection. Additional behavior types can be added as Shay gains more extension hooks.
+
+`$raydeclr` declarations are accepted in ordinary `.shay` files after `$useentry rayinit`; they are registered callable functions, ready for a Ray UI host integration. The package itself does not contain a Ray UI renderer.
+
 ## Standard library
 
 The standard `.shaii` libraries live in `srchfile/siil/`. Existing `$shaiiport [name.shaii]` imports resolve through that directory, in addition to importer-relative paths and the optional `SHAY_STDLIB` override.

@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 namespace shay {
-enum class StatementKind { UseEntry, ImportLibrary, ImportTask, Declare, InputVariable, OutputText, OutputTextExit, MarkFailure, OutputValue, ListAppend, ListSet, ListRemove, MapSet, MapRemove, SetAdd, SetRemove, SetContains, ThrowError, TryCatch, FileRead, FileWrite, FileAppend, FileExists, FileDelete, DirectoryCreate, DirectoryExists, ProcessRun, ReturnValue, DeclareFunction, DeclareClass, DeclareMethod, DoFunction, ExecuteClass, OutputCall, If, LogFileExtension, LogFileName, LogText, Invalid };
+enum class StatementKind { UseEntry, EntrySyntaxMetadata, ImportLibrary, ImportTask, Declare, InputVariable, OutputText, OutputTextExit, MarkFailure, OutputValue, ListAppend, ListSet, ListRemove, MapSet, MapRemove, SetAdd, SetRemove, SetContains, ThrowError, TryCatch, FileRead, FileWrite, FileAppend, FileExists, FileDelete, DirectoryCreate, DirectoryExists, ProcessRun, ReturnValue, DeclareFunction, DeclareClass, DeclareMethod, DoFunction, ExecuteClass, OutputCall, If, LogFileExtension, LogFileName, LogText, Invalid };
 struct Statement {
     StatementKind kind = StatementKind::Invalid;
     std::size_t line = 1;
@@ -13,6 +13,7 @@ struct Statement {
     std::vector<std::string> parameters, arguments, output_names;
     std::vector<Statement> body, else_body;
     bool has_return = false;
+    bool entry_syntax_declaration = false;
     bool dynamic_value = false;
     bool external_import = false;
     bool list_value = false;

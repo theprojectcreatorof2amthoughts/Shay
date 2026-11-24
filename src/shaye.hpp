@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iterator>
 #include <string>
+#include <sstream>
 #include <unordered_map>
 #include <vector>
 
@@ -50,6 +51,19 @@ discover_shaye_entries(const std::filesystem::path& source) {
             if (!is_lowercase_useentry_name(name)) continue;
             entries.emplace(name, it->path());
             register_useentry_name(name);
+            std::ifstream package(it->path(), std::ios::binary);
+            std::string header, line, pending_syntax;
+            if (!std::getline(package, header) || header != "SHAYE/1") continue;
+            while (std::getline(package, line)) {
+                std::istringstream words(line);
+                std::string directive, value, extra;
+                if (!(words >> directive >> value) || (words >> extra)) continue;
+                if (directive == "$entrysyn" && is_lowercase_useentry_name(value)) pending_syntax = value;
+                else if (directive == "$entrysyndef" && !pending_syntax.empty()) {
+                    register_entry_syntax(name, pending_syntax, value);
+                    pending_syntax.clear();
+                }
+            }
         }
     }
     return entries;
