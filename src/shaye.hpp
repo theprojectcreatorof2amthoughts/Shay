@@ -53,7 +53,7 @@ discover_shaye_entries(const std::filesystem::path& source) {
             register_useentry_name(name);
             std::ifstream package(it->path(), std::ios::binary);
             std::string header, line, pending_syntax;
-            std::getline(package, header);
+            if (!std::getline(package, header) || header != "SHAYE/1") continue;
             while (std::getline(package, line)) {
                 std::istringstream words(line);
                 std::string directive, value, extra;
