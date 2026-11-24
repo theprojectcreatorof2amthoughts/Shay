@@ -44,13 +44,12 @@ pass "useentry rejects uppercase and unregistered names"
 # A portable .shaye package is discovered only under srchfile/siil/entryinit.
 mkdir -p "$TMP/srchfile/siil/entryinit"
 cat > "$TMP/entry-source.shay" <<'EOF'
-brew extension_marker = "Loaded from a .shaye package"
+instxt/>"Loaded from a .shaye package"
 EOF
 "$GSHAI" -et "$TMP/srchfile/siil/entryinit/extensionhello.shaye" "$TMP/entry-source.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "create .shaye package"; }
 grep -q '^SHAYE/1$' "$TMP/srchfile/siil/entryinit/extensionhello.shaye" || fail ".shaye package header"
 cat > "$TMP/entry-use.shay" <<'EOF'
 $useentry extensionhello
-insval/>extension_marker
 EOF
 out=$("$SHAII" "$TMP/entry-use.shay") || { cat "$TMP/out" "$TMP/err" >&2; fail "interpreter loads .shaye entry"; }
 [ "$out" = "Loaded from a .shaye package" ] || fail "interpreter .shaye output"
