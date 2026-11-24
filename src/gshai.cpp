@@ -797,19 +797,19 @@ int main(int argc,char**argv){
  }
  if(positional.size()>=3&&positional[0]=="-et"){
   const fs::path package=positional[1];
-  if(package.extension()!=".shaye"){std::cerr<<"gshai: -et output must use the .shaye extension\\n";return 2;}
-  if(!shay::is_lowercase_useentry_name(package.stem().string())){std::cerr<<"gshai: .shaye filename stem must contain lowercase letters only\\n";return 2;}
+  if(package.extension()!=".shaye"){std::cerr<<"gshai: -et output must use the .shaye extension\n";return 2;}
+  if(!shay::is_lowercase_useentry_name(package.stem().string())){std::cerr<<"gshai: .shaye filename stem must contain lowercase letters only\n";return 2;}
   std::string source_text;
   for(std::size_t i=2;i<positional.size();++i){
    const fs::path source=positional[i];
-   if(source.extension()!=".shay"&&source.extension()!=".shaii"){std::cerr<<"gshai: -et inputs must be .shay or .shaii source files\\n";return 2;}
+   if(source.extension()!=".shay"&&source.extension()!=".shaii"){std::cerr<<"gshai: -et inputs must be .shay or .shaii source files\n";return 2;}
    std::ifstream input(source,std::ios::binary);
-   if(!input){std::cerr<<"gshai: cannot open entry source '"<<source.string()<<"'\\n";return 1;}
+   if(!input){std::cerr<<"gshai: cannot open entry source '"<<source.string()<<"'\n";return 1;}
    source_text.append(std::istreambuf_iterator<char>(input),{});
-   if(source_text.empty()||source_text.back()!='\\n')source_text.push_back('\\n');
+   if(source_text.empty()||source_text.back()!='\n')source_text.push_back('\n');
   }
-  if(!shay::write_shaye(package,source_text)){std::cerr<<"gshai: cannot write entry package '"<<package.string()<<"'\\n";return 1;}
-  std::cout<<"gshai: wrote .shaye entry package "<<package.string()<<" from "<<(positional.size()-2)<<" source file(s)\\n";return 0;
+  if(!shay::write_shaye(package,source_text)){std::cerr<<"gshai: cannot write entry package '"<<package.string()<<"'\n";return 1;}
+  std::cout<<"gshai: wrote .shaye entry package "<<package.string()<<" from "<<(positional.size()-2)<<" source file(s)\n";return 0;
  }
  if(positional.size()==1&&positional[0]=="--version"){std::cout<<"gshai 0.4.0 (Shay compiler)\n";return 0;}
  if(positional.size()==1&&(positional[0]=="--help"||positional[0]=="-h")){
