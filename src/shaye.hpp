@@ -2,6 +2,7 @@
 #define SHAY_SHAYE_HPP
 
 #include "useentry.hpp"
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
