@@ -4,6 +4,7 @@
 #include "parser.hpp"
 #include "shui_source.hpp"
 #include "shui_runtime_codegen.hpp"
+#include "shaye.hpp"
 #include <chrono>
 #include <cctype>
 #include <cstdio>
@@ -181,11 +182,19 @@ void validate_body(BuildContext&ctx,const fs::path&file,const std::vector<shay::
 void load_file(const fs::path&input,BuildContext&ctx){
  std::error_code ec;const fs::path canonical=fs::weakly_canonical(input,ec);const std::string key=(ec?input:canonical).string();
  if(ctx.active.count(key)){diagnose(ctx,input,1,"circular import detected");return;}if(ctx.loaded.count(key))return;
- const std::string extension=input.extension().string();
- if(extension!=".shay"&&extension!=".shaz"&&extension!=".shaii"&&extension!=".shui"){diagnose(ctx,input,1,"unsupported file extension (expected .shay, .shaz, .shaii, or .shui)");return;}
- std::ifstream stream(input,std::ios::binary);if(!stream){diagnose(ctx,input,1,"cannot open source file");return;}
- const std::string raw_source((std::istreambuf_iterator<char>(stream)),std::istreambuf_iterator<char>());
+ const std::string file_extension=input.extension().string();
+ std::string extension=file_extension;
+ if(extension==".shaye")extension=".shaii";
+ if(extension!=".shay"&&extension!=".shaz"&&extension!=".shaii"&&extension!=".shui"){diagnose(ctx,input,1,"unsupported file extension (expected .shay, .shaz, .shaii, .shui, or .shaye)");return;}
+ std::string raw_source;
+ if(file_extension==".shaye"){
+  if(!shay::read_shaye(input,raw_source)){diagnose(ctx,input,1,"invalid .shaye package (expected SHAYE/1 header)");return;}
+ }else{
+  std::ifstream stream(input,std::ios::binary);if(!stream){diagnose(ctx,input,1,"cannot open source file");return;}
+  raw_source.assign(std::istreambuf_iterator<char>(stream),std::istreambuf_iterator<char>());
+ }
  std::string source=raw_source;
+ shay::discover_shaye_entries(input);
  if(extension==".shui"){
   std::vector<shay::ui::language::SourceDiagnostic> ui_diagnostics;
   if(!shay::ui::language::prepare_shui_source(input,raw_source,source,ui_diagnostics)){
@@ -203,6 +212,12 @@ void load_file(const fs::path&input,BuildContext&ctx){
  for(const auto&e:program.errors)diagnose(ctx,input,e.line,e.message,false,e.column);
  ctx.active.insert(key);
  for(const auto&s:program.statements){
+  if(s.kind==shay::StatementKind::UseEntry){
+   const auto entries=shay::discover_shaye_entries(input);
+   const auto entry=entries.find(s.name);
+   if(entry!=entries.end())load_file(entry->second,ctx);
+   continue;
+  }
   if(s.kind==shay::StatementKind::ImportLibrary||s.kind==shay::StatementKind::ImportTask){
    const bool library=s.kind==shay::StatementKind::ImportLibrary;const std::string required=library?".shaii":".shaz";
    if(extension==".shaii"&&library){diagnose(ctx,input,s.line,".shaii files cannot import other .shaii libraries");continue;}
