@@ -397,7 +397,7 @@ void execute_file(const fs::path&input,Context&ctx){
     ctx.log_file_name_set=true;break;
    }
    case shay::StatementKind::DeclareFunction:
-    if(extension!=".shaii"){diagnose(ctx,input,s.line,"'$declr' is only allowed in .shaii files");break;}
+    if(extension!=".shaii"&&!s.ray_ui_declaration){diagnose(ctx,input,s.line,"'$declr' is only allowed in .shaii files; '$raydeclr' requires rayinit");break;}
     if(ctx.functions.count(s.name))diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");
     else ctx.functions.emplace(s.name,s);
     break;
