@@ -58,6 +58,36 @@ out=$("$TMP/entry-use-app") || fail "run compiled .shaye entry"
 [ "$out" = "Loaded from a .shaye package" ] || fail "compiled .shaye output"
 pass "gshai and shaii discover and load optional .shaye entry packages"
 
+# rayinit enables the Ray UI declaration syntax in ordinary .shay source.
+mkdir -p "$TMP/srchfile/siil/entryinit"
+printf 'SHAYE/1\\n' > "$TMP/srchfile/siil/entryinit/rayinit.shaye"
+cat > "$TMP/ray-ui.shaii" <<'EOF'
+$declr doUi()
+    instxt/>"Ray UI callback executed"
+finish
+EOF
+cat > "$TMP/ray-ui-main.shay" <<'EOF'
+$shaiiport "ray-ui.shaii"
+$useentry rayinit
+$raydeclr rayui()
+    dofunc doUi
+finish
+dofunc rayui
+EOF
+out=$("$SHAII" "$TMP/ray-ui-main.shay") || { cat "$TMP/out" "$TMP/err" >&2; fail "interpreter loads raydeclr through rayinit"; }
+[ "$out" = "Ray UI callback executed" ] || fail "interpreter raydeclr callback"
+"$GSHAI" -o "$TMP/ray-ui-app" "$TMP/ray-ui-main.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "compiler loads raydeclr through rayinit"; }
+out=$("$TMP/ray-ui-app") || fail "run compiled raydeclr callback"
+[ "$out" = "Ray UI callback executed" ] || fail "compiled raydeclr callback"
+cat > "$TMP/ray-ui-without-entry.shay" <<'EOF'
+$raydeclr rayui()
+    instxt/>"must not run"
+finish
+EOF
+if "$SHAII" --check "$TMP/ray-ui-without-entry.shay" >"$TMP/out" 2>"$TMP/err"; then fail "raydeclr worked without rayinit"; fi
+grep -q "requires '\$useentry rayinit'" "$TMP/err" || fail "raydeclr missing-rayinit diagnostic"
+pass "rayinit enables raydeclr declarations in both gshai and shaii"
+
 cat > "$TMP/unused-variable.shay" <<'EOF'
 brew unused_result = "unused"
 instxt/>"Compiler still succeeds"
