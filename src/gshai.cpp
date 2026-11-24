@@ -731,9 +731,9 @@ bool write_translation(const BuildContext&ctx,const fs::path&path,bool add_main,
    default:break;
   }
  }
- out<<" for(const auto& failure : shay_failures) if(!shay_handled_failures.count(failure.first)){std::fprintf(stderr,\"Shay function '%s' failed: %s\n\",failure.first.c_str(),failure.second.c_str());return 1;}\n"
+ out<<" for(const auto& failure : shay_failures) if(!shay_handled_failures.count(failure.first)){std::fprintf(stderr,\"Shay function '%s' failed: %s\\n\",failure.first.c_str(),failure.second.c_str());return 1;}\n"
        " return 0;\n } catch(const ShayExit&) { return 1; }\n"
-       " catch(const std::exception& error) { std::fprintf(stderr,\"Shay runtime error: %s\n\",error.what()); return 1; }\n}\n";
+       " catch(const std::exception& error) { std::fprintf(stderr,\"Shay runtime error: %s\\n\",error.what()); return 1; }\n}\n";
  if(!add_main&&entry_symbol!="shay_program_entry")
   out<<"#if defined(__GNUC__) || defined(__clang__)\n"
         "extern \"C\" int shay_program_entry() __attribute__((weak));\n"
