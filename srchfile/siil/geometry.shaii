@@ -1,0 +1,7 @@
+## Geometry constants
+brew geometry_triangle_angles = 180
+brew geometry_full_turn_degrees = 360
+brew geometry_right_angle_degrees = 90
+brew geometry_circle_fraction = 0.5
+brew geometry_square_sides = 4
+brew geometry_triangle_sides = 3
