@@ -45,7 +45,6 @@ pass "useentry rejects uppercase and unregistered names"
 mkdir -p "$TMP/srchfile/siil/entryinit"
 cat > "$TMP/entry-source.shay" <<'EOF'
 $declr extensionhello()
-    instxt/>"Loaded from a .shaye package"
 finish
 EOF
 "$GSHAI" -et "$TMP/srchfile/siil/entryinit/extensionhello.shaye" "$TMP/entry-source.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "create .shaye package"; }
@@ -53,6 +52,7 @@ grep -q '^SHAYE/1$' "$TMP/srchfile/siil/entryinit/extensionhello.shaye" || fail 
 cat > "$TMP/entry-use.shay" <<'EOF'
 $useentry extensionhello
 dofunc extensionhello
+instxt/>"Loaded from a .shaye package"
 EOF
 out=$("$SHAII" "$TMP/entry-use.shay") || { cat "$TMP/out" "$TMP/err" >&2; fail "interpreter loads .shaye entry"; }
 [ "$out" = "Loaded from a .shaye package" ] || fail "interpreter .shaye output"
