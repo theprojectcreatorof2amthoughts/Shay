@@ -58,9 +58,13 @@ out=$("$TMP/entry-use-app") || fail "run compiled .shaye entry"
 [ "$out" = "Loaded from a .shaye package" ] || fail "compiled .shaye output"
 pass "gshai and shaii discover and load optional .shaye entry packages"
 
-# rayinit enables the Ray UI declaration syntax in ordinary .shay source.
+# rayinit registers entry-defined syntax in ordinary .shay source.
 mkdir -p "$TMP/srchfile/siil/entryinit"
-printf 'SHAYE/1\n' > "$TMP/srchfile/siil/entryinit/rayinit.shaye"
+cat > "$TMP/srchfile/siil/entryinit/rayinit.shaye" <<'EOF'
+SHAYE/1
+$entrysyn raydeclr
+$entrysyndef function
+EOF
 cat > "$TMP/ray-ui.shaii" <<'EOF'
 $declr doUi()
     instxt/>"Ray UI callback executed"
@@ -85,8 +89,8 @@ $raydeclr rayui()
 finish
 EOF
 if "$SHAII" --check "$TMP/ray-ui-without-entry.shay" >"$TMP/out" 2>"$TMP/err"; then fail "raydeclr worked without rayinit"; fi
-grep -q "requires '\$useentry rayinit'" "$TMP/err" || fail "raydeclr missing-rayinit diagnostic"
-pass "rayinit enables raydeclr declarations in both gshai and shaii"
+grep -q "enabled entry syntax" "$TMP/err" || fail "raydeclr missing-entry-syntax diagnostic"
+pass "rayinit registers entry-defined function syntax in both gshai and shaii"
 
 cat > "$TMP/unused-variable.shay" <<'EOF'
 brew unused_result = "unused"
