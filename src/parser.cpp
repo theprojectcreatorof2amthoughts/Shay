@@ -153,6 +153,8 @@ Program Parser::parse(){
      statement.name=previous().text;
      if(!is_lowercase_useentry_name(statement.name))
       program.errors.push_back({previous().line,previous().column,"unknown or invalid useentry '"+statement.name+"'; names must contain lowercase letters only"});
+     if(statement.name=="rayinit" && is_valid_useentry_name(statement.name))
+      rayinit_enabled_=true;
      if(peek().kind!=TokenKind::Newline&&!atEnd()){
       error(program.errors,"unexpected content after '$useentry' name");
       valid=false;
@@ -246,8 +248,14 @@ Program Parser::parse(){
     valid=consume(TokenKind::Symbol,"!",program.errors,"expected '!' before the class name");
     if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected a class name after '!'");
     if(valid)statement.name="!"+previous().text;
-   }else if(match(TokenKind::Identifier,"declr")){
+   }else if(match(TokenKind::Identifier,"declr") || match(TokenKind::Identifier,"raydeclr")){
+    const bool ray_ui_declaration=previous().text=="raydeclr";
     statement.kind=StatementKind::DeclareFunction;
+    statement.ray_ui_declaration=ray_ui_declaration;
+    if(ray_ui_declaration&&!rayinit_enabled_){
+     error(program.errors,"'$raydeclr' requires '$useentry rayinit' and an installed rayinit.shaye package");
+     valid=false;
+    }
     valid=consume(TokenKind::Identifier,"",program.errors,"expected a function name after '$declr");
     if(valid)statement.name=previous().text;
     if(valid)valid=consume(TokenKind::Symbol,"(",program.errors,"expected '(' after function name");
