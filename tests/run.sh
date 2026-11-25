@@ -44,27 +44,28 @@ pass "useentry rejects uppercase and unregistered names"
 # A portable .shaye package is discovered only under srchfile/siil/entryinit.
 mkdir -p "$TMP/srchfile/siil/entryinit"
 cat > "$TMP/entry-source.shay" <<'EOF'
-instxt/>"Loaded from a .shaye package"
+$entrysyn sayhello instxt
 EOF
-"$GSHAI" -et "$TMP/srchfile/siil/entryinit/extensionhello.shaye" "$TMP/entry-source.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "create .shaye package"; }
-grep -q '^SHAYE/1$' "$TMP/srchfile/siil/entryinit/extensionhello.shaye" || fail ".shaye package header"
+"$GSHAI" -et "$TMP/srchfile/siil/entryinit/extensionhello.shaye" "$TMP/entry-source.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "create binary .shaye package"; }
+[ "$(od -An -tx1 -N5 "$TMP/srchfile/siil/entryinit/extensionhello.shaye" | tr -d ' \n')" = "5348415945" ] || fail ".shaye binary magic"
+if grep -a -q 'sayhello' "$TMP/srchfile/siil/entryinit/extensionhello.shaye"; then fail ".shaye exposed readable syntax source"; fi
 cat > "$TMP/entry-use.shay" <<'EOF'
 $useentry extensionhello
+sayhello/>"Loaded from a binary .shaye package"
 EOF
-out=$("$SHAII" "$TMP/entry-use.shay") || { cat "$TMP/out" "$TMP/err" >&2; fail "interpreter loads .shaye entry"; }
-[ "$out" = "Loaded from a .shaye package" ] || fail "interpreter .shaye output"
+out=$("$SHAII" "$TMP/entry-use.shay") || { cat "$TMP/out" "$TMP/err" >&2; fail "interpreter loads binary .shaye entry"; }
+[ "$out" = "Loaded from a binary .shaye package" ] || fail "interpreter .shaye syntax alias"
 "$GSHAI" -o "$TMP/entry-use-app" "$TMP/entry-use.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "compiler loads .shaye entry"; }
 out=$("$TMP/entry-use-app") || fail "run compiled .shaye entry"
-[ "$out" = "Loaded from a .shaye package" ] || fail "compiled .shaye output"
+[ "$out" = "Loaded from a binary .shaye package" ] || fail "compiled .shaye syntax alias"
 pass "gshai and shaii discover and load optional .shaye entry packages"
 
 # rayinit registers entry-defined syntax in ordinary .shay source.
 mkdir -p "$TMP/srchfile/siil/entryinit"
-cat > "$TMP/srchfile/siil/entryinit/rayinit.shaye" <<'EOF'
-SHAYE/1
-$entrysyn raydeclr
-$entrysyndef function
+cat > "$TMP/rayinit-source.shay" <<'EOF'
+$entrysyn raydeclr declr
 EOF
+"$GSHAI" -et "$TMP/srchfile/siil/entryinit/rayinit.shaye" "$TMP/rayinit-source.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "build binary rayinit entry"; }
 cat > "$TMP/ray-ui.shaii" <<'EOF'
 $declr doUi()
     instxt/>"Ray UI callback executed"

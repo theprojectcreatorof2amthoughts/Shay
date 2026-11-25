@@ -8,7 +8,13 @@ Parser::Parser(const std::vector<Token> &tokens, std::unordered_set<std::string>
 const Token &Parser::peek() const{return tokens_[current_];}
 const Token &Parser::previous() const{return tokens_[current_-1];}
 bool Parser::atEnd() const{return peek().kind==TokenKind::End;}
-bool Parser::match(TokenKind kind,const std::string &text){if(peek().kind!=kind||(!text.empty()&&peek().text!=text))return false;++current_;return true;}
+bool Parser::match(TokenKind kind,const std::string &text){
+ if(peek().kind!=kind)return false;
+ if(!text.empty()&&peek().text!=text){
+  if(kind!=TokenKind::Identifier||entry_syntax_target(peek().text,active_entries_)!=text)return false;
+ }
+ ++current_;return true;
+}
 void Parser::skipLine(){while(!atEnd()&&peek().kind!=TokenKind::Newline)++current_;if(peek().kind==TokenKind::Newline)++current_;}
 void Parser::error(std::vector<ParseError>&errors,const std::string&message){errors.push_back({peek().line,peek().column,message});}
 bool Parser::consume(TokenKind kind,const std::string&text,std::vector<ParseError>&errors,const std::string&message){if(match(kind,text))return true;error(errors,message);return false;}
@@ -247,12 +253,7 @@ Program Parser::parse(){
     valid=consume(TokenKind::Symbol,"!",program.errors,"expected '!' before the class name");
     if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected a class name after '!'");
     if(valid)statement.name="!"+previous().text;
-   }else if(match(TokenKind::Identifier,"entrysyn") || match(TokenKind::Identifier,"entrysyndef")){
-    statement.kind=StatementKind::EntrySyntaxMetadata;
-    valid=consume(TokenKind::Identifier,"",program.errors,"expected a name after entry syntax metadata");
-    if(valid)statement.name=previous().text;
-   }else if(match(TokenKind::Identifier,"declr") ||
-            (peek().kind==TokenKind::Identifier && entry_syntax_behavior(peek().text,active_entries_)=="function" && match(TokenKind::Identifier))){
+   }else if(match(TokenKind::Identifier,"declr")){
     const bool entry_syntax_declaration=previous().text!="declr";
     statement.kind=StatementKind::DeclareFunction;
     statement.entry_syntax_declaration=entry_syntax_declaration;
