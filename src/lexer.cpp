@@ -45,12 +45,12 @@ std::vector<Token> Lexer::scan() {
       const std::string bits=digits.substr(2);
       if(bits.empty()||bits.find_first_not_of("01")!=std::string::npos)throw std::invalid_argument("binary");
       unsigned long long value=std::stoull(bits,nullptr,2);
-      tokens.push_back({TokenKind::Number,std::to_string(value),startLine,startColumn});
+      tokens.push_back({TokenKind::Number,std::to_string(value),startLine,startColumn,true});
      }else if(digits.size()>2&&digits[0]=='0'&&(digits[1]=='x'||digits[1]=='X')){
       const std::string hex=digits.substr(2);
       if(hex.empty()||hex.find_first_not_of("0123456789abcdefABCDEF")!=std::string::npos)throw std::invalid_argument("hexadecimal");
       unsigned long long value=std::stoull(hex,nullptr,16);
-      tokens.push_back({TokenKind::Number,std::to_string(value),startLine,startColumn});
+      tokens.push_back({TokenKind::Number,std::to_string(value),startLine,startColumn,true});
      }else{
       errors_.push_back({startLine,startColumn,"expected a binary (::0b...::) or hexadecimal (::0x...::) literal"});
       tokens.push_back({TokenKind::Invalid,digits,startLine,startColumn});
