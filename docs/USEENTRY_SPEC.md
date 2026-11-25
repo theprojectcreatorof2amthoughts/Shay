@@ -74,3 +74,28 @@ The standard `.shaii` libraries live in `srchfile/siil/`. Existing `$shaiiport [
 - Invalid names containing capitals, digits, or symbols remain syntax errors.
 - Built-in names continue to work without a corresponding `.shaye` package.
 - User-installed entries in `~/.shay/entries/` survive deletion or replacement of the Shay repository.
+
+## Binary and hexadecimal literals
+
+The optional `bininit` entry enables native base-prefixed integer literals:
+
+```shay
+$useentry bininit
+brew flags = ::0b101010::
+brew mask = ::0xF76A::
+brew combined = flags + mask
+ifit combined == 63340
+    instxt/>"Binary and hexadecimal values are numeric"
+exec
+```
+
+Binary digits are limited to `0` and `1`; hexadecimal digits accept `0-9`, `a-f`, and `A-F`. Values are range-checked as unsigned 64-bit integers and normalized to decimal numeric tokens, so assignments, arithmetic, comparisons, and expressions share the existing numeric implementation in both `gshai` and `shaii`. The syntax is rejected unless `$useentry bininit` appears before the literal.
+
+The package declares the numeric syntax hook in its source payload:
+
+```shay
+$entrysyn binliteral
+$entrysyndef number
+```
+
+Create the package with `gshai -et bininit.shaye main.shay`, then place it in `srchfile/siil/entryinit/` or install it under `~/.shay/entries/`.
