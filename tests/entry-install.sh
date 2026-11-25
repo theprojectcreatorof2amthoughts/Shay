@@ -17,3 +17,24 @@ HOME="$TMP/home" "$GSHAI" -o "$TMP/app" "$TMP/main.shay"
 out=$("$TMP/app")
 [ "$out" = "User entry loaded" ]
 printf '%s\n' 'PASS: insent installs nested binary entries for gshai and shaii'
+
+# $entrysyndef stores named syntax patterns in the binary package.
+cat > "$TMP/pattern-source.shay" <<'EOF'
+$entrysyn saypattern instxt
+$entrysyndef hexnum
+    ::0x0000::
+    ::0xFFFF::
+finish
+$entrysyndef binnum
+    ::0b0000::
+    ::0b1111::
+finish
+EOF
+"$GSHAI" -et "$TMP/home/.shay/entries/patternentry.shaye" "$TMP/pattern-source.shay"
+cat > "$TMP/pattern-entry-main.shay" <<'EOF'
+$useentry patternentry
+saypattern/>"Pattern entry package loaded"
+EOF
+out=$(HOME="$TMP/home" "$SHAII" "$TMP/pattern-entry-main.shay")
+[ "$out" = "Pattern entry package loaded" ]
+printf '%s\n' 'PASS: $entrysyndef blocks compile into and load from binary .shaye packages'
