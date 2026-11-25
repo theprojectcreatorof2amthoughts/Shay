@@ -8,14 +8,14 @@ Parser::Parser(const std::vector<Token> &tokens, std::unordered_set<std::string>
 const Token &Parser::peek() const{return tokens_[current_];}
 const Token &Parser::previous() const{return tokens_[current_-1];}
 bool Parser::atEnd() const{return peek().kind==TokenKind::End;}
-bool Parser::match(TokenKind kind,const std::string &text){if(peek().kind!=kind||(!text.empty()&&peek().text!=text))return false;if(kind==TokenKind::Number&&peek().extended_numeric&&!active_entries_.count("bininit"))return false;++current_;return true;}
+bool Parser::match(TokenKind kind,const std::string &text){if(peek().kind!=kind||(!text.empty()&&peek().text!=text))return false;if(kind==TokenKind::Number&&peek().extended_numeric&&!entry_has_behavior("bininit","number",active_entries_))return false;++current_;return true;}
 void Parser::skipLine(){while(!atEnd()&&peek().kind!=TokenKind::Newline)++current_;if(peek().kind==TokenKind::Newline)++current_;}
 void Parser::error(std::vector<ParseError>&errors,const std::string&message){errors.push_back({peek().line,peek().column,message});}
 bool Parser::consume(TokenKind kind,const std::string&text,std::vector<ParseError>&errors,const std::string&message){if(match(kind,text))return true;error(errors,message);return false;}
 namespace {
 bool expression_token(const Token&t,const std::unordered_set<std::string>&active_entries){
  if(t.kind==TokenKind::Identifier)return true;
- if(t.kind==TokenKind::Number)return !t.extended_numeric||active_entries.count("bininit")!=0;
+ if(t.kind==TokenKind::Number)return !t.extended_numeric||entry_has_behavior("bininit","number",active_entries);
  return t.kind==TokenKind::Symbol&&(t.text=="+"||t.text=="-"||t.text=="*"||t.text=="/"||t.text=="("||t.text==")");
 }
 std::string collect_expression(const std::vector<Token>&tokens,std::size_t&at,const std::string&stop,bool&valid,const std::unordered_set<std::string>&active_entries){
