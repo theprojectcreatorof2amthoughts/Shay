@@ -93,6 +93,25 @@ if "$SHAII" --check "$TMP/ray-ui-without-entry.shay" >"$TMP/out" 2>"$TMP/err"; t
 grep -q "enabled entry syntax" "$TMP/err" || fail "raydeclr missing-entry-syntax diagnostic"
 pass "rayinit registers entry-defined function syntax in both gshai and shaii"
 
+cat > "$TMP/control-alias-source.shay" <<'EOF'
+$entrysyn whenit ifit
+$entrysyn doneit exec
+$entrysyn endit finish
+EOF
+"$GSHAI" -et "$TMP/srchfile/siil/entryinit/controlwords.shaye" "$TMP/control-alias-source.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "build control keyword aliases"; }
+cat > "$TMP/control-alias.shay" <<'EOF'
+$useentry controlwords
+whenit true
+    instxt/>"Control-flow aliases work"
+doneit
+EOF
+out=$("$SHAII" "$TMP/control-alias.shay") || { cat "$TMP/out" "$TMP/err" >&2; fail "interpreter control keyword aliases"; }
+[ "$out" = "Control-flow aliases work" ] || fail "interpreter control alias output"
+"$GSHAI" -o "$TMP/control-alias-app" "$TMP/control-alias.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "compiler control keyword aliases"; }
+out=$("$TMP/control-alias-app") || fail "run compiled control alias"
+[ "$out" = "Control-flow aliases work" ] || fail "compiled control alias output"
+pass "binary extensions can alias block-opening and block-closing grammar keywords"
+
 cat > "$TMP/unused-variable.shay" <<'EOF'
 brew unused_result = "unused"
 instxt/>"Compiler still succeeds"
