@@ -108,7 +108,7 @@ Program Parser::parse(){
    if(foundCatch){Parser catchParser(catchTokens,active_entries_);Program catchProgram=catchParser.parse();statement.else_body=std::move(catchProgram.statements);for(const auto&e:catchProgram.errors)program.errors.push_back(e);}
   }else if(match(TokenKind::Identifier,"ifit")){
    statement.kind=StatementKind::If;
-   while(!atEnd()&&peek().kind!=TokenKind::Newline){statement.condition+=peek().text;statement.condition.push_back(' ');++current_;}
+   while(!atEnd()&&peek().kind!=TokenKind::Newline){if(peek().extended_numeric&&!entry_has_behavior("bininit","number",active_entries_)){error(program.errors,"binary and hexadecimal literals require $useentry bininit");valid=false;}statement.condition+=peek().text;statement.condition.push_back(' ');++current_;}
    if(statement.condition.empty()){error(program.errors,"ifit requires a condition");valid=false;}
    if(peek().kind==TokenKind::Newline)++current_;
    std::vector<Token> bodyTokens,elseTokens;bool foundExec=false,seenElse=false;int ifDepth=1;
