@@ -56,6 +56,7 @@ $(COMPILER): $(COMPILER_OBJECT) $(FRONTEND_OBJECTS)
 
 test: build
 	CXX="$(CXX)" sh tests/run.sh ./$(INTERPRETER) ./$(COMPILER)
+	sh tests/entry-install.sh ./$(INTERPRETER) ./$(COMPILER)
 
 check: $(INTERPRETER)
 	./$(INTERPRETER) --check "$(PROGRAM)"
@@ -84,16 +85,15 @@ insent:
 	  printf '%s\n' 'Usage: make insent /path/to/shaye_folder'; exit 2; \
 	fi
 	@src="$(ENTRY_DIR)"; \
-	if [ ! -d "$src" ]; then printf 'insent: folder not found: %s\n' "$src" >&2; exit 2; fi; \
-	src=$(CDPATH= cd -- "$src" && pwd); dest="$(ENTRY_HOME)"; \
-	mkdir -p "$dest"; \
-	find "$src" -type f -name '*.shaye' -exec sh -c 'src=$1; dest=$2; shift 2; for file do rel=${file#"$src"/}; target="$dest/$rel"; mkdir -p "$(dirname "$target")" || exit 1; cp -f "$file" "$target" || exit 1; done' sh "$src" "$dest" {} +; \
-	printf 'Installed .shaye entries into %s\n' "$dest"
+	if [ ! -d "$$src" ]; then printf 'insent: folder not found: %s\n' "$$src" >&2; exit 2; fi; \
+	src=$$(CDPATH= cd -- "$$src" && pwd); dest="$(ENTRY_HOME)"; \
+	mkdir -p "$$dest"; \
+	find "$$src" -type f -name '*.shaye' -exec sh -c 'src=$$1; dest=$$2; shift 2; for file do rel=$${file#"$$src"/}; target="$$dest/$$rel"; mkdir -p "$$(dirname "$$target")" || exit 1; cp -f "$$file" "$$target" || exit 1; done' sh "$$src" "$$dest" {} +; \
+	printf 'Installed .shaye entries into %s\n' "$$dest"
 
 # A positional source folder follows the insent goal; this pattern consumes it.
 %:
 	@:
-
 uninstall:
 	rm -f "$(DESTDIR)$(BINDIR)/gshai" "$(DESTDIR)$(BINDIR)/shaii"
 	@for lib in srchfile/siil/*.shaii; do rm -f "$(DESTDIR)$(SHAREDIR)/siil/${lib##*/}"; done
