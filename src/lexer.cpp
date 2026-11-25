@@ -1,5 +1,6 @@
 #include "lexer.hpp"
 #include <cctype>
+#include <stdexcept>
 namespace shay {
 Lexer::Lexer(const std::string &source) : source_(source) {}
 char Lexer::peek(std::size_t ahead) const { const auto at=offset_+ahead; return at<source_.size()?source_[at]:'\0'; }
