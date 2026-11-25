@@ -29,6 +29,41 @@ std::vector<Token> Lexer::scan() {
    else tokens.push_back({TokenKind::String,value,startLine,startColumn});
    continue;
   }
+  // Base-prefixed numeric literals use Shay's explicit ::...:: delimiters.
+  // Normalize them to decimal here so every downstream consumer (compiler,
+  // interpreter, declarations, collections, and expression parsing) sees a
+  // normal numeric token.
+  if(c==':'&&peek(1)==':'){
+   take();take();
+   std::string digits;
+   while(peek()!='\\0'&&peek()!=':'&&peek()!='\\n')digits.push_back(take());
+   if(peek()==':'&&peek(1)==':'){
+    take();take();
+    try{
+     if(digits.size()>2&&digits[0]=='0'&&(digits[1]=='b'||digits[1]=='B')){
+      const std::string bits=digits.substr(2);
+      if(bits.empty()||bits.find_first_not_of("01")!=std::string::npos)throw std::invalid_argument("binary");
+      unsigned long long value=std::stoull(bits,nullptr,2);
+      tokens.push_back({TokenKind::Number,std::to_string(value),startLine,startColumn});
+     }else if(digits.size()>2&&digits[0]=='0'&&(digits[1]=='x'||digits[1]=='X')){
+      const std::string hex=digits.substr(2);
+      if(hex.empty()||hex.find_first_not_of("0123456789abcdefABCDEF")!=std::string::npos)throw std::invalid_argument("hexadecimal");
+      unsigned long long value=std::stoull(hex,nullptr,16);
+      tokens.push_back({TokenKind::Number,std::to_string(value),startLine,startColumn});
+     }else{
+      errors_.push_back({startLine,startColumn,"expected a binary (::0b...::) or hexadecimal (::0x...::) literal"});
+      tokens.push_back({TokenKind::Invalid,digits,startLine,startColumn});
+     }
+    }catch(...){
+     errors_.push_back({startLine,startColumn,"invalid or out-of-range binary/hexadecimal numeric literal"});
+     tokens.push_back({TokenKind::Invalid,digits,startLine,startColumn});
+    }
+   }else{
+    errors_.push_back({startLine,startColumn,"unterminated base-prefixed numeric literal; expected closing '::'"});
+    tokens.push_back({TokenKind::Invalid,digits,startLine,startColumn});
+   }
+   continue;
+  }
   if(std::isalpha(static_cast<unsigned char>(c))||c=='_'){
    std::string word;while(std::isalnum(static_cast<unsigned char>(peek()))||peek()=='_')word.push_back(take());
    tokens.push_back({TokenKind::Identifier,word,startLine,startColumn});continue;
