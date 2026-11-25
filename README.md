@@ -52,7 +52,7 @@ $useentry varinit
 $useentry funcinit
 ```
 
-For UI applications, add $useentry uiinit. The .shuil adapter—not $useentry—selects Browser or Windows and its translation backend. See [the useentry specification](docs/USEENTRY_SPEC.md) for the full catalog and [the SHAY UI specification](docs/SHUI_SPEC.md) for UI source structure.
+For binary and hexadecimal integer literals, add `$useentry bininit`; use `::0b101010::` and `::0xF76A::`. See the [bininit entry documentation](docs/USEENTRY_SPEC.md#binary-and-hexadecimal-literals). For UI applications, add $useentry uiinit. The .shuil adapter—not $useentry—selects Browser or Windows and its translation backend. See [the useentry specification](docs/USEENTRY_SPEC.md) for the full catalog and [the SHAY UI specification](docs/SHUI_SPEC.md) for UI source structure.
 
 ## Siil standard library
 
