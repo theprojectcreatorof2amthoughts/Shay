@@ -3,6 +3,7 @@
 
 #include "useentry.hpp"
 #include <algorithm>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -13,6 +14,15 @@
 
 namespace shay {
 inline constexpr const char* shaye_magic = "SHAYE/1\n";
+
+inline std::filesystem::path user_entry_directory() {
+    const char* home = std::getenv("HOME");
+#ifdef _WIN32
+    if (!home || !*home) home = std::getenv("USERPROFILE");
+#endif
+    if (!home || !*home) return {};
+    return std::filesystem::path(home) / ".shay" / "entries";
+}
 
 inline std::vector<std::filesystem::path> entryinit_directories(const std::filesystem::path& source) {
     std::vector<std::filesystem::path> roots;
@@ -32,6 +42,8 @@ inline std::vector<std::filesystem::path> entryinit_directories(const std::files
     add_ancestors(std::filesystem::current_path(ec));
     ec.clear();
     add_ancestors(source);
+    const auto user_entries = user_entry_directory();
+    if (!user_entries.empty()) roots.push_back(user_entries);
     std::vector<std::filesystem::path> unique;
     for (const auto& path : roots)
         if (std::find(unique.begin(), unique.end(), path) == unique.end())
@@ -45,11 +57,11 @@ discover_shaye_entries(const std::filesystem::path& source) {
     for (const auto& directory : entryinit_directories(source)) {
         std::error_code ec;
         if (!std::filesystem::is_directory(directory, ec)) continue;
-        for (std::filesystem::directory_iterator it(directory, ec), end; !ec && it != end; it.increment(ec)) {
+        for (std::filesystem::recursive_directory_iterator it(directory, ec), end; !ec && it != end; it.increment(ec)) {
             if (!it->is_regular_file(ec) || it->path().extension() != ".shaye") continue;
             const std::string name = it->path().stem().string();
             if (!is_lowercase_useentry_name(name)) continue;
-            entries.emplace(name, it->path());
+            if (!entries.emplace(name, it->path()).second) continue;
             register_useentry_name(name);
             std::ifstream package(it->path(), std::ios::binary);
             std::string header, line, pending_syntax;
