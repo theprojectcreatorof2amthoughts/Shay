@@ -11,12 +11,19 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace shay {
 inline constexpr unsigned char shaye_magic[] = {'S','H','A','Y','E',0x00,0x01};
 inline constexpr unsigned char shaye_alias_opcode = 0x01;
+inline constexpr unsigned char shaye_definition_opcode = 0x02;
 inline constexpr unsigned char shaye_end_opcode = 0x00;
+
+struct ShayeRecords {
+    std::vector<std::pair<std::string, std::string>> aliases;
+    std::vector<std::pair<std::string, std::vector<std::string>>> definitions;
+};
 
 inline std::filesystem::path user_entry_directory() {
     const char* home = std::getenv("HOME");
@@ -48,8 +55,7 @@ inline std::vector<std::filesystem::path> entryinit_directories(const std::files
     if (!user_entries.empty()) roots.push_back(user_entries);
     std::vector<std::filesystem::path> unique;
     for (const auto& path : roots)
-        if (std::find(unique.begin(), unique.end(), path) == unique.end())
-            unique.push_back(path);
+        if (std::find(unique.begin(), unique.end(), path) == unique.end()) unique.push_back(path);
     return unique;
 }
 inline unsigned char shaye_mask(std::size_t index) {
@@ -61,9 +67,8 @@ inline void shaye_write_u16(std::ostream& out, std::uint16_t value) {
 }
 inline bool shaye_read_u16(const std::string& bytes, std::size_t& at, std::uint16_t& value) {
     if (at + 2 > bytes.size()) return false;
-    value = static_cast<std::uint16_t>(
-        (static_cast<unsigned char>(bytes[at]) << 8) |
-        static_cast<unsigned char>(bytes[at + 1]));
+    value = static_cast<std::uint16_t>((static_cast<unsigned char>(bytes[at]) << 8) |
+                                       static_cast<unsigned char>(bytes[at + 1]));
     at += 2;
     return true;
 }
@@ -73,34 +78,60 @@ inline std::string shaye_transform(const std::string& value) {
         result[i] = static_cast<char>(static_cast<unsigned char>(result[i]) ^ shaye_mask(i));
     return result;
 }
-inline bool read_shaye_records(const std::filesystem::path& path,
-                               std::vector<std::pair<std::string, std::string>>& records) {
+inline bool shaye_read_string(const std::string& bytes, std::size_t& at, std::string& value) {
+    std::uint16_t size = 0;
+    if (!shaye_read_u16(bytes, at, size) || size == 0 || at + size > bytes.size()) return false;
+    value = shaye_transform(bytes.substr(at, size));
+    at += size;
+    return true;
+}
+inline void shaye_write_string(std::ostream& out, const std::string& value) {
+    shaye_write_u16(out, static_cast<std::uint16_t>(value.size()));
+    const auto encoded = shaye_transform(value);
+    out.write(encoded.data(), static_cast<std::streamsize>(encoded.size()));
+}
+inline bool read_shaye_records(const std::filesystem::path& path, ShayeRecords& records) {
     std::ifstream input(path, std::ios::binary);
     if (!input) return false;
     const std::string bytes((std::istreambuf_iterator<char>(input)), {});
     if (bytes.size() < sizeof(shaye_magic) ||
         !std::equal(std::begin(shaye_magic), std::end(shaye_magic), bytes.begin(),
-                    [](unsigned char a, char b) { return a == static_cast<unsigned char>(b); }))
-        return false;
+                    [](unsigned char a, char b) { return a == static_cast<unsigned char>(b); })) return false;
     std::size_t at = sizeof(shaye_magic);
-    std::vector<std::pair<std::string, std::string>> parsed;
+    ShayeRecords parsed;
     bool ended = false;
     while (at < bytes.size()) {
         const auto opcode = static_cast<unsigned char>(bytes[at++]);
         if (opcode == shaye_end_opcode) { ended = at == bytes.size(); break; }
-        if (opcode != shaye_alias_opcode) return false;
-        std::uint16_t alias_size = 0, target_size = 0;
-        if (!shaye_read_u16(bytes, at, alias_size) || alias_size == 0 || at + alias_size > bytes.size()) return false;
-        std::string alias = shaye_transform(bytes.substr(at, alias_size));
-        at += alias_size;
-        if (!shaye_read_u16(bytes, at, target_size) || target_size == 0 || at + target_size > bytes.size()) return false;
-        std::string target = shaye_transform(bytes.substr(at, target_size));
-        at += target_size;
-        if (!is_lowercase_useentry_name(alias) || !is_lowercase_useentry_name(target)) return false;
-        parsed.emplace_back(std::move(alias), std::move(target));
+        if (opcode == shaye_alias_opcode) {
+            std::string alias, target;
+            if (!shaye_read_string(bytes, at, alias) || !shaye_read_string(bytes, at, target) ||
+                !is_lowercase_useentry_name(alias) || !is_lowercase_useentry_name(target)) return false;
+            parsed.aliases.emplace_back(std::move(alias), std::move(target));
+        } else if (opcode == shaye_definition_opcode) {
+            std::string name;
+            std::uint16_t count = 0;
+            if (!shaye_read_string(bytes, at, name) || !is_lowercase_useentry_name(name) ||
+                !shaye_read_u16(bytes, at, count) || count == 0) return false;
+            std::vector<std::string> patterns;
+            patterns.reserve(count);
+            for (std::uint16_t i = 0; i < count; ++i) {
+                std::string pattern;
+                if (!shaye_read_string(bytes, at, pattern)) return false;
+                patterns.push_back(std::move(pattern));
+            }
+            parsed.definitions.emplace_back(std::move(name), std::move(patterns));
+        } else return false;
     }
     if (!ended) return false;
     records = std::move(parsed);
+    return true;
+}
+inline bool read_shaye_records(const std::filesystem::path& path,
+                               std::vector<std::pair<std::string, std::string>>& aliases) {
+    ShayeRecords records;
+    if (!read_shaye_records(path, records)) return false;
+    aliases = std::move(records.aliases);
     return true;
 }
 inline std::unordered_map<std::string, std::filesystem::path>
@@ -112,52 +143,80 @@ discover_shaye_entries(const std::filesystem::path& source) {
         for (std::filesystem::recursive_directory_iterator it(directory, ec), end; !ec && it != end; it.increment(ec)) {
             if (!it->is_regular_file(ec) || it->path().extension() != ".shaye") continue;
             const std::string name = it->path().stem().string();
-            if (!is_lowercase_useentry_name(name)) continue;
-            if (!entries.emplace(name, it->path()).second) continue;
+            if (!is_lowercase_useentry_name(name) || !entries.emplace(name, it->path()).second) continue;
             register_useentry_name(name);
-            std::vector<std::pair<std::string, std::string>> records;
+            ShayeRecords records;
             if (!read_shaye_records(it->path(), records)) continue;
-            for (const auto& record : records)
-                register_entry_syntax(name, record.first, record.second);
+            for (const auto& alias : records.aliases) register_entry_syntax(name, alias.first, alias.second);
+            for (const auto& definition : records.definitions)
+                register_entry_syntax_pattern(name, definition.first, definition.second);
         }
     }
     return entries;
 }
 inline bool read_shaye(const std::filesystem::path& path, std::string& source) {
-    std::vector<std::pair<std::string, std::string>> records;
+    ShayeRecords records;
     if (!read_shaye_records(path, records)) return false;
     source.clear();
     return true;
 }
+inline std::string shaye_trim(const std::string& value) {
+    const auto first = value.find_first_not_of(" \t\r");
+    if (first == std::string::npos) return {};
+    const auto last = value.find_last_not_of(" \t\r");
+    return value.substr(first, last - first + 1);
+}
 inline bool write_shaye(const std::filesystem::path& path, const std::string& source) {
     std::istringstream lines(source);
     std::string line;
-    std::vector<std::pair<std::string, std::string>> records;
+    ShayeRecords records;
+    bool in_definition = false;
+    std::string definition_name;
+    std::vector<std::string> definition_patterns;
     while (std::getline(lines, line)) {
-        const auto first = line.find_first_not_of(" \t\r");
-        if (first == std::string::npos || line.compare(first, 2, "#%") == 0 || line.compare(first, 2, "##") == 0)
+        const std::string current = shaye_trim(line);
+        if (current.empty() || current.rfind("#%", 0) == 0 || current.rfind("##", 0) == 0) continue;
+        if (in_definition) {
+            if (current == "finish") {
+                if (definition_patterns.empty()) return false;
+                records.definitions.emplace_back(definition_name, definition_patterns);
+                in_definition = false;
+                definition_name.clear();
+                definition_patterns.clear();
+            } else {
+                if (current.size() > 65535) return false;
+                definition_patterns.push_back(current);
+                if (definition_patterns.size() > 65535) return false;
+            }
             continue;
-        std::istringstream words(line.substr(first));
-        std::string directive, alias, target, extra;
-        if (!(words >> directive >> alias >> target) || (words >> extra) ||
-            directive != "$entrysyn" || !is_lowercase_useentry_name(alias) ||
-            !is_lowercase_useentry_name(target))
-            return false;
-        records.emplace_back(std::move(alias), std::move(target));
+        }
+        std::istringstream words(current);
+        std::string directive, first, second, extra;
+        if (!(words >> directive >> first)) return false;
+        if (directive == "$entrysyn") {
+            if (!(words >> second) || (words >> extra) ||
+                !is_lowercase_useentry_name(first) || !is_lowercase_useentry_name(second)) return false;
+            records.aliases.emplace_back(std::move(first), std::move(second));
+        } else if (directive == "$entrysyndef") {
+            if ((words >> extra) || !is_lowercase_useentry_name(first)) return false;
+            in_definition = true;
+            definition_name = std::move(first);
+        } else return false;
     }
-    if (records.empty()) return false;
+    if (in_definition || (records.aliases.empty() && records.definitions.empty())) return false;
     std::ofstream output(path, std::ios::binary | std::ios::trunc);
     if (!output) return false;
     output.write(reinterpret_cast<const char*>(shaye_magic), sizeof(shaye_magic));
-    for (const auto& record : records) {
-        if (record.first.size() > 65535 || record.second.size() > 65535) return false;
+    for (const auto& alias : records.aliases) {
         output.put(static_cast<char>(shaye_alias_opcode));
-        shaye_write_u16(output, static_cast<std::uint16_t>(record.first.size()));
-        const auto alias = shaye_transform(record.first);
-        output.write(alias.data(), static_cast<std::streamsize>(alias.size()));
-        shaye_write_u16(output, static_cast<std::uint16_t>(record.second.size()));
-        const auto target = shaye_transform(record.second);
-        output.write(target.data(), static_cast<std::streamsize>(target.size()));
+        shaye_write_string(output, alias.first);
+        shaye_write_string(output, alias.second);
+    }
+    for (const auto& definition : records.definitions) {
+        output.put(static_cast<char>(shaye_definition_opcode));
+        shaye_write_string(output, definition.first);
+        shaye_write_u16(output, static_cast<std::uint16_t>(definition.second.size()));
+        for (const auto& pattern : definition.second) shaye_write_string(output, pattern);
     }
     output.put(static_cast<char>(shaye_end_opcode));
     return static_cast<bool>(output);
