@@ -32,13 +32,20 @@ inline std::unordered_map<std::string, EntrySyntaxDefinition>& mutable_entry_syn
     return definitions;
 }
 inline void register_entry_syntax(const std::string& entry, const std::string& syntax, const std::string& behavior) {
-    if (is_lowercase_useentry_name(entry) && is_lowercase_useentry_name(syntax) && behavior == "function")
+    if (is_lowercase_useentry_name(entry) && is_lowercase_useentry_name(syntax) && (behavior == "function" || behavior == "number"))
         mutable_entry_syntax_registry()[syntax] = {entry, behavior};
 }
 inline std::string entry_syntax_behavior(const std::string& syntax, const std::unordered_set<std::string>& active_entries) {
     const auto found = mutable_entry_syntax_registry().find(syntax);
     if (found == mutable_entry_syntax_registry().end() || !active_entries.count(found->second.entry)) return {};
     return found->second.behavior;
+}
+
+inline bool entry_has_behavior(const std::string& entry, const std::string& behavior, const std::unordered_set<std::string>& active_entries) {
+    if (!active_entries.count(entry)) return false;
+    for (const auto& item : mutable_entry_syntax_registry())
+        if (item.second.entry == entry && item.second.behavior == behavior) return true;
+    return false;
 }
 
 inline void register_useentry_name(const std::string& name) {
