@@ -8,21 +8,22 @@ Parser::Parser(const std::vector<Token> &tokens, std::unordered_set<std::string>
 const Token &Parser::peek() const{return tokens_[current_];}
 const Token &Parser::previous() const{return tokens_[current_-1];}
 bool Parser::atEnd() const{return peek().kind==TokenKind::End;}
-bool Parser::match(TokenKind kind,const std::string &text){if(peek().kind!=kind||(!text.empty()&&peek().text!=text))return false;++current_;return true;}
+bool Parser::match(TokenKind kind,const std::string &text){if(peek().kind!=kind||(!text.empty()&&peek().text!=text))return false;if(kind==TokenKind::Number&&peek().extended_numeric&&!active_entries_.count("bininit"))return false;++current_;return true;}
 void Parser::skipLine(){while(!atEnd()&&peek().kind!=TokenKind::Newline)++current_;if(peek().kind==TokenKind::Newline)++current_;}
 void Parser::error(std::vector<ParseError>&errors,const std::string&message){errors.push_back({peek().line,peek().column,message});}
 bool Parser::consume(TokenKind kind,const std::string&text,std::vector<ParseError>&errors,const std::string&message){if(match(kind,text))return true;error(errors,message);return false;}
 namespace {
-bool expression_token(const Token&t){
- if(t.kind==TokenKind::Identifier||t.kind==TokenKind::Number)return true;
+bool expression_token(const Token&t,const std::unordered_set<std::string>&active_entries){
+ if(t.kind==TokenKind::Identifier)return true;
+ if(t.kind==TokenKind::Number)return !t.extended_numeric||active_entries.count("bininit")!=0;
  return t.kind==TokenKind::Symbol&&(t.text=="+"||t.text=="-"||t.text=="*"||t.text=="/"||t.text=="("||t.text==")");
 }
-std::string collect_expression(const std::vector<Token>&tokens,std::size_t&at,const std::string&stop,bool&valid){
+std::string collect_expression(const std::vector<Token>&tokens,std::size_t&at,const std::string&stop,bool&valid,const std::unordered_set<std::string>&active_entries){
  std::string result;int depth=0;
  while(at<tokens.size()&&tokens[at].kind!=TokenKind::End&&tokens[at].kind!=TokenKind::Newline){
   const Token&t=tokens[at];
   if(t.kind==TokenKind::Symbol&&depth==0&&(t.text==stop||t.text==")"))break;
-  if(!expression_token(t)){valid=false;break;}
+  if(!expression_token(t,active_entries)){valid=false;break;}
   if(t.kind==TokenKind::Symbol&&t.text=="(")++depth;
   if(t.kind==TokenKind::Symbol&&t.text==")"){if(depth==0){valid=false;break;}--depth;}
   result+=t.text;++at;
@@ -274,7 +275,7 @@ Program Parser::parse(){
     while(match(TokenKind::Newline)){}
     if(valid&&match(TokenKind::Identifier,"forw")){
      statement.has_return=true;
-     statement.value=collect_expression(tokens_,current_,"",valid);
+     statement.value=collect_expression(tokens_,current_,"",valid,active_entries_);
      if(statement.value.empty()){error(program.errors,"'forw' requires a return expression");valid=false;}
      if(peek().kind==TokenKind::Newline)++current_;else if(!atEnd()){error(program.errors,"expected a newline after return expression");valid=false;}
      while(match(TokenKind::Newline)){}
@@ -389,7 +390,7 @@ Program Parser::parse(){
    if(valid)statement.name=previous().text;
   }else if(match(TokenKind::Identifier,"forw")){
    statement.kind=StatementKind::ReturnValue;
-   statement.value=collect_expression(tokens_,current_,"",valid);
+   statement.value=collect_expression(tokens_,current_,"",valid,active_entries_);
    if(statement.value.empty()){error(program.errors,"'forw' requires a return expression");valid=false;}
   }else if(match(TokenKind::Identifier,"logit")){
    statement.kind=StatementKind::LogText;
@@ -422,7 +423,7 @@ Program Parser::parse(){
     statement.output_names.clear();
     if(!(peek().kind==TokenKind::Symbol&&peek().text==")")){
      while(valid){
-      auto arg=collect_expression(tokens_,current_,",",valid);
+      auto arg=collect_expression(tokens_,current_,",",valid,active_entries_);
       if(!valid||arg.empty()){error(program.errors,"expected a function argument expression");valid=false;break;}
       statement.arguments.push_back(arg);
       if(match(TokenKind::Symbol,","))continue;
