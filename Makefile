@@ -12,6 +12,9 @@ PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 SHAREDIR ?= $(PREFIX)/share/shay
 DESTDIR ?=
+SHAY_HOME ?= $(HOME)/.shay
+ENTRY_HOME ?= $(SHAY_HOME)/entries
+ENTRY_DIR ?= $(word 2,$(MAKECMDGOALS))
 
 CXXFLAGS ?= -std=c++20 -O2 -Wall -Wextra -Wpedantic
 CFLAGS ?= -std=c11 -O2 -Wall -Wextra -Wpedantic
@@ -26,9 +29,12 @@ INTERPRETER_OBJECT := $(BUILD_DIR)/shaii.o
 COMPILER_OBJECT := $(BUILD_DIR)/gshai.o
 DEPFILES := $(FRONTEND_OBJECTS:.o=.d) $(RUNTIME_OBJECT:.o=.d) $(INTERPRETER_OBJECT:.o=.d) $(COMPILER_OBJECT:.o=.d)
 
-.PHONY: all build test check run compile executable clean install uninstall debug release help
+.PHONY: all build entry-home test check run compile executable clean install uninstall insent debug release help
 all: build
-build: $(INTERPRETER) $(COMPILER)
+build: entry-home $(INTERPRETER) $(COMPILER)
+
+entry-home:
+	mkdir -p "$(ENTRY_HOME)"
 
 $(BUILD_DIR)/.dir:
 	mkdir -p "$(BUILD_DIR)"
@@ -70,6 +76,23 @@ install: build
 	$(INSTALL) -d "$(DESTDIR)$(SHAREDIR)/siil"
 	$(INSTALL) -m 0644 srchfile/siil/*.shaii "$(DESTDIR)$(SHAREDIR)/siil/"
 	$(INSTALL) -m 0644 srchfile/siil/README.md "$(DESTDIR)$(SHAREDIR)/siil/README.md"
+
+# Usage: make insent /path/to/a/folder/of/shaye/files
+# The extra path is accepted as a make goal so the requested positional syntax works.
+insent:
+	@if [ -z "$(strip $(ENTRY_DIR))" ]; then \
+	  printf '%s\n' 'Usage: make insent /path/to/shaye_folder'; exit 2; \
+	fi
+	@src="$(ENTRY_DIR)"; \
+	if [ ! -d "$src" ]; then printf 'insent: folder not found: %s\n' "$src" >&2; exit 2; fi; \
+	src=$(CDPATH= cd -- "$src" && pwd); dest="$(ENTRY_HOME)"; \
+	mkdir -p "$dest"; \
+	find "$src" -type f -name '*.shaye' -exec sh -c 'src=$1; dest=$2; shift 2; for file do rel=${file#"$src"/}; target="$dest/$rel"; mkdir -p "$(dirname "$target")" || exit 1; cp -f "$file" "$target" || exit 1; done' sh "$src" "$dest" {} +; \
+	printf 'Installed .shaye entries into %s\n' "$dest"
+
+# A positional source folder follows the insent goal; this pattern consumes it.
+%:
+	@:
 
 uninstall:
 	rm -f "$(DESTDIR)$(BINDIR)/gshai" "$(DESTDIR)$(BINDIR)/shaii"
