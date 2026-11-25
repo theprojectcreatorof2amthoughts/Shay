@@ -103,7 +103,7 @@ $useentry bininit
 brew binary_value = ::0b101010::
 brew hex_value = ::0xF76A::
 brew total = binary_value + hex_value
-ifit total == 63340
+ifit total == 63380
     instxt/>"Base literals calculate correctly"
 elseit
     instxt/>"Base literal calculation failed"
