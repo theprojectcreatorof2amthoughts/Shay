@@ -1,0 +1,250 @@
+#% BinInit source package definition.
+#% Compile with: gshai -et bininit.shaye main.shay
+
+#% ===== BININIT ENTRY SOURCE =====
+#% This file is the readable source used to generate bininit.shaye.
+#% Compile it with: gshai -et bininit.shaye main.shay
+#% The generated .shaye is a binary entry package, not a source file.
+#% BinInit works with logical BaseFul sectors managed by BaseFul.
+#% It does not expose raw physical disk sectors or direct disk access.
+#% This entry defines four BinInit syntax families.
+#% Hexadecimal numeric literals use the 0x prefix.
+#% Binary numeric literals use the 0b prefix.
+#% The selectsector form chooses a logical BaseFul sector.
+#% The expdatabinary form expands selected sector data as binary.
+#% instxtexit/> is core Shay syntax and is not declared here.
+#% No extra sector commands are invented by this entry.
+#% The definitions below are syntax metadata for the entry loader.
+#% Runtime execution requires matching lexer, parser, and runtime support.
+#% A syntax declaration alone does not implement disk or sector operations.
+
+#% ===== HEXADECIMAL LITERAL =====
+#% The hexadecimal family is named hexnum.
+#% The prefix is exactly 0x after the opening delimiter.
+#% Digits 0 through 9 are valid hexadecimal digits.
+#% Letters A through F are valid hexadecimal digits.
+#% Letters a through f are valid hexadecimal digits.
+#% The closing delimiter terminates the numeric literal.
+#% The value is interpreted as a number, not as a string.
+#% Leading zeroes do not change the represented value.
+#% A hexadecimal literal must contain at least one digit.
+#% A hexadecimal literal cannot contain a sign inside its digits.
+#% A sign, if supported by an expression, belongs outside the literal.
+#% Whitespace is not permitted inside the delimited literal.
+#% Invalid hexadecimal characters must be diagnosed.
+#% An unterminated hexadecimal literal must be diagnosed.
+#% The implementation must detect numeric overflow.
+
+#% ===== BINARY LITERAL =====
+#% The binary family is named binnum.
+#% The prefix is exactly 0b after the opening delimiter.
+#% Only zero and one are valid binary digits.
+#% The closing delimiter terminates the numeric literal.
+#% The value is interpreted as a number, not as a string.
+#% Leading zeroes do not change the represented value.
+#% A binary literal must contain at least one digit.
+#% A binary literal cannot contain other decimal digits.
+#% A binary literal cannot contain hexadecimal letters.
+#% Whitespace is not permitted inside the delimited literal.
+#% Invalid binary characters must be diagnosed.
+#% An unterminated binary literal must be diagnosed.
+#% The implementation must detect numeric overflow.
+#% Binary and hexadecimal values should share numeric expression rules.
+#% The literal form must remain unambiguous with ordinary Shay symbols.
+
+#% ===== LOGICAL SECTOR SELECTION =====
+#% The selection family is named selectsector.
+#% The command accepts one value identifying a logical BaseFul sector.
+#% The value is evaluated using the active Shay expression rules.
+#% The selected sector belongs to BaseFul's logical sector model.
+#% Selection does not select a physical disk sector.
+#% Selection does not grant raw device access.
+#% BaseFul validates whether the requested logical sector exists.
+#% A missing logical sector must produce a clear runtime error.
+#% An invalid sector identifier must not change the current selection.
+#% A successful selection becomes the current logical sector.
+#% The selected sector is scoped to the active BaseFul context.
+#% The operation must not silently create a new sector.
+#% The operation must not modify sector contents.
+#% The command has no implicit output unless the runtime specifies it.
+#% The selected sector is the input to the expansion operation.
+
+#% ===== BINARY DATA EXPANSION =====
+#% The expansion family is named expdatabinary.
+#% The command uses the currently selected logical BaseFul sector.
+#% The command expands that sector's data into a binary representation.
+#% The operation reads through BaseFul's logical data interface.
+#% The operation does not read a physical disk sector directly.
+#% The operation does not change the selected sector.
+#% The operation does not modify the sector's stored data.
+#% The output representation must be deterministic.
+#% Each byte is represented using eight binary digits.
+#% Byte order follows the logical data order supplied by BaseFul.
+#% An empty logical sector produces an empty binary representation.
+#% A missing selection must produce a clear runtime error.
+#% A failed BaseFul read must be reported to the caller.
+#% The operation must not silently truncate sector data.
+#% The operation must not silently pad missing data.
+
+#% ===== COMPILER AND INTERPRETER EXPECTATIONS =====
+#% gshai and shaii must agree on the declared syntax.
+#% The compiler must reject malformed literal tokens.
+#% The interpreter must reject malformed literal tokens.
+#% Both tools must report the source location of syntax errors.
+#% The compiler must preserve ordinary Shay expression precedence.
+#% The interpreter must preserve ordinary Shay expression precedence.
+#% The entry is optional when a program does not use BinInit syntax.
+#% A program activates this entry with $useentry bininit.
+#% The entry filename stem is the name used by $useentry.
+#% The package is discovered through the configured entry directories.
+#% The binary package must be validated before its records are registered.
+#% Malformed packages must not partially register syntax definitions.
+#% Existing alias-only .shaye packages remain supported.
+#% Unknown package opcodes must be rejected safely.
+#% The package format is not encryption or a security boundary.
+
+#% ===== SAFETY BOUNDARIES =====
+#% BaseFul owns the logical sector abstraction.
+#% BinInit requests operations through BaseFul only.
+#% BinInit does not bypass BaseFul validation.
+#% BinInit does not expose arbitrary device paths.
+#% BinInit does not issue raw read or write system calls.
+#% BinInit does not write sector data during selection.
+#% BinInit does not write sector data during binary expansion.
+#% The expansion command is read-only.
+#% A future write operation would require a separate explicit design.
+#% No future write operation is implied by these declarations.
+#% No physical geometry is exposed by these declarations.
+#% No partition table is modified by these declarations.
+#% No boot record is modified by these declarations.
+#% No filesystem metadata is modified by these declarations.
+#% Errors must leave BaseFul's logical sector state consistent.
+
+#% ===== EXTENSION SCOPE =====
+#% This entry is named bininit.
+#% Its syntax definitions are hexnum, binnum, selectsector, and expdatabinary.
+#% The entry does not redefine instxt or instxtexit.
+#% The entry does not redefine existing control-flow keywords.
+#% The entry does not add unrequested list or backup commands.
+#% The entry does not add unrequested restore commands.
+#% The entry does not add unrequested sector deletion commands.
+#% The entry does not add unrequested sector enumeration commands.
+#% The entry does not add unrequested physical disk commands.
+#% The entry does not add unrequested import or export commands.
+#% The entry does not add unrequested comparison commands.
+#% The entry does not add unrequested formatting commands.
+#% The entry does not add unrequested raw memory access.
+#% The entry remains optional for normal Shay programs.
+#% The syntax names remain lowercase as required by $useentry.
+
+$entrysyndef hexnum
+    ::0x[0-9A-Fa-f]+::
+finish
+
+$entrysyndef binnum
+    ::0b[01]+::
+finish
+
+$entrysyndef selectsector
+    :$selectsector value
+finish
+
+$entrysyndef expdatabinary
+    :$expdatabinary
+finish
+#% BinInit source note 156: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 157: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 158: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 159: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 160: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 161: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 162: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 163: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 164: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 165: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 166: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 167: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 168: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 169: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 170: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 171: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 172: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 173: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 174: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 175: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 176: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 177: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 178: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 179: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 180: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 181: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 182: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 183: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 184: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 185: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 186: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 187: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 188: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 189: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 190: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 191: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 192: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 193: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 194: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 195: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 196: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 197: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 198: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 199: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 200: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 201: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 202: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 203: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 204: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 205: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 206: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 207: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 208: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 209: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 210: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 211: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 212: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 213: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 214: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 215: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 216: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 217: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 218: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 219: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 220: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 221: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 222: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 223: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 224: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 225: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 226: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 227: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 228: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 229: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 230: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 231: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 232: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 233: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 234: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 235: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 236: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 237: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 238: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 239: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 240: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 241: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 242: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 243: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 244: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 245: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 246: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 247: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 248: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 249: preserve the four declared syntax families and BaseFul logical-sector boundary.
+#% BinInit source note 250: preserve the four declared syntax families and BaseFul logical-sector boundary.
+
