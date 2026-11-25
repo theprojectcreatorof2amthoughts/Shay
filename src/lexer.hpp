@@ -12,6 +12,7 @@ struct Token {
     std::string text;
     std::size_t line;
     std::size_t column;
+    bool extended_numeric = false;
 };
 struct LexError {
     std::size_t line;
