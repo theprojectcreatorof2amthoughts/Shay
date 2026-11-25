@@ -3,6 +3,7 @@
 #include <string>
 #include <unordered_set>
 #include <unordered_map>
+#include <vector>
 namespace shay {
 inline std::unordered_set<std::string>& mutable_useentry_registry() {
     static std::unordered_set<std::string> entries = {
@@ -22,14 +23,28 @@ inline bool is_lowercase_useentry_name(const std::string& name) {
     return true;
 }
 struct EntrySyntaxDefinition { std::string entry; std::string target; };
+struct EntrySyntaxPattern { std::string entry; std::string name; std::vector<std::string> patterns; };
 inline std::unordered_map<std::string, EntrySyntaxDefinition>& mutable_entry_syntax_registry() {
     static std::unordered_map<std::string, EntrySyntaxDefinition> definitions;
+    return definitions;
+}
+inline std::unordered_map<std::string, EntrySyntaxPattern>& mutable_entry_pattern_registry() {
+    static std::unordered_map<std::string, EntrySyntaxPattern> definitions;
     return definitions;
 }
 inline void register_entry_syntax(const std::string& entry, const std::string& syntax, const std::string& target) {
     if (is_lowercase_useentry_name(entry) && is_lowercase_useentry_name(syntax) &&
         is_lowercase_useentry_name(target))
         mutable_entry_syntax_registry()[syntax] = {entry, target};
+}
+inline void register_entry_syntax_pattern(const std::string& entry, const std::string& name,
+                                          const std::vector<std::string>& patterns) {
+    if (!is_lowercase_useentry_name(entry) || !is_lowercase_useentry_name(name) || patterns.empty()) return;
+    mutable_entry_pattern_registry()[entry + ":" + name] = {entry, name, patterns};
+}
+inline const EntrySyntaxPattern* entry_syntax_pattern(const std::string& entry, const std::string& name) {
+    const auto found = mutable_entry_pattern_registry().find(entry + ":" + name);
+    return found == mutable_entry_pattern_registry().end() ? nullptr : &found->second;
 }
 inline std::string entry_syntax_target(const std::string& syntax,
                                        const std::unordered_set<std::string>& active_entries) {
