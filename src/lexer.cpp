@@ -37,7 +37,7 @@ std::vector<Token> Lexer::scan() {
   if(c==':'&&peek(1)==':'){
    take();take();
    std::string digits;
-   while(peek()!='\\0'&&peek()!=':'&&peek()!='\\n')digits.push_back(take());
+   while(peek()!='\0'&&peek()!=':'&&peek()!='\\n')digits.push_back(take());
    if(peek()==':'&&peek(1)==':'){
     take();take();
     try{
