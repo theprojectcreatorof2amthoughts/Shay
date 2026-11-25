@@ -333,7 +333,7 @@ void execute_file(const fs::path&input,Context&ctx){
  if(extension!=".shay"&&extension!=".shaz"&&extension!=".shaii"&&extension!=".shui"){diagnose(ctx,input,1,"unsupported file extension (expected .shay, .shaz, .shaii, .shui, or .shaye)");return;}
  std::string raw_source;
  if(file_extension==".shaye"){
-  if(!shay::read_shaye(input,raw_source)){diagnose(ctx,input,1,"invalid .shaye package (expected SHAYE/1 header)");return;}
+  if(!shay::read_shaye(input,raw_source)){diagnose(ctx,input,1,"invalid binary .shaye package (bad magic, version, or bytecode)");return;}
  }else{
   std::ifstream stream(input,std::ios::binary);if(!stream){diagnose(ctx,input,1,"cannot open source file");return;}
   raw_source.assign(std::istreambuf_iterator<char>(stream),{});

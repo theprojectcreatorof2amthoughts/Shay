@@ -8,7 +8,15 @@ Parser::Parser(const std::vector<Token> &tokens, std::unordered_set<std::string>
 const Token &Parser::peek() const{return tokens_[current_];}
 const Token &Parser::previous() const{return tokens_[current_-1];}
 bool Parser::atEnd() const{return peek().kind==TokenKind::End;}
-bool Parser::match(TokenKind kind,const std::string &text){if(peek().kind!=kind||(!text.empty()&&peek().text!=text))return false;++current_;return true;}
+bool Parser::keyword(const Token &token,const std::string &text) const {
+ return token.kind==TokenKind::Identifier &&
+        (token.text==text || entry_syntax_target(token.text,active_entries_)==text);
+}
+bool Parser::match(TokenKind kind,const std::string &text){
+ if(peek().kind!=kind)return false;
+ if(!text.empty() && (kind!=TokenKind::Identifier ? peek().text!=text : !keyword(peek(),text)))return false;
+ ++current_;return true;
+}
 void Parser::skipLine(){while(!atEnd()&&peek().kind!=TokenKind::Newline)++current_;if(peek().kind==TokenKind::Newline)++current_;}
 void Parser::error(std::vector<ParseError>&errors,const std::string&message){errors.push_back({peek().line,peek().column,message});}
 bool Parser::consume(TokenKind kind,const std::string&text,std::vector<ParseError>&errors,const std::string&message){if(match(kind,text))return true;error(errors,message);return false;}
@@ -79,15 +87,15 @@ Program Parser::parse(){
    if(peek().kind==TokenKind::Newline)++current_;
    std::vector<Token> tryTokens,catchTokens;bool foundCatch=false,foundEnd=false;int tryDepth=1;
    while(!atEnd()){
-    if(peek().kind==TokenKind::Identifier&&peek().text=="tryit"){
+    if(keyword(peek(),"tryit")){
      ++tryDepth;(foundCatch?catchTokens:tryTokens).push_back(peek());++current_;continue;
     }
-    if(peek().kind==TokenKind::Identifier&&peek().text=="endtry"){
+    if(keyword(peek(),"endtry")){
      --tryDepth;
      if(tryDepth==0){foundEnd=true;++current_;if(peek().kind==TokenKind::Newline)++current_;skipCurrentLine=false;break;}
      (foundCatch?catchTokens:tryTokens).push_back(peek());++current_;continue;
     }
-    if(tryDepth==1&&!foundCatch&&peek().kind==TokenKind::Identifier&&peek().text=="catchit"){
+    if(tryDepth==1&&!foundCatch&&keyword(peek(),"catchit")){
      foundCatch=true;++current_;
      if(!consume(TokenKind::Identifier,"",program.errors,"expected an error variable name after 'catchit'")){valid=false;break;}
      statement.name=previous().text;
@@ -112,10 +120,10 @@ Program Parser::parse(){
    if(peek().kind==TokenKind::Newline)++current_;
    std::vector<Token> bodyTokens,elseTokens;bool foundExec=false,seenElse=false;int ifDepth=1;
    while(!atEnd()){
-    if(peek().kind==TokenKind::Identifier&&peek().text=="ifit"){
+    if(keyword(peek(),"ifit")){
      ++ifDepth;(seenElse?elseTokens:bodyTokens).push_back(peek());++current_;continue;
     }
-    if(peek().kind==TokenKind::Identifier&&peek().text=="exec"){
+    if(keyword(peek(),"exec")){
      --ifDepth;
      if(ifDepth==0){
       foundExec=true;++current_;
@@ -125,7 +133,7 @@ Program Parser::parse(){
      }
      (seenElse?elseTokens:bodyTokens).push_back(peek());++current_;continue;
     }
-    if(ifDepth==1&&peek().kind==TokenKind::Identifier&&peek().text=="elseit"){
+    if(ifDepth==1&&keyword(peek(),"elseit")){
      if(seenElse){error(program.errors,"an ifit block can contain only one elseit branch");valid=false;}
      seenElse=true;++current_;
      if(peek().kind!=TokenKind::Newline&&!atEnd()){error(program.errors,"unexpected token after 'elseit'");valid=false;}
@@ -207,7 +215,7 @@ Program Parser::parse(){
     if(valid&&peek().kind!=TokenKind::Newline){error(program.errors,"expected a newline after class declaration");valid=false;}
     if(peek().kind==TokenKind::Newline)++current_;
     while(match(TokenKind::Newline)){}
-    while(valid&&!atEnd()&&!(peek().kind==TokenKind::Identifier&&peek().text=="finish")){
+    while(valid&&!atEnd()&&!(keyword(peek(),"finish"))){
      if(!consume(TokenKind::Symbol,"$",program.errors,"expected '$declrmthd' or 'finish' inside class")){valid=false;break;}
      if(!consume(TokenKind::Identifier,"declrmthd",program.errors,"expected 'declrmthd' inside class")){valid=false;break;}
      Statement method;method.kind=StatementKind::DeclareMethod;method.line=previous().line;
@@ -217,9 +225,9 @@ Program Parser::parse(){
      ++current_;while(match(TokenKind::Newline)){}
      std::vector<Token> methodTokens;bool foundMethodFinish=false;int methodIfDepth=0;
      while(!atEnd()){
-      if(peek().kind==TokenKind::Identifier&&peek().text=="ifit"){++methodIfDepth;methodTokens.push_back(peek());++current_;continue;}
-      if(peek().kind==TokenKind::Identifier&&peek().text=="exec"&&methodIfDepth>0){--methodIfDepth;methodTokens.push_back(peek());++current_;continue;}
-      if(peek().kind==TokenKind::Identifier&&peek().text=="finish"&&methodIfDepth==0){foundMethodFinish=true;++current_;break;}
+      if(keyword(peek(),"ifit")){++methodIfDepth;methodTokens.push_back(peek());++current_;continue;}
+      if(keyword(peek(),"exec")&&methodIfDepth>0){--methodIfDepth;methodTokens.push_back(peek());++current_;continue;}
+      if(keyword(peek(),"finish")&&methodIfDepth==0){foundMethodFinish=true;++current_;break;}
       methodTokens.push_back(peek());++current_;
      }
      if(!foundMethodFinish){error(program.errors,"expected 'finish' to close method '"+method.name+"'");valid=false;break;}
@@ -247,12 +255,7 @@ Program Parser::parse(){
     valid=consume(TokenKind::Symbol,"!",program.errors,"expected '!' before the class name");
     if(valid)valid=consume(TokenKind::Identifier,"",program.errors,"expected a class name after '!'");
     if(valid)statement.name="!"+previous().text;
-   }else if(match(TokenKind::Identifier,"entrysyn") || match(TokenKind::Identifier,"entrysyndef")){
-    statement.kind=StatementKind::EntrySyntaxMetadata;
-    valid=consume(TokenKind::Identifier,"",program.errors,"expected a name after entry syntax metadata");
-    if(valid)statement.name=previous().text;
-   }else if(match(TokenKind::Identifier,"declr") ||
-            (peek().kind==TokenKind::Identifier && entry_syntax_behavior(peek().text,active_entries_)=="function" && match(TokenKind::Identifier))){
+   }else if(match(TokenKind::Identifier,"declr")){
     const bool entry_syntax_declaration=previous().text!="declr";
     statement.kind=StatementKind::DeclareFunction;
     statement.entry_syntax_declaration=entry_syntax_declaration;
@@ -282,9 +285,9 @@ Program Parser::parse(){
     }else if(valid){
      std::vector<Token> bodyTokens;bool foundFinish=false;int ifDepth=0;
      while(!atEnd()){
-      if(peek().kind==TokenKind::Identifier&&peek().text=="ifit"){++ifDepth;bodyTokens.push_back(peek());++current_;continue;}
-      if(peek().kind==TokenKind::Identifier&&peek().text=="exec"&&ifDepth>0){--ifDepth;bodyTokens.push_back(peek());++current_;continue;}
-      if(peek().kind==TokenKind::Identifier&&peek().text=="finish"&&ifDepth==0){foundFinish=true;++current_;break;}
+      if(keyword(peek(),"ifit")){++ifDepth;bodyTokens.push_back(peek());++current_;continue;}
+      if(keyword(peek(),"exec")&&ifDepth>0){--ifDepth;bodyTokens.push_back(peek());++current_;continue;}
+      if(keyword(peek(),"finish")&&ifDepth==0){foundFinish=true;++current_;break;}
       bodyTokens.push_back(peek());++current_;
      }
      if(!foundFinish){error(program.errors,"expected 'finish' to close the function");valid=false;}

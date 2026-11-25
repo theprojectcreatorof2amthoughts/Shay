@@ -17,6 +17,7 @@ private:
     const Token &peek() const;
     const Token &previous() const;
     bool match(TokenKind kind, const std::string &text = "");
+    bool keyword(const Token &token, const std::string &text) const;
     bool atEnd() const;
     void skipLine();
     void error(std::vector<ParseError> &errors, const std::string &message);
