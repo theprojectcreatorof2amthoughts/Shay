@@ -14,19 +14,29 @@ Names contain lowercase English letters only (a through z). Multiple directives 
 
 ## Extension package discovery
 
-Both `gshai` and `shaii` look only in:
+Both `gshai` and `shaii` discover `.shaye` packages recursively in the repository's `srchfile/siil/entryinit/` directory and in the user's persistent `~/.shay/entries/` directory. Repository-local entries take precedence when two packages have the same entry name.
 
 ```text
-srchfile/
-└── siil/
-    ├── *.shaii
-    └── entryinit/
-        └── *.shaye
+Shay repository/
+└── srchfile/siil/entryinit/*.shaye
+
+User home/
+└── .shay/entries/**/*.shaye
 ```
 
 The package filename, without `.shaye`, is its entry name. For example, `myfeature.shaye` is activated by `$useentry myfeature`. A source file activates the package corresponding to each `$useentry` directive. Packages can contain Shay library declarations and their definitions become available to the importing program.
 
-The discovery root is found by walking the source file's directory ancestors and the current working directory. No other directory is searched for `.shaye` packages.
+Repository-local discovery walks the source file's directory ancestors and the current working directory. The user entry directory is independent of the repository, so installed packages remain available after the Git checkout is moved or deleted. `HOME` is used on Unix-like systems and `USERPROFILE` is the Windows fallback.
+
+## Installing user entries
+
+A normal `make` build creates `~/.shay/entries/`. To install every `.shaye` file found recursively under a chosen folder, run:
+
+```sh
+make insent ~/your_shaye_folder
+```
+
+The folder's relative subdirectory structure is preserved. The package filename remains its entry identity, so `tools/math/main.shaye` is selected with `$useentry main`. Existing files with the same relative path are replaced. The equivalent variable form is `make insent ENTRY_DIR=~/your_shaye_folder`. You can override the destination with `ENTRY_HOME=/some/path`.
 
 ## Creating a package
 
@@ -63,3 +73,4 @@ The standard `.shaii` libraries live in `srchfile/siil/`. Existing `$shaiiport [
 - An installed package is loaded once, even if the same entry is requested repeatedly.
 - Invalid names containing capitals, digits, or symbols remain syntax errors.
 - Built-in names continue to work without a corresponding `.shaye` package.
+- User-installed entries in `~/.shay/entries/` survive deletion or replacement of the Shay repository.
