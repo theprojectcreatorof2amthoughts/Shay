@@ -92,6 +92,35 @@ if "$SHAII" --check "$TMP/ray-ui-without-entry.shay" >"$TMP/out" 2>"$TMP/err"; t
 grep -q "enabled entry syntax" "$TMP/err" || fail "raydeclr missing-entry-syntax diagnostic"
 pass "rayinit registers entry-defined function syntax in both gshai and shaii"
 
+# bininit enables native binary and hexadecimal integer literals.
+cat > "$TMP/bininit-source.shay" <<'EOF'
+$entrysyn binliteral
+$entrysyndef number
+EOF
+"$GSHAI" -et "$TMP/srchfile/siil/entryinit/bininit.shaye" "$TMP/bininit-source.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "create bininit package"; }
+cat > "$TMP/bininit-values.shay" <<'EOF'
+$useentry bininit
+brew binary_value = ::0b101010::
+brew hex_value = ::0xF76A::
+brew total = binary_value + hex_value
+ifit total == 63340
+    instxt/>"Base literals calculate correctly"
+elseit
+    instxt/>"Base literal calculation failed"
+exec
+EOF
+out=$("$SHAII" "$TMP/bininit-values.shay") || { cat "$TMP/out" "$TMP/err" >&2; fail "interpret bininit numeric literals"; }
+[ "$out" = "Base literals calculate correctly" ] || fail "interpreter binary/hex arithmetic"
+"$GSHAI" -o "$TMP/bininit-values-app" "$TMP/bininit-values.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "compile bininit numeric literals"; }
+out=$("$TMP/bininit-values-app") || fail "run compiled bininit numeric literals"
+[ "$out" = "Base literals calculate correctly" ] || fail "compiler binary/hex arithmetic"
+cat > "$TMP/bininit-without-entry.shay" <<'EOF'
+brew value = ::0b101010::
+EOF
+if "$SHAII" --check "$TMP/bininit-without-entry.shay" >"$TMP/out" 2>"$TMP/err"; then fail "binary literal accepted without bininit"; fi
+if "$GSHAI" -o "$TMP/bininit-without-entry-app" "$TMP/bininit-without-entry.shay" >"$TMP/out" 2>"$TMP/err"; then fail "compiler accepted binary literal without bininit"; fi
+pass "bininit gates native binary/hex literals and both runtimes evaluate them"
+
 cat > "$TMP/unused-variable.shay" <<'EOF'
 brew unused_result = "unused"
 instxt/>"Compiler still succeeds"
