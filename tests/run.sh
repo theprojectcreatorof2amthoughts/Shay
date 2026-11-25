@@ -101,7 +101,7 @@ EOF
 "$GSHAI" -et "$TMP/srchfile/siil/entryinit/controlwords.shaye" "$TMP/control-alias-source.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "build control keyword aliases"; }
 cat > "$TMP/control-alias.shay" <<'EOF'
 $useentry controlwords
-whenit true
+whenit 1 == 1
     instxt/>"Control-flow aliases work"
 doneit
 EOF
