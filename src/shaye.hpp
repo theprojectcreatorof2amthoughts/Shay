@@ -200,6 +200,26 @@ inline std::string shaye_trim(const std::string& value) {
     const auto last = value.find_last_not_of(" \t\r");
     return value.substr(first, last - first + 1);
 }
+inline std::string shaye_executable_source(const std::string& source) {
+    std::istringstream lines(source);
+    std::ostringstream executable;
+    std::string line;
+    bool in_definition = false;
+    while (std::getline(lines, line)) {
+        const std::string current = shaye_trim(line);
+        if (in_definition) {
+            if (current == "finish") in_definition = false;
+            continue;
+        }
+        if (current.rfind("$entrysyn", 0) == 0) continue;
+        if (current.rfind("$entrysyndef", 0) == 0) {
+            in_definition = true;
+            continue;
+        }
+        executable << line << '\n';
+    }
+    return executable.str();
+}
 inline bool write_shaye(const std::filesystem::path& path, const std::string& source) {
     std::istringstream lines(source);
     std::string line;
@@ -242,7 +262,8 @@ inline bool write_shaye(const std::filesystem::path& path, const std::string& so
         }
     }
     if (in_definition) return false;
-    if (source.size() > UINT32_MAX) return false;
+    records.source = shaye_executable_source(source);
+    if (records.source.size() > UINT32_MAX) return false;
     std::ofstream output(path, std::ios::binary | std::ios::trunc);
     if (!output) return false;
     output.write(reinterpret_cast<const char*>(shpak_magic), sizeof(shpak_magic));
@@ -258,8 +279,8 @@ inline bool write_shaye(const std::filesystem::path& path, const std::string& so
         for (const auto& pattern : definition.second) shaye_write_string(output, pattern);
     }
     output.put(static_cast<char>(shaye_source_opcode));
-    shaye_write_u32(output, static_cast<std::uint32_t>(source.size()));
-    const auto encoded_source = shaye_transform(source);
+    shaye_write_u32(output, static_cast<std::uint32_t>(records.source.size()));
+    const auto encoded_source = shaye_transform(records.source);
     output.write(encoded_source.data(), static_cast<std::streamsize>(encoded_source.size()));
     output.put(static_cast<char>(shaye_end_opcode));
     return static_cast<bool>(output);
