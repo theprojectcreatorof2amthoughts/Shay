@@ -46,6 +46,15 @@ out=$(HOME="$TMP/home" "$SHAII" "$TMP/pattern-entry-main.shay")
 [ "$out" = "Pattern entry package loaded" ]
 printf '%s\n' 'PASS: $entrysyndef blocks compile into and load from binary .shpak packages'
 
+# shentrypak validates ordinary Shay syntax instead of blindly packaging bad source.
+printf '%s\n' '$notashay' > "$TMP/invalid-shay.shay"
+if "$SHENTRYPACK" "$TMP/invalid-shay.shay" -o "$TMP/invalid-shay.shpak" 2>"$TMP/invalid-shay-diagnostics"; then
+    echo "expected shentrypak to reject invalid Shay syntax" >&2
+    exit 1
+fi
+test ! -e "$TMP/invalid-shay.shpak"
+printf '%s\n' 'PASS: shentrypak validates Shay syntax before writing packages'
+
 # The dedicated compiler reports exact source locations and does not emit a bad package.
 cat > "$TMP/broken-entry.shay" <<'EOF'
 $entrysyndef broken
