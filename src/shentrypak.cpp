@@ -6,6 +6,7 @@
 #include <sstream>
 #include <string>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace fs = std::filesystem;
@@ -166,7 +167,7 @@ void print_diagnostics(const std::vector<Diagnostic>& diagnostics) {
 
 void usage() {
     std::cout
-        << "Usage: shentrypak source.shay [-o output.shpak]\n"
+        << "Usage: shentrypak source.shay -o output.shpak\n"
         << "       shentrypak -o output.shpak source.shay [more-source.shay ...]\n"
         << "       shentrypak --version\n\n"
         << "Compiles $entrysyn and $entrysyndef declarations into a binary .shpak entry package.\n";
