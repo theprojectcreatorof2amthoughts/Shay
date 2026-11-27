@@ -187,8 +187,8 @@ void load_file(const fs::path&input,BuildContext&ctx){
  if(extension==".shaye"||extension==".shpak")extension=".shaii";
  if(extension!=".shay"&&extension!=".shaz"&&extension!=".shaii"&&extension!=".shui"&&extension!=".shaye"&&extension!=".shpak"){diagnose(ctx,input,1,"unsupported file extension (expected .shay, .shaz, .shaii, .shui, or .shpak)");return;}
  std::string raw_source;
- if(file_extension==".shaye"){
-  if(!shay::read_shaye(input,raw_source)){diagnose(ctx,input,1,"invalid binary .shaye package (bad magic, version, or bytecode)");return;}
+ if(file_extension==".shaye"||file_extension==".shpak"){
+  if(!shay::read_shaye(input,raw_source)){diagnose(ctx,input,1,"invalid binary entry package (bad magic, version, or bytecode)");return;}
  }else{
   std::ifstream stream(input,std::ios::binary);if(!stream){diagnose(ctx,input,1,"cannot open source file");return;}
   raw_source.assign(std::istreambuf_iterator<char>(stream),std::istreambuf_iterator<char>());
@@ -797,12 +797,12 @@ int main(int argc,char**argv){
   else positional.push_back(arg);
  }
  if(!positional.empty()&&positional[0]=="-et"){
-  std::cerr<<"gshai: -et has been replaced by shentrypak; use 'shentrypak source.shay -o output.shpak'\\n";return 2;
+  std::cerr<<"gshai: -et has been replaced by shentrypak; use 'shentrypak source.shay -o output.shpak'\n";return 2;
  }
  if(positional.size()==1&&positional[0]=="--version"){std::cout<<"gshai 0.4.0 (Shay compiler)\n";return 0;}
  if(positional.size()==1&&(positional[0]=="--help"||positional[0]=="-h")){
-  std::cout<<"Usage:\n  gshai -et output.shaye source.shay|source.shaii\n  gshai [Shay flags] -ob [output.sho] source.shay|source.shaz|source.shui [more sources ...]\n  gshai [Shay flags] -o  [output]     source.shay|source.shaz [more sources ...]\n  gshai [Shay flags] -o  [output]     program.sho [more.sho ...]   Link existing objects\n  gshai --version\n\n"
-           <<"-et compiles syntax-alias declarations into a binary .shaye extension package.\n"
+  std::cout<<"Usage:\n  gshai [Shay flags] -ob [output.sho] source.shay|source.shaz|source.shui [more sources ...]\n  gshai [Shay flags] -o  [output]     source.shay|source.shaz [more sources ...]\n  gshai [Shay flags] -o  [output]     program.sho [more.sho ...]   Link existing objects\n  gshai --version\n\n"
+
            <<"-ob compiles one or more source files into a .sho object; -o compiles source files or links .sho objects in order.\n"
            <<"Shay compiler flags (may appear anywhere):\n"
            <<"  --shaywall    Enable common Shay warnings, including unused variables\n"
