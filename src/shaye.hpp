@@ -15,7 +15,8 @@
 #include <vector>
 
 namespace shay {
-inline constexpr unsigned char shaye_magic[] = {'S','H','A','Y','E',0x00,0x01};
+inline constexpr unsigned char shaye_magic[] = {'S','H','A','Y','E',0x00,0x01}; // Legacy .shaye package magic.
+inline constexpr unsigned char shpak_magic[] = {'S','H','P','A','K',0x00,0x01};
 inline constexpr unsigned char shaye_alias_opcode = 0x01;
 inline constexpr unsigned char shaye_definition_opcode = 0x02;
 inline constexpr unsigned char shaye_end_opcode = 0x00;
@@ -94,10 +95,14 @@ inline bool read_shaye_records(const std::filesystem::path& path, ShayeRecords& 
     std::ifstream input(path, std::ios::binary);
     if (!input) return false;
     const std::string bytes((std::istreambuf_iterator<char>(input)), {});
-    if (bytes.size() < sizeof(shaye_magic) ||
-        !std::equal(std::begin(shaye_magic), std::end(shaye_magic), bytes.begin(),
-                    [](unsigned char a, char b) { return a == static_cast<unsigned char>(b); })) return false;
-    std::size_t at = sizeof(shaye_magic);
+    const bool is_shpak = bytes.size() >= sizeof(shpak_magic) &&
+        std::equal(std::begin(shpak_magic), std::end(shpak_magic), bytes.begin(),
+                   [](unsigned char a, char b) { return a == static_cast<unsigned char>(b); });
+    const bool is_legacy_shaye = bytes.size() >= sizeof(shaye_magic) &&
+        std::equal(std::begin(shaye_magic), std::end(shaye_magic), bytes.begin(),
+                   [](unsigned char a, char b) { return a == static_cast<unsigned char>(b); });
+    if (!is_shpak && !is_legacy_shaye) return false;
+    std::size_t at = is_shpak ? sizeof(shpak_magic) : sizeof(shaye_magic);
     ShayeRecords parsed;
     bool ended = false;
     while (at < bytes.size()) {
@@ -141,9 +146,16 @@ discover_shaye_entries(const std::filesystem::path& source) {
         std::error_code ec;
         if (!std::filesystem::is_directory(directory, ec)) continue;
         for (std::filesystem::recursive_directory_iterator it(directory, ec), end; !ec && it != end; it.increment(ec)) {
-            if (!it->is_regular_file(ec) || it->path().extension() != ".shaye") continue;
+            if (!it->is_regular_file(ec)) continue;
+            const auto extension = it->path().extension();
+            if (extension != ".shpak" && extension != ".shaye") continue;
             const std::string name = it->path().stem().string();
-            if (!is_lowercase_useentry_name(name) || !entries.emplace(name, it->path()).second) continue;
+            if (!is_lowercase_useentry_name(name)) continue;
+            auto existing = entries.find(name);
+            if (existing != entries.end()) {
+                if (existing->second.extension() == ".shpak" || extension != ".shpak") continue;
+                existing->second = it->path();
+            } else entries.emplace(name, it->path());
             register_useentry_name(name);
             ShayeRecords records;
             if (!read_shaye_records(it->path(), records)) continue;
@@ -206,7 +218,7 @@ inline bool write_shaye(const std::filesystem::path& path, const std::string& so
     if (in_definition || (records.aliases.empty() && records.definitions.empty())) return false;
     std::ofstream output(path, std::ios::binary | std::ios::trunc);
     if (!output) return false;
-    output.write(reinterpret_cast<const char*>(shaye_magic), sizeof(shaye_magic));
+    output.write(reinterpret_cast<const char*>(shpak_magic), sizeof(shpak_magic));
     for (const auto& alias : records.aliases) {
         output.put(static_cast<char>(shaye_alias_opcode));
         shaye_write_string(output, alias.first);
