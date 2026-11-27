@@ -52,7 +52,6 @@ bool validate_source(const fs::path& file, const std::string& source,
     std::string definition_name;
     std::size_t definition_line = 0;
     std::size_t pattern_count = 0;
-    bool found_declaration = false;
     bool valid = true;
 
     auto report = [&](std::size_t number, const std::string& raw,
@@ -118,7 +117,6 @@ bool validate_source(const fs::path& file, const std::string& source,
                 report(line_number, line, "alias record exceeds the 65535-byte package limit", first);
             if (!aliases.insert(first).second)
                 report(line_number, line, "duplicate entry syntax alias '" + first + "'", first);
-            found_declaration = true;
         } else if (directive == "$entrysyndef") {
             if (!(words >> first)) {
                 report(line_number, line, "expected a syntax definition name after '$entrysyndef'", "$entrysyndef");
@@ -138,18 +136,16 @@ bool validate_source(const fs::path& file, const std::string& source,
             definition_name = first;
             definition_line = line_number;
             pattern_count = 0;
-            found_declaration = true;
         } else {
-            report(line_number, line, "unexpected content in an entry source; expected '$entrysyn' or '$entrysyndef'", directive);
+            // Entry packages may contain ordinary Shay code, imports, and
+            // declarations. The package preserves this source verbatim.
+            continue;
         }
     }
 
     if (in_definition)
         report(definition_line, "$entrysyndef " + definition_name,
                "syntax definition '" + definition_name + "' is missing its closing 'finish'", "$entrysyndef");
-    if (!found_declaration)
-        report(1, source.substr(0, source.find('\n')),
-               "entry source contains no $entrysyn or $entrysyndef declarations");
     return valid;
 }
 
