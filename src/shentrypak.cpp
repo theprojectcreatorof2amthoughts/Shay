@@ -1,4 +1,6 @@
 #include "shaye.hpp"
+#include "lexer.hpp"
+#include "parser.hpp"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -149,6 +151,30 @@ bool validate_source(const fs::path& file, const std::string& source,
     return valid;
 }
 
+void validate_shay_syntax(const fs::path& file, const std::string& source,
+                          std::vector<Diagnostic>& diagnostics) {
+    shay::Lexer lexer(source);
+    const auto tokens = lexer.scan();
+    shay::Parser parser(tokens);
+    const shay::Program program = parser.parse();
+    auto append = [&](std::size_t line, std::size_t column, const std::string& message) {
+        Diagnostic diagnostic;
+        diagnostic.file = file;
+        diagnostic.line = line;
+        diagnostic.column = column ? column : 1;
+        diagnostic.message = message;
+        std::istringstream lines(source);
+        std::string text;
+        for (std::size_t current = 1; current <= line && std::getline(lines, text); ++current)
+            if (current == line) diagnostic.source = text;
+        diagnostics.push_back(std::move(diagnostic));
+    };
+    for (const auto& error : lexer.errors())
+        append(error.line, error.column, error.message);
+    for (const auto& error : program.errors)
+        append(error.line, error.column, error.message);
+}
+
 void print_diagnostics(const std::vector<Diagnostic>& diagnostics) {
     for (const auto& diagnostic : diagnostics) {
         std::cerr << diagnostic.file.string() << ':' << diagnostic.line << ':' << diagnostic.column
@@ -227,6 +253,7 @@ int main(int argc, char** argv) {
         }
         const std::string source((std::istreambuf_iterator<char>(input)), {});
         validate_source(source_path, source, diagnostics, aliases, definitions);
+        validate_shay_syntax(source_path, source, diagnostics);
         combined_source += source;
         if (combined_source.empty() || combined_source.back() != '\n') combined_source.push_back('\n');
     }
