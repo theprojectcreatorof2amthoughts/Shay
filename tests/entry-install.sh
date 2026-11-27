@@ -1,9 +1,9 @@
 #!/usr/bin/env sh
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-SHAII="$ROOT/build/shaii"
-GSHAI="$ROOT/build/gshai"
-SHENTRYPACK="$ROOT/build/shentrypak"
+SHAII=${1:-"$ROOT/build/shaii"}
+GSHAI=${2:-"$ROOT/build/gshai"}
+SHENTRYPACK=${3:-"$ROOT/build/shentrypak"}
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT HUP INT TERM
 mkdir -p "$TMP/source/nested"
