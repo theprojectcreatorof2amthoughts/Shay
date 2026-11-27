@@ -7,6 +7,7 @@ INSTALL ?= install
 BUILD_DIR ?= build
 INTERPRETER := $(BUILD_DIR)/shaii
 COMPILER := $(BUILD_DIR)/gshai
+ENTRY_PACKER := $(BUILD_DIR)/shentrypak
 PROGRAM ?= examples/hello.shay
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
@@ -31,7 +32,7 @@ DEPFILES := $(FRONTEND_OBJECTS:.o=.d) $(RUNTIME_OBJECT:.o=.d) $(INTERPRETER_OBJE
 
 .PHONY: all build entry-home test check run compile executable clean install uninstall insent debug release help
 all: build
-build: entry-home $(INTERPRETER) $(COMPILER)
+build: entry-home $(INTERPRETER) $(COMPILER) $(ENTRY_PACKER)
 
 entry-home:
 	mkdir -p "$(ENTRY_HOME)"
@@ -52,11 +53,14 @@ $(INTERPRETER): $(INTERPRETER_OBJECT) $(FRONTEND_OBJECTS) $(RUNTIME_OBJECT)
 $(COMPILER): $(COMPILER_OBJECT) $(FRONTEND_OBJECTS)
 	$(CXX) $(LDFLAGS) $^ $(LDLIBS) -o "$@"
 
+$(ENTRY_PACKER): src/shentrypak.cpp src/shaye.hpp src/useentry.hpp | $(BUILD_DIR)/.dir
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -Isrc "$<" $(LDFLAGS) $(LDLIBS) -o "$@"
+
 -include $(DEPFILES)
 
 test: build
 	CXX="$(CXX)" sh tests/run.sh ./$(INTERPRETER) ./$(COMPILER)
-	sh tests/entry-install.sh ./$(INTERPRETER) ./$(COMPILER)
+	sh tests/entry-install.sh ./$(INTERPRETER) ./$(COMPILER) ./$(ENTRY_PACKER)
 
 check: $(INTERPRETER)
 	./$(INTERPRETER) --check "$(PROGRAM)"
@@ -72,30 +76,32 @@ executable: $(COMPILER)
 
 install: build
 	$(INSTALL) -d "$(DESTDIR)$(BINDIR)"
+	$(INSTALL) -m 0755 "$(ENTRY_PACKER)" "$(DESTDIR)$(BINDIR)/shentrypak"
 	$(INSTALL) -m 0755 "$(COMPILER)" "$(DESTDIR)$(BINDIR)/gshai"
 	$(INSTALL) -m 0755 "$(INTERPRETER)" "$(DESTDIR)$(BINDIR)/shaii"
+	$(INSTALL) -m 0755 "$(ENTRY_PACKER)" "$(DESTDIR)$(BINDIR)/shentrypak"
 	$(INSTALL) -d "$(DESTDIR)$(SHAREDIR)/siil"
 	$(INSTALL) -m 0644 srchfile/siil/*.shaii "$(DESTDIR)$(SHAREDIR)/siil/"
 	$(INSTALL) -m 0644 srchfile/siil/README.md "$(DESTDIR)$(SHAREDIR)/siil/README.md"
 
-# Usage: make insent /path/to/a/folder/of/shaye/files
+# Usage: make insent /path/to/a/folder/of/shpak/files
 # The extra path is accepted as a make goal so the requested positional syntax works.
 insent:
 	@if [ -z "$(strip $(ENTRY_DIR))" ]; then \
-	  printf '%s\n' 'Usage: make insent /path/to/shaye_folder'; exit 2; \
+	  printf '%s\n' 'Usage: make insent /path/to/shpak_folder'; exit 2; \
 	fi
 	@src="$(ENTRY_DIR)"; \
 	if [ ! -d "$$src" ]; then printf 'insent: folder not found: %s\n' "$$src" >&2; exit 2; fi; \
 	src=$$(CDPATH= cd -- "$$src" && pwd); dest="$(ENTRY_HOME)"; \
 	mkdir -p "$$dest"; \
-	find "$$src" -type f -name '*.shaye' -exec sh -c 'src=$$1; dest=$$2; shift 2; for file do rel=$${file#"$$src"/}; target="$$dest/$$rel"; mkdir -p "$$(dirname "$$target")" || exit 1; cp -f "$$file" "$$target" || exit 1; done' sh "$$src" "$$dest" {} +; \
-	printf 'Installed .shaye entries into %s\n' "$$dest"
+	find "$$src" -type f \\( -name '*.shpak' -o -name '*.shaye' \\) -exec sh -c 'src=$$1; dest=$$2; shift 2; for file do rel=$${file#"$$src"/}; target="$$dest/$$rel"; mkdir -p "$$(dirname "$$target")" || exit 1; cp -f "$$file" "$$target" || exit 1; done' sh "$$src" "$$dest" {} +; \
+	printf 'Installed .shpak entries into %s\n' "$$dest"
 
 # A positional source folder follows the insent goal; this pattern consumes it.
 %:
 	@:
 uninstall:
-	rm -f "$(DESTDIR)$(BINDIR)/gshai" "$(DESTDIR)$(BINDIR)/shaii"
+	rm -f "$(DESTDIR)$(BINDIR)/gshai" "$(DESTDIR)$(BINDIR)/shaii" "$(DESTDIR)$(BINDIR)/shentrypak"
 	@for lib in srchfile/siil/*.shaii; do rm -f "$(DESTDIR)$(SHAREDIR)/siil/${lib##*/}"; done
 	rm -f "$(DESTDIR)$(SHAREDIR)/siil/README.md"
 	-rmdir "$(DESTDIR)$(SHAREDIR)/siil" "$(DESTDIR)$(SHAREDIR)"
