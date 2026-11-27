@@ -7,7 +7,9 @@ SHENTRYPACK=${3:-"$ROOT/build/shentrypak"}
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT HUP INT TERM
 mkdir -p "$TMP/source/nested"
+ : > "$TMP/source/nested/main.shaii"
 cat > "$TMP/source/userinstalled-source.shay" <<'EOF'
+$shaiiport "main.shaii"
 $entrysyn sayuser instxt
 instxt/>"Packaged entry body executed"
 EOF
@@ -16,7 +18,8 @@ HOME="$TMP/home" make -C "$ROOT" insent "$TMP/source"
 test -f "$TMP/home/.shay/entries/nested/userinstalled.shpak"
 printf '%s\n' '$useentry userinstalled' 'sayuser/>"User entry loaded"' > "$TMP/main.shay"
 out=$(HOME="$TMP/home" "$SHAII" "$TMP/main.shay")
-[ "$out" = "Packaged entry body executed\nUser entry loaded" ]
+expected=$(printf '%s\n%s' "Packaged entry body executed" "User entry loaded")
+[ "$out" = "$expected" ]
 HOME="$TMP/home" "$GSHAI" -o "$TMP/app" "$TMP/main.shay"
 out=$("$TMP/app")
 [ "$out" = "User entry loaded" ]
