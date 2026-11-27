@@ -329,7 +329,7 @@ void execute_file(const fs::path&input,Context&ctx){
  if(ctx.loaded.count(key))return;
  const std::string file_extension=input.extension().string();
  std::string extension=file_extension;
- if(extension==".shaye"||extension==".shpak")extension=".shaii";
+ if(extension==".shaye")extension=".shaii";else if(extension==".shpak")extension=".shay";
  if(extension!=".shay"&&extension!=".shaz"&&extension!=".shaii"&&extension!=".shui"){diagnose(ctx,input,1,"unsupported file extension (expected .shay, .shaz, .shaii, .shui, or .shpak)");return;}
  std::string raw_source;
  if(file_extension==".shaye"||file_extension==".shpak"){
