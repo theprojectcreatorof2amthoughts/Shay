@@ -35,3 +35,8 @@ add_test(NAME shay_toolchain_suite
                  $<TARGET_FILE:shaii> $<TARGET_FILE:gshai>)
 set_tests_properties(shay_toolchain_suite PROPERTIES
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+add_test(NAME shay_entry_package_suite
+         COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/tests/entry-install.sh
+                 $<TARGET_FILE:shaii> $<TARGET_FILE:gshai> $<TARGET_FILE:shentrypak>)
+set_tests_properties(shay_entry_package_suite PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
