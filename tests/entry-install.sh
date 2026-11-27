@@ -25,14 +25,14 @@ out=$("$TMP/app")
 [ "$out" = "$expected" ]
 printf '%s\n' 'PASS: insent installs nested .shpak entries and executes packaged Shay source for gshai and shaii'
 
-# $entrysyndef blocks compile into binary package records.
+# Function-style $entrysyndef declarations compile into binary package records.
 cat > "$TMP/pattern-source.shay" <<'EOF'
 $entrysyn saypattern instxt
-$entrysyndef hexnum
+$entrysyndef $dobase()
     ::0x0000::
     ::0xFFFF::
 finish
-$entrysyndef binnum
+$entrysyndef $binnum()
     ::0b0000::
     ::0b1111::
 finish
@@ -44,7 +44,7 @@ saypattern/>"Pattern entry package loaded"
 EOF
 out=$(HOME="$TMP/home" "$SHAII" "$TMP/pattern-entry-main.shay")
 [ "$out" = "Pattern entry package loaded" ]
-printf '%s\n' 'PASS: $entrysyndef blocks compile into and load from binary .shpak packages'
+printf '%s\n' 'PASS: function-style $entrysyndef declarations compile into and load from binary .shpak packages'
 
 # shentrypak validates ordinary Shay syntax instead of blindly packaging bad source.
 printf '%s\n' '$notashay' > "$TMP/invalid-shay.shay"
