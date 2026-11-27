@@ -121,21 +121,22 @@ bool validate_source(const fs::path& file, const std::string& source,
                 report(line_number, line, "duplicate entry syntax alias '" + first + "'", first);
         } else if (directive == "$entrysyndef") {
             if (!(words >> first)) {
-                report(line_number, line, "expected a syntax definition name after '$entrysyndef'", "$entrysyndef");
+                report(line_number, line, "expected a function-style syntax name after '$entrysyndef' (for example, '$dobase()')", "$entrysyndef");
                 continue;
             }
             if (words >> extra) {
                 report(line_number, line, "unexpected extra token '" + extra + "' after '$entrysyndef'", extra);
                 continue;
             }
-            if (!shay::is_lowercase_useentry_name(first))
-                report(line_number, line, "syntax definition name '" + first + "' must contain lowercase English letters only", first);
+            if (!shay::shaye_parse_definition_signature(first, definition_name)) {
+                report(line_number, line, "syntax definition must use '$name()' with a lowercase English function name", first);
+                continue;
+            }
             if (first.size() > 65535)
-                report(line_number, line, "syntax definition name exceeds the 65535-byte package limit", first);
-            if (!definitions.insert(first).second)
-                report(line_number, line, "duplicate syntax definition '" + first + "'", first);
+                report(line_number, line, "syntax definition signature exceeds the 65535-byte package limit", first);
+            if (!definitions.insert(definition_name).second)
+                report(line_number, line, "duplicate syntax definition '" + definition_name + "'", first);
             in_definition = true;
-            definition_name = first;
             definition_line = line_number;
             pattern_count = 0;
         } else {
@@ -146,8 +147,8 @@ bool validate_source(const fs::path& file, const std::string& source,
     }
 
     if (in_definition)
-        report(definition_line, "$entrysyndef " + definition_name,
-               "syntax definition '" + definition_name + "' is missing its closing 'finish'", "$entrysyndef");
+        report(definition_line, "$entrysyndef $" + definition_name + "()",
+               "syntax definition '$" + definition_name + "()' is missing its closing 'finish'", "$entrysyndef");
     return valid;
 }
 
