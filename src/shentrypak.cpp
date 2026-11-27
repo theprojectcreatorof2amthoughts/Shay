@@ -183,7 +183,10 @@ bool bundle_imported_libraries(const fs::path& file, const std::string& source,
                                std::string& bundled_source,
                                std::unordered_set<std::string>& bundled_paths,
                                std::vector<Diagnostic>& diagnostics) {
-    shay::Lexer lexer(source);
+    // Entry declarations are package metadata, not executable Shay tokens.
+    // Blank them while preserving line numbers before parsing imports.
+    const std::string executable_source = shay::shaye_executable_source(source);
+    shay::Lexer lexer(executable_source);
     const auto tokens = lexer.scan();
     shay::Parser parser(tokens);
     const shay::Program program = parser.parse();
