@@ -53,8 +53,8 @@ $(INTERPRETER): $(INTERPRETER_OBJECT) $(FRONTEND_OBJECTS) $(RUNTIME_OBJECT)
 $(COMPILER): $(COMPILER_OBJECT) $(FRONTEND_OBJECTS)
 	$(CXX) $(LDFLAGS) $^ $(LDLIBS) -o "$@"
 
-$(ENTRY_PACKER): src/shentrypak.cpp src/shaye.hpp src/useentry.hpp | $(BUILD_DIR)/.dir
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -Isrc "$<" $(LDFLAGS) $(LDLIBS) -o "$@"
+$(ENTRY_PACKER): src/shentrypak.cpp src/shaye.hpp src/useentry.hpp src/lexer.hpp src/parser.hpp $(FRONTEND_OBJECTS) | $(BUILD_DIR)/.dir
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -Isrc src/shentrypak.cpp $(FRONTEND_OBJECTS) $(LDFLAGS) $(LDLIBS) -o "$@"
 
 -include $(DEPFILES)
 
