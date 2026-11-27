@@ -116,11 +116,12 @@ clean:
 help:
 	@printf '%s\n' \
 	  'Shay toolchain' \
-	  '  make                 Build compiler (gshai) and interpreter (shaii)' \
+	  '  make                 Build gshai, shaii, and shentrypak' \\
+  '  shentrypak source.shay -o entry.shpak  # compile an entry package' \\
 	  '  make test            Run compiler/interpreter regression tests' \
 	  '  make check PROGRAM=examples/hello.shay' \
 	  '  make run PROGRAM=examples/hello.shay' \
 	  '  make compile PROGRAM=examples/hello.shay  # emits .sho' \
 	  '  make executable PROGRAM=examples/hello.shay  # emits executable' \
-	  '  make install         Install gshai and shaii' \
+	  '  make install         Install gshai, shaii, and shentrypak' \
 	  '  make clean           Remove build outputs'
