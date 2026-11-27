@@ -19,7 +19,10 @@ target_link_libraries(shaii PRIVATE shay_frontend shay_runtime)
 add_executable(gshai src/gshai.cpp)
 target_link_libraries(gshai PRIVATE shay_frontend)
 
-foreach(target shaii gshai shay_frontend shay_runtime)
+add_executable(shentrypak src/shentrypak.cpp)
+target_include_directories(shentrypak PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+foreach(target shaii gshai shentrypak shay_frontend shay_runtime)
     target_compile_options(${target} PRIVATE
         $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang>:-Wall;-Wextra;-Wpedantic>
         $<$<COMPILE_LANG_AND_ID:C,GNU,Clang>:-Wall;-Wextra;-Wpedantic>
