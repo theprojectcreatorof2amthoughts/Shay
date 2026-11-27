@@ -153,7 +153,8 @@ bool validate_source(const fs::path& file, const std::string& source,
 
 void validate_shay_syntax(const fs::path& file, const std::string& source,
                           std::vector<Diagnostic>& diagnostics) {
-    shay::Lexer lexer(source);
+    const std::string executable_source = shay::shaye_executable_source(source);
+    shay::Lexer lexer(executable_source);
     const auto tokens = lexer.scan();
     shay::Parser parser(tokens);
     const shay::Program program = parser.parse();
@@ -163,7 +164,7 @@ void validate_shay_syntax(const fs::path& file, const std::string& source,
         diagnostic.line = line;
         diagnostic.column = column ? column : 1;
         diagnostic.message = message;
-        std::istringstream lines(source);
+        std::istringstream lines(executable_source);
         std::string text;
         for (std::size_t current = 1; current <= line && std::getline(lines, text); ++current)
             if (current == line) diagnostic.source = text;
