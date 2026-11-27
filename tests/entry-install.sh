@@ -16,6 +16,7 @@ EOF
 "$SHENTRYPACK" "$TMP/source/nested/userinstalled-source.shay" -o "$TMP/source/nested/userinstalled.shpak"
 HOME="$TMP/home" make -C "$ROOT" insent "$TMP/source"
 test -f "$TMP/home/.shay/entries/nested/userinstalled.shpak"
+test -f "$TMP/home/.shay/entries/nested/main.shaii"
 printf '%s\n' '$useentry userinstalled' 'sayuser/>"User entry loaded"' > "$TMP/main.shay"
 out=$(HOME="$TMP/home" "$SHAII" "$TMP/main.shay")
 expected=$(printf '%s\n%s' "Packaged entry body executed" "User entry loaded")
