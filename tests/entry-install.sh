@@ -8,12 +8,12 @@ TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT HUP INT TERM
 mkdir -p "$TMP/source/nested"
  : > "$TMP/source/nested/main.shaii"
-cat > "$TMP/source/userinstalled-source.shay" <<'EOF'
+cat > "$TMP/source/nested/userinstalled-source.shay" <<'EOF'
 $shaiiport "main.shaii"
 $entrysyn sayuser instxt
 instxt/>"Packaged entry body executed"
 EOF
-"$SHENTRYPACK" "$TMP/source/userinstalled-source.shay" -o "$TMP/source/nested/userinstalled.shpak"
+"$SHENTRYPACK" "$TMP/source/nested/userinstalled-source.shay" -o "$TMP/source/nested/userinstalled.shpak"
 HOME="$TMP/home" make -C "$ROOT" insent "$TMP/source"
 test -f "$TMP/home/.shay/entries/nested/userinstalled.shpak"
 printf '%s\n' '$useentry userinstalled' 'sayuser/>"User entry loaded"' > "$TMP/main.shay"
@@ -69,7 +69,7 @@ test ! -e "$TMP/broken.shpak"
 printf '%s\n' 'PASS: shentrypak reports source diagnostics and rejects invalid packages'
 
 # gshai no longer owns entry package compilation.
-if "$GSHAI" -et "$TMP/old.shpak" "$TMP/source/userinstalled-source.shay" >/dev/null 2>&1; then
+if "$GSHAI" -et "$TMP/old.shpak" "$TMP/source/nested/userinstalled-source.shay" >/dev/null 2>&1; then
     echo "expected gshai -et to be removed" >&2
     exit 1
 fi
