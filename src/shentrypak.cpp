@@ -1,4 +1,5 @@
 #include "shaye.hpp"
+#include "imports.hpp"
 #include "lexer.hpp"
 #include "parser.hpp"
 #include <filesystem>
@@ -8,6 +9,7 @@
 #include <sstream>
 #include <string>
 #include <unordered_set>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -177,6 +179,81 @@ void validate_shay_syntax(const fs::path& file, const std::string& source,
         append(error.line, error.column, error.message);
 }
 
+
+bool bundle_imported_libraries(const fs::path& file, const std::string& source,
+                               std::string& bundled_source,
+                               std::unordered_set<std::string>& bundled_paths,
+                               std::vector<Diagnostic>& diagnostics) {
+    shay::Lexer lexer(source);
+    const auto tokens = lexer.scan();
+    shay::Parser parser(tokens);
+    const shay::Program program = parser.parse();
+    bool valid = true;
+    for (const auto& error : lexer.errors()) {
+        Diagnostic d; d.file=file; d.line=error.line; d.column=error.column;
+        d.message=error.message; diagnostics.push_back(std::move(d)); valid=false;
+    }
+    for (const auto& error : program.errors) {
+        Diagnostic d; d.file=file; d.line=error.line; d.column=error.column;
+        d.message=error.message; diagnostics.push_back(std::move(d)); valid=false;
+    }
+    if (!valid) return false;
+    std::unordered_set<std::size_t> import_lines;
+    for (const auto& statement : program.statements) {
+        if (statement.kind != shay::StatementKind::ImportLibrary) continue;
+        if (fs::path(statement.value).extension() != ".shaii") {
+            Diagnostic d; d.file=file; d.line=statement.line; d.column=1;
+            d.message="$shaiiport requires a .shaii file"; diagnostics.push_back(std::move(d));
+            valid=false; continue;
+        }
+        const fs::path resolved = shay::resolve_import(file, statement.value, !statement.external_import);
+        std::ifstream library_input(resolved, std::ios::binary);
+        if (!library_input) {
+            Diagnostic d; d.file=file; d.line=statement.line; d.column=1;
+            d.message="cannot bundle imported library '" + statement.value + "' (looked for '" + resolved.string() + "')";
+            diagnostics.push_back(std::move(d)); valid=false; continue;
+        }
+        import_lines.insert(statement.line);
+        std::error_code ec;
+        const fs::path canonical = fs::weakly_canonical(resolved, ec);
+        const std::string key = (ec ? resolved : canonical).string();
+        if (!bundled_paths.insert(key).second) continue;
+        const std::string library_source((std::istreambuf_iterator<char>(library_input)), {});
+        shay::Lexer library_lexer(library_source);
+        const auto library_tokens = library_lexer.scan();
+        shay::Parser library_parser(library_tokens);
+        const auto library_program = library_parser.parse();
+        for (const auto& error : library_lexer.errors()) {
+            Diagnostic d; d.file=resolved; d.line=error.line; d.column=error.column;
+            d.message=error.message; diagnostics.push_back(std::move(d)); valid=false;
+        }
+        for (const auto& error : library_program.errors) {
+            Diagnostic d; d.file=resolved; d.line=error.line; d.column=error.column;
+            d.message=error.message; diagnostics.push_back(std::move(d)); valid=false;
+        }
+        for (const auto& item : library_program.statements) {
+            if (item.kind == shay::StatementKind::ImportLibrary) {
+                Diagnostic d; d.file=resolved; d.line=item.line; d.column=1;
+                d.message=".shaii files cannot import other .shaii libraries";
+                diagnostics.push_back(std::move(d)); valid=false;
+            }
+        }
+        bundled_source += "\n#% Embedded library: " + resolved.filename().string() + "\n";
+        bundled_source += library_source;
+        if (bundled_source.empty() || bundled_source.back() != '\n') bundled_source.push_back('\n');
+    }
+    if (!valid) return false;
+    std::istringstream lines(source);
+    std::string line;
+    std::size_t line_number=0;
+    while (std::getline(lines,line)) {
+        ++line_number;
+        if (!import_lines.count(line_number)) bundled_source += line + "\n";
+        else bundled_source += "\n";
+    }
+    return true;
+}
+
 void print_diagnostics(const std::vector<Diagnostic>& diagnostics) {
     for (const auto& diagnostic : diagnostics) {
         std::cerr << diagnostic.file.string() << ':' << diagnostic.line << ':' << diagnostic.column
@@ -240,6 +317,7 @@ int main(int argc, char** argv) {
     }
 
     std::string combined_source;
+    std::unordered_set<std::string> bundled_library_paths;
     std::vector<Diagnostic> diagnostics;
     std::unordered_set<std::string> aliases;
     std::unordered_set<std::string> definitions;
@@ -256,7 +334,9 @@ int main(int argc, char** argv) {
         const std::string source((std::istreambuf_iterator<char>(input)), {});
         validate_source(source_path, source, diagnostics, aliases, definitions);
         validate_shay_syntax(source_path, source, diagnostics);
-        combined_source += source;
+        std::string packaged_source;
+        if (!bundle_imported_libraries(source_path, source, packaged_source, bundled_library_paths, diagnostics)) continue;
+        combined_source += packaged_source;
         if (combined_source.empty() || combined_source.back() != '\n') combined_source.push_back('\n');
     }
     if (!diagnostics.empty()) {
