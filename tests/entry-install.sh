@@ -1,24 +1,25 @@
 #!/usr/bin/env sh
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-SHAII="$ROOT/build/shaii"
-GSHAI="$ROOT/build/gshai"
+SHAII=${1:-"$ROOT/build/shaii"}
+GSHAI=${2:-"$ROOT/build/gshai"}
+SHENTRYPACK=${3:-"$ROOT/build/shentrypak"}
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT HUP INT TERM
 mkdir -p "$TMP/source/nested"
 printf '%s\n' '$entrysyn sayuser instxt' > "$TMP/source/userinstalled-source.shay"
-"$GSHAI" -et "$TMP/source/nested/userinstalled.shaye" "$TMP/source/userinstalled-source.shay"
+"$SHENTRYPACK" "$TMP/source/userinstalled-source.shay" -o "$TMP/source/nested/userinstalled.shpak"
 HOME="$TMP/home" make -C "$ROOT" insent "$TMP/source"
-test -f "$TMP/home/.shay/entries/nested/userinstalled.shaye"
+test -f "$TMP/home/.shay/entries/nested/userinstalled.shpak"
 printf '%s\n' '$useentry userinstalled' 'sayuser/>"User entry loaded"' > "$TMP/main.shay"
 out=$(HOME="$TMP/home" "$SHAII" "$TMP/main.shay")
 [ "$out" = "User entry loaded" ]
 HOME="$TMP/home" "$GSHAI" -o "$TMP/app" "$TMP/main.shay"
 out=$("$TMP/app")
 [ "$out" = "User entry loaded" ]
-printf '%s\n' 'PASS: insent installs nested binary entries for gshai and shaii'
+printf '%s\n' 'PASS: insent installs nested .shpak entries for gshai and shaii'
 
-# $entrysyndef stores named syntax patterns in the binary package.
+# $entrysyndef blocks compile into binary package records.
 cat > "$TMP/pattern-source.shay" <<'EOF'
 $entrysyn saypattern instxt
 $entrysyndef hexnum
@@ -30,11 +31,31 @@ $entrysyndef binnum
     ::0b1111::
 finish
 EOF
-"$GSHAI" -et "$TMP/home/.shay/entries/patternentry.shaye" "$TMP/pattern-source.shay"
+"$SHENTRYPACK" "$TMP/pattern-source.shay" -o "$TMP/home/.shay/entries/patternentry.shpak"
 cat > "$TMP/pattern-entry-main.shay" <<'EOF'
 $useentry patternentry
 saypattern/>"Pattern entry package loaded"
 EOF
 out=$(HOME="$TMP/home" "$SHAII" "$TMP/pattern-entry-main.shay")
 [ "$out" = "Pattern entry package loaded" ]
-printf '%s\n' 'PASS: $entrysyndef blocks compile into and load from binary .shaye packages'
+printf '%s\n' 'PASS: $entrysyndef blocks compile into and load from binary .shpak packages'
+
+# The dedicated compiler reports exact source locations and does not emit a bad package.
+cat > "$TMP/broken-entry.shay" <<'EOF'
+$entrysyndef broken
+    ::0xFF::
+EOF
+if "$SHENTRYPACK" "$TMP/broken-entry.shay" -o "$TMP/broken.shpak" 2>"$TMP/diagnostics"; then
+    echo "expected shentrypak to reject an unterminated syntax definition" >&2
+    exit 1
+fi
+grep -F "$TMP/broken-entry.shay:1:1: error: syntax definition 'broken' is missing its closing 'finish'" "$TMP/diagnostics" >/dev/null
+test ! -e "$TMP/broken.shpak"
+printf '%s\n' 'PASS: shentrypak reports source diagnostics and rejects invalid packages'
+
+# gshai no longer owns entry package compilation.
+if "$GSHAI" -et "$TMP/old.shpak" "$TMP/source/userinstalled-source.shay" >/dev/null 2>&1; then
+    echo "expected gshai -et to be removed" >&2
+    exit 1
+fi
+printf '%s\n' 'PASS: entry package compilation is separated from gshai'

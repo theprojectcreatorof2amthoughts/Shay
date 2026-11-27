@@ -329,11 +329,11 @@ void execute_file(const fs::path&input,Context&ctx){
  if(ctx.loaded.count(key))return;
  const std::string file_extension=input.extension().string();
  std::string extension=file_extension;
- if(extension==".shaye")extension=".shaii";
- if(extension!=".shay"&&extension!=".shaz"&&extension!=".shaii"&&extension!=".shui"){diagnose(ctx,input,1,"unsupported file extension (expected .shay, .shaz, .shaii, .shui, or .shaye)");return;}
+ if(extension==".shaye"||extension==".shpak")extension=".shaii";
+ if(extension!=".shay"&&extension!=".shaz"&&extension!=".shaii"&&extension!=".shui"){diagnose(ctx,input,1,"unsupported file extension (expected .shay, .shaz, .shaii, .shui, or .shpak)");return;}
  std::string raw_source;
- if(file_extension==".shaye"){
-  if(!shay::read_shaye(input,raw_source)){diagnose(ctx,input,1,"invalid binary .shaye package (bad magic, version, or bytecode)");return;}
+ if(file_extension==".shaye"||file_extension==".shpak"){
+  if(!shay::read_shaye(input,raw_source)){diagnose(ctx,input,1,"invalid binary entry package (bad magic, version, or bytecode)");return;}
  }else{
   std::ifstream stream(input,std::ios::binary);if(!stream){diagnose(ctx,input,1,"cannot open source file");return;}
   raw_source.assign(std::istreambuf_iterator<char>(stream),{});
@@ -583,7 +583,7 @@ int main(int argc,char**argv){
  bool check=false;fs::path source;
  for(int i=1;i<argc;++i){const std::string arg=argv[i];
   if(arg=="--check")check=true;
-  else if(arg=="--help"||arg=="-h"){std::cout<<"Usage: shaii [--check] program.shay|program.shaz|program.shui|library.shaii\n       shaii --version\n";return 0;}
+  else if(arg=="--help"||arg=="-h"){std::cout<<"Usage: shaii [--check] program.shay|program.shaz|program.shui|library.shaii|entry.shpak\n       shaii --version\n";return 0;}
   else if(!arg.empty()&&arg[0]=='-'){std::cerr<<"shaii: unknown option: "<<arg<<"\n";return 2;}
   else if(source.empty())source=arg;else{std::cerr<<"shaii: only one entry file is accepted\n";return 2;}
  }

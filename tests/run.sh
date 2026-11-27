@@ -2,9 +2,11 @@
 set -eu
 SHAII="${1:-./build/shaii}"
 GSHAI="${2:-./build/gshai}"
+SHENTRYPACK="${3:-./build/shentrypak}"
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 case "$SHAII" in /*) ;; *) SHAII="$ROOT/$SHAII";; esac
 case "$GSHAI" in /*) ;; *) GSHAI="$ROOT/$GSHAI";; esac
+case "$SHENTRYPACK" in /*) ;; *) SHENTRYPACK="$ROOT/$SHENTRYPACK";; esac
 TMP=$(mktemp -d)
 ui_pid=""
 cleanup() { if [ -n "$ui_pid" ]; then kill "$ui_pid" 2>/dev/null || true; wait "$ui_pid" 2>/dev/null || true; fi; rm -rf "$TMP"; }
@@ -41,31 +43,31 @@ if "$SHAII" --check "$TMP/useentry-invalid.shay" >"$TMP/out" 2>"$TMP/err"; then 
 grep -q "unknown or invalid useentry 'Reginit'" "$TMP/err" || { cat "$TMP/err" >&2; fail "uppercase useentry diagnostic"; }
 pass "useentry rejects uppercase and unregistered names"
 
-# A portable .shaye package is discovered only under srchfile/siil/entryinit.
+# A portable .shpak package is discovered only under srchfile/siil/entryinit.
 mkdir -p "$TMP/srchfile/siil/entryinit"
 cat > "$TMP/entry-source.shay" <<'EOF'
 $entrysyn sayhello instxt
 EOF
-"$GSHAI" -et "$TMP/srchfile/siil/entryinit/extensionhello.shaye" "$TMP/entry-source.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "create binary .shaye package"; }
-[ "$(od -An -tx1 -N5 "$TMP/srchfile/siil/entryinit/extensionhello.shaye" | tr -d ' \n')" = "5348415945" ] || fail ".shaye binary magic"
-if grep -a -q 'sayhello' "$TMP/srchfile/siil/entryinit/extensionhello.shaye"; then fail ".shaye exposed readable syntax source"; fi
+"$SHENTRYPACK" "$TMP/entry-source.shay" -o "$TMP/srchfile/siil/entryinit/extensionhello.shpak" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "create binary .shpak package"; }
+[ "$(od -An -tx1 -N5 "$TMP/srchfile/siil/entryinit/extensionhello.shpak" | tr -d ' \n' | tr 'a-f' 'A-F')" = "534850414B" ] || fail ".shpak binary magic"
+if grep -a -q 'sayhello' "$TMP/srchfile/siil/entryinit/extensionhello.shpak"; then fail ".shpak exposed readable syntax source"; fi
 cat > "$TMP/entry-use.shay" <<'EOF'
 $useentry extensionhello
-sayhello/>"Loaded from a binary .shaye package"
+sayhello/>"Loaded from a binary .shpak package"
 EOF
-out=$("$SHAII" "$TMP/entry-use.shay") || { cat "$TMP/out" "$TMP/err" >&2; fail "interpreter loads binary .shaye entry"; }
-[ "$out" = "Loaded from a binary .shaye package" ] || fail "interpreter .shaye syntax alias"
-"$GSHAI" -o "$TMP/entry-use-app" "$TMP/entry-use.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "compiler loads .shaye entry"; }
-out=$("$TMP/entry-use-app") || fail "run compiled .shaye entry"
-[ "$out" = "Loaded from a binary .shaye package" ] || fail "compiled .shaye syntax alias"
-pass "gshai and shaii discover and load optional .shaye entry packages"
+out=$("$SHAII" "$TMP/entry-use.shay") || { cat "$TMP/out" "$TMP/err" >&2; fail "interpreter loads binary .shpak entry"; }
+[ "$out" = "Loaded from a binary .shpak package" ] || fail "interpreter .shpak syntax alias"
+"$GSHAI" -o "$TMP/entry-use-app" "$TMP/entry-use.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "compiler loads .shpak entry"; }
+out=$("$TMP/entry-use-app") || fail "run compiled .shpak entry"
+[ "$out" = "Loaded from a binary .shpak package" ] || fail "compiled .shpak syntax alias"
+pass "gshai and shaii discover and load optional .shpak entry packages"
 
 # rayinit registers entry-defined syntax in ordinary .shay source.
 mkdir -p "$TMP/srchfile/siil/entryinit"
 cat > "$TMP/rayinit-source.shay" <<'EOF'
 $entrysyn raydeclr declr
 EOF
-"$GSHAI" -et "$TMP/srchfile/siil/entryinit/rayinit.shaye" "$TMP/rayinit-source.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "build binary rayinit entry"; }
+"$SHENTRYPACK" "$TMP/rayinit-source.shay" -o "$TMP/srchfile/siil/entryinit/rayinit.shpak" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "build binary rayinit entry"; }
 cat > "$TMP/ray-ui.shaii" <<'EOF'
 $declr doUi()
     instxt/>"Ray UI callback executed"
@@ -98,7 +100,7 @@ $entrysyn whenit ifit
 $entrysyn doneit exec
 $entrysyn endit finish
 EOF
-"$GSHAI" -et "$TMP/srchfile/siil/entryinit/controlwords.shaye" "$TMP/control-alias-source.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "build control keyword aliases"; }
+"$SHENTRYPACK" "$TMP/control-alias-source.shay" -o "$TMP/srchfile/siil/entryinit/controlwords.shpak" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "build control keyword aliases"; }
 cat > "$TMP/control-alias.shay" <<'EOF'
 $useentry controlwords
 whenit 1 == 1

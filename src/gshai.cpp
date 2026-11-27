@@ -184,11 +184,11 @@ void load_file(const fs::path&input,BuildContext&ctx){
  if(ctx.active.count(key)){diagnose(ctx,input,1,"circular import detected");return;}if(ctx.loaded.count(key))return;
  const std::string file_extension=input.extension().string();
  std::string extension=file_extension;
- if(extension==".shaye")extension=".shaii";
- if(extension!=".shay"&&extension!=".shaz"&&extension!=".shaii"&&extension!=".shui"){diagnose(ctx,input,1,"unsupported file extension (expected .shay, .shaz, .shaii, .shui, or .shaye)");return;}
+ if(extension==".shaye"||extension==".shpak")extension=".shaii";
+ if(extension!=".shay"&&extension!=".shaz"&&extension!=".shaii"&&extension!=".shui"&&extension!=".shaye"&&extension!=".shpak"){diagnose(ctx,input,1,"unsupported file extension (expected .shay, .shaz, .shaii, .shui, or .shpak)");return;}
  std::string raw_source;
- if(file_extension==".shaye"){
-  if(!shay::read_shaye(input,raw_source)){diagnose(ctx,input,1,"invalid binary .shaye package (bad magic, version, or bytecode)");return;}
+ if(file_extension==".shaye"||file_extension==".shpak"){
+  if(!shay::read_shaye(input,raw_source)){diagnose(ctx,input,1,"invalid binary entry package (bad magic, version, or bytecode)");return;}
  }else{
   std::ifstream stream(input,std::ios::binary);if(!stream){diagnose(ctx,input,1,"cannot open source file");return;}
   raw_source.assign(std::istreambuf_iterator<char>(stream),std::istreambuf_iterator<char>());
@@ -796,26 +796,13 @@ int main(int argc,char**argv){
   else if(arg=="--shayo3")optimization="3";
   else positional.push_back(arg);
  }
- if(positional.size()>=3&&positional[0]=="-et"){
-  const fs::path package=positional[1];
-  if(package.extension()!=".shaye"){std::cerr<<"gshai: -et output must use the .shaye extension\n";return 2;}
-  if(!shay::is_lowercase_useentry_name(package.stem().string())){std::cerr<<"gshai: .shaye filename stem must contain lowercase letters only\n";return 2;}
-  std::string source_text;
-  for(std::size_t i=2;i<positional.size();++i){
-   const fs::path source=positional[i];
-   if(source.extension()!=".shay"&&source.extension()!=".shaii"){std::cerr<<"gshai: -et inputs must be .shay or .shaii source files\n";return 2;}
-   std::ifstream input(source,std::ios::binary);
-   if(!input){std::cerr<<"gshai: cannot open entry source '"<<source.string()<<"'\n";return 1;}
-   source_text.append(std::istreambuf_iterator<char>(input),{});
-   if(source_text.empty()||source_text.back()!='\n')source_text.push_back('\n');
-  }
-  if(!shay::write_shaye(package,source_text)){std::cerr<<"gshai: cannot write entry package '"<<package.string()<<"'\n";return 1;}
-  std::cout<<"gshai: wrote .shaye entry package "<<package.string()<<" from "<<(positional.size()-2)<<" source file(s)\n";return 0;
+ if(!positional.empty()&&positional[0]=="-et"){
+  std::cerr<<"gshai: -et has been replaced by shentrypak; use 'shentrypak source.shay -o output.shpak'\n";return 2;
  }
  if(positional.size()==1&&positional[0]=="--version"){std::cout<<"gshai 0.4.0 (Shay compiler)\n";return 0;}
  if(positional.size()==1&&(positional[0]=="--help"||positional[0]=="-h")){
-  std::cout<<"Usage:\n  gshai -et output.shaye source.shay|source.shaii\n  gshai [Shay flags] -ob [output.sho] source.shay|source.shaz|source.shui [more sources ...]\n  gshai [Shay flags] -o  [output]     source.shay|source.shaz [more sources ...]\n  gshai [Shay flags] -o  [output]     program.sho [more.sho ...]   Link existing objects\n  gshai --version\n\n"
-           <<"-et compiles syntax-alias declarations into a binary .shaye extension package.\n"
+  std::cout<<"Usage:\n  gshai [Shay flags] -ob [output.sho] source.shay|source.shaz|source.shui [more sources ...]\n  gshai [Shay flags] -o  [output]     source.shay|source.shaz [more sources ...]\n  gshai [Shay flags] -o  [output]     program.sho [more.sho ...]   Link existing objects\n  gshai --version\n\n"
+
            <<"-ob compiles one or more source files into a .sho object; -o compiles source files or links .sho objects in order.\n"
            <<"Shay compiler flags (may appear anywhere):\n"
            <<"  --shaywall    Enable common Shay warnings, including unused variables\n"
