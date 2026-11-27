@@ -7,17 +7,20 @@ SHENTRYPACK=${3:-"$ROOT/build/shentrypak"}
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT HUP INT TERM
 mkdir -p "$TMP/source/nested"
-printf '%s\n' '$entrysyn sayuser instxt' > "$TMP/source/userinstalled-source.shay"
+cat > "$TMP/source/userinstalled-source.shay" <<'EOF'
+$entrysyn sayuser instxt
+instxt/>"Packaged entry body executed"
+EOF
 "$SHENTRYPACK" "$TMP/source/userinstalled-source.shay" -o "$TMP/source/nested/userinstalled.shpak"
 HOME="$TMP/home" make -C "$ROOT" insent "$TMP/source"
 test -f "$TMP/home/.shay/entries/nested/userinstalled.shpak"
 printf '%s\n' '$useentry userinstalled' 'sayuser/>"User entry loaded"' > "$TMP/main.shay"
 out=$(HOME="$TMP/home" "$SHAII" "$TMP/main.shay")
-[ "$out" = "User entry loaded" ]
+[ "$out" = "Packaged entry body executed\nUser entry loaded" ]
 HOME="$TMP/home" "$GSHAI" -o "$TMP/app" "$TMP/main.shay"
 out=$("$TMP/app")
 [ "$out" = "User entry loaded" ]
-printf '%s\n' 'PASS: insent installs nested .shpak entries for gshai and shaii'
+printf '%s\n' 'PASS: insent installs nested .shpak entries and executes packaged Shay source for gshai and shaii'
 
 # $entrysyndef blocks compile into binary package records.
 cat > "$TMP/pattern-source.shay" <<'EOF'
