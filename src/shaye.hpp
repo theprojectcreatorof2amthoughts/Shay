@@ -20,8 +20,10 @@ inline constexpr unsigned char shpak_magic[] = {'S','H','P','A','K',0x00,0x01};
 inline constexpr unsigned char shaye_alias_opcode = 0x01;
 inline constexpr unsigned char shaye_definition_opcode = 0x02;
 inline constexpr unsigned char shaye_end_opcode = 0x00;
+inline constexpr unsigned char shaye_source_opcode = 0x03;
 
 struct ShayeRecords {
+    std::string source;
     std::vector<std::pair<std::string, std::string>> aliases;
     std::vector<std::pair<std::string, std::vector<std::string>>> definitions;
 };
@@ -65,6 +67,21 @@ inline unsigned char shaye_mask(std::size_t index) {
 inline void shaye_write_u16(std::ostream& out, std::uint16_t value) {
     out.put(static_cast<char>((value >> 8) & 0xff));
     out.put(static_cast<char>(value & 0xff));
+}
+inline void shaye_write_u32(std::ostream& out, std::uint32_t value) {
+    out.put(static_cast<char>((value >> 24) & 0xff));
+    out.put(static_cast<char>((value >> 16) & 0xff));
+    out.put(static_cast<char>((value >> 8) & 0xff));
+    out.put(static_cast<char>(value & 0xff));
+}
+inline bool shaye_read_u32(const std::string& bytes, std::size_t& at, std::uint32_t& value) {
+    if (at + 4 > bytes.size()) return false;
+    value = (static_cast<std::uint32_t>(static_cast<unsigned char>(bytes[at])) << 24) |
+            (static_cast<std::uint32_t>(static_cast<unsigned char>(bytes[at + 1])) << 16) |
+            (static_cast<std::uint32_t>(static_cast<unsigned char>(bytes[at + 2])) << 8) |
+            static_cast<std::uint32_t>(static_cast<unsigned char>(bytes[at + 3]));
+    at += 4;
+    return true;
 }
 inline bool shaye_read_u16(const std::string& bytes, std::size_t& at, std::uint16_t& value) {
     if (at + 2 > bytes.size()) return false;
@@ -126,6 +143,11 @@ inline bool read_shaye_records(const std::filesystem::path& path, ShayeRecords& 
                 patterns.push_back(std::move(pattern));
             }
             parsed.definitions.emplace_back(std::move(name), std::move(patterns));
+        } else if (opcode == shaye_source_opcode) {
+            std::uint32_t size = 0;
+            if (!shaye_read_u32(bytes, at, size) || at + size > bytes.size()) return false;
+            parsed.source = shaye_transform(bytes.substr(at, size));
+            at += size;
         } else return false;
     }
     if (!ended) return false;
@@ -169,7 +191,7 @@ discover_shaye_entries(const std::filesystem::path& source) {
 inline bool read_shaye(const std::filesystem::path& path, std::string& source) {
     ShayeRecords records;
     if (!read_shaye_records(path, records)) return false;
-    source.clear();
+    source = std::move(records.source);
     return true;
 }
 inline std::string shaye_trim(const std::string& value) {
@@ -213,9 +235,14 @@ inline bool write_shaye(const std::filesystem::path& path, const std::string& so
             if ((words >> extra) || !is_lowercase_useentry_name(first)) return false;
             in_definition = true;
             definition_name = std::move(first);
-        } else return false;
+        } else {
+            // A .shpak is a complete Shay entry source. Ordinary Shay statements
+            // are retained in the payload; only entry metadata is extracted here.
+            continue;
+        }
     }
-    if (in_definition || (records.aliases.empty() && records.definitions.empty())) return false;
+    if (in_definition) return false;
+    if (source.size() > UINT32_MAX) return false;
     std::ofstream output(path, std::ios::binary | std::ios::trunc);
     if (!output) return false;
     output.write(reinterpret_cast<const char*>(shpak_magic), sizeof(shpak_magic));
@@ -230,6 +257,10 @@ inline bool write_shaye(const std::filesystem::path& path, const std::string& so
         shaye_write_u16(output, static_cast<std::uint16_t>(definition.second.size()));
         for (const auto& pattern : definition.second) shaye_write_string(output, pattern);
     }
+    output.put(static_cast<char>(shaye_source_opcode));
+    shaye_write_u32(output, static_cast<std::uint32_t>(source.size()));
+    const auto encoded_source = shaye_transform(source);
+    output.write(encoded_source.data(), static_cast<std::streamsize>(encoded_source.size()));
     output.put(static_cast<char>(shaye_end_opcode));
     return static_cast<bool>(output);
 }
