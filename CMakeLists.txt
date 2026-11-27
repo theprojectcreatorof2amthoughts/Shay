@@ -20,6 +20,7 @@ add_executable(gshai src/gshai.cpp)
 target_link_libraries(gshai PRIVATE shay_frontend)
 
 add_executable(shentrypak src/shentrypak.cpp)
+target_link_libraries(shentrypak PRIVATE shay_frontend)
 target_include_directories(shentrypak PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 foreach(target shaii gshai shentrypak shay_frontend shay_runtime)
