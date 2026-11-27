@@ -26,19 +26,49 @@ $entrysyn raydeclr declr
 $entrysyn sayhello instxt
 ```
 
-Use `$entrysyndef` to declare a named syntax pattern with one or more pattern lines. The block ends with `finish`:
+Use `$entrysyndef` to declare a function-style entry syntax definition. Its signature is written as `$name()`, and the definition body contains one or more syntax-pattern lines. The block ends with `finish`:
 
 ```shay
-$entrysyndef hexnum
-    ::0x0000::
+$entrysyndef $dobase()
+    ::0xF014::
     ::0xFFFF::
 finish
 
-$entrysyndef binnum
+$entrysyndef $binnum()
     ::0b0000::
     ::0b1111::
 finish
 ```
+
+The compiler stores the function name (without the leading `# Shay entry system
+
+The `$useentry` directive activates an optional syntax extension by its lowercase filename stem.
+
+```shay
+$useentry rayinit
+$useentry bininit
+```
+
+Names contain lowercase English letters only. Missing extensions remain optional; an entry is activated only when a matching package is found.
+
+## Binary extension packages
+
+Both `gshai` and `shaii` discover `.shpak` packages recursively under `srchfile/siil/entryinit/` and `~/.shay/entries/`. Repository-local entries take precedence over user-installed entries with the same name.
+
+A `.shpak` is a binary package, not a text file with a header. It begins with the `SHPAK` magic and a format version, followed by bytecode records. Alias records map a new lowercase keyword to an existing Shay grammar keyword. Definition records store a named syntax definition and its pattern lines. Payload strings are byte-encoded, so opening the package in a text editor does not show the original extension source.
+
+The byte encoding is not encryption. Anyone who implements the format can decode it; it is a binary package format, not a security boundary.
+
+## Creating syntax extensions
+
+Use `$entrysyn` for aliases to existing grammar keywords:
+
+```shay
+$entrysyn raydeclr declr
+$entrysyn sayhello instxt
+```
+
+ and trailing `()`) with its pattern lines in the binary definition record. The earlier bare-name form is still accepted for compatibility.
 
 Compile declarations with the dedicated entry compiler:
 
@@ -48,7 +78,7 @@ shentrypak bininit-source.shay -o bininit.shpak
 
 `shentrypak` validates entry declarations before writing the package. Errors include the source filename, line, column, source line, and caret. A package is not emitted when validation fails. `gshai` no longer compiles entry packages; use it only for ordinary Shay applications.
 
-Each definition is stored as a separate binary record, and the loader registers it under the active entry name. Pattern lines are preserved as authored; they are not interpreted as executable code. A definition record by itself does not implement a new lexer token, parser production, or runtime operation. Those semantics must be implemented by Shay's compiler/interpreter and associated with the definition. In particular, defining `hexnum`, `binnum`, or sector-operation patterns does not by itself add hexadecimal/binary numeric evaluation or BaseFul sector functionality.
+Each definition is stored as a separate binary record, and the loader registers it under the active entry name. Pattern lines are preserved as authored as the body of the function-style syntax definition. Declaring and packaging the function signature does not, by itself, add a new lexer token, parser production, or runtime operation; those execution semantics still need their corresponding compiler/interpreter implementation.
 
 The `.shpak` package format supports both alias and definition records in one package. Existing `.shaye` packages remain readable for migration, but new packages are written as `.shpak`.
 
