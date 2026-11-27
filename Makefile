@@ -59,7 +59,7 @@ $(ENTRY_PACKER): src/shentrypak.cpp src/shaye.hpp src/useentry.hpp | $(BUILD_DIR
 -include $(DEPFILES)
 
 test: build
-	CXX="$(CXX)" sh tests/run.sh ./$(INTERPRETER) ./$(COMPILER)
+	CXX="$(CXX)" sh tests/run.sh ./$(INTERPRETER) ./$(COMPILER) ./$(ENTRY_PACKER)
 	sh tests/entry-install.sh ./$(INTERPRETER) ./$(COMPILER) ./$(ENTRY_PACKER)
 
 check: $(INTERPRETER)
