@@ -398,12 +398,12 @@ void execute_file(const fs::path&input,Context&ctx){
     ctx.log_file_name_set=true;break;
    }
    case shay::StatementKind::DeclareFunction:
-    if(extension!=".shaii"&&!s.entry_syntax_declaration){diagnose(ctx,input,s.line,"'$declr' is only allowed in .shaii files; entry-defined function syntax requires its $useentry");break;}
+    if(extension!=".shaii"&&file_extension!=".shpak"&&!s.entry_syntax_declaration){diagnose(ctx,input,s.line,"'$declr' is only allowed in .shaii files; entry-defined function syntax requires its $useentry");break;}
     if(ctx.functions.count(s.name))diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");
     else ctx.functions.emplace(s.name,s);
     break;
    case shay::StatementKind::DeclareClass:{
-    if(extension!=".shaii"&&extension!=".shui"){diagnose(ctx,input,s.line,"class declarations are only allowed in .shaii or .shui files");break;}
+    if(extension!=".shaii"&&extension!=".shui"&&file_extension!=".shpak"){diagnose(ctx,input,s.line,"class declarations are only allowed in .shaii or .shui files");break;}
     if(ctx.classes.count(s.name)){diagnose(ctx,input,s.line,"class '"+s.name+"' is already declared");break;}
     std::vector<std::string> methods;bool valid=true;
     for(const auto&method:s.body)
