@@ -48,7 +48,7 @@ mkdir -p "$TMP/srchfile/siil/entryinit"
 cat > "$TMP/entry-source.shay" <<'EOF'
 $entrysyn sayhello instxt
 EOF
-"$SHENTRYPACK" "$TMP/srchfile/siil/entryinit/extensionhello.shpak" "$TMP/entry-source.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "create binary .shpak package"; }
+"$SHENTRYPACK" "$TMP/entry-source.shay" -o "$TMP/srchfile/siil/entryinit/extensionhello.shpak" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "create binary .shpak package"; }
 [ "$(od -An -tx1 -N5 "$TMP/srchfile/siil/entryinit/extensionhello.shpak" | tr -d ' \n')" = "534850414B" ] || fail ".shpak binary magic"
 if grep -a -q 'sayhello' "$TMP/srchfile/siil/entryinit/extensionhello.shpak"; then fail ".shpak exposed readable syntax source"; fi
 cat > "$TMP/entry-use.shay" <<'EOF'
@@ -67,7 +67,7 @@ mkdir -p "$TMP/srchfile/siil/entryinit"
 cat > "$TMP/rayinit-source.shay" <<'EOF'
 $entrysyn raydeclr declr
 EOF
-"$SHENTRYPACK" "$TMP/srchfile/siil/entryinit/rayinit.shpak" "$TMP/rayinit-source.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "build binary rayinit entry"; }
+"$SHENTRYPACK" "$TMP/rayinit-source.shay" -o "$TMP/srchfile/siil/entryinit/rayinit.shpak" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "build binary rayinit entry"; }
 cat > "$TMP/ray-ui.shaii" <<'EOF'
 $declr doUi()
     instxt/>"Ray UI callback executed"
@@ -100,7 +100,7 @@ $entrysyn whenit ifit
 $entrysyn doneit exec
 $entrysyn endit finish
 EOF
-"$SHENTRYPACK" "$TMP/srchfile/siil/entryinit/controlwords.shpak" "$TMP/control-alias-source.shay" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "build control keyword aliases"; }
+"$SHENTRYPACK" "$TMP/control-alias-source.shay" -o "$TMP/srchfile/siil/entryinit/controlwords.shpak" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "build control keyword aliases"; }
 cat > "$TMP/control-alias.shay" <<'EOF'
 $useentry controlwords
 whenit 1 == 1
