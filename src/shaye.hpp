@@ -195,9 +195,9 @@ inline bool read_shaye(const std::filesystem::path& path, std::string& source) {
     return true;
 }
 inline std::string shaye_trim(const std::string& value) {
-    const auto first = value.find_first_not_of(" \\t\\r");
+    const auto first = value.find_first_not_of(" \t\r");
     if (first == std::string::npos) return {};
-    const auto last = value.find_last_not_of(" \\t\\r");
+    const auto last = value.find_last_not_of(" \t\r");
     return value.substr(first, last - first + 1);
 }
 inline bool shaye_parse_definition_signature(const std::string& signature, std::string& name) {
@@ -220,21 +220,21 @@ inline std::string shaye_executable_source(const std::string& source) {
         const std::string current = shaye_trim(line);
         if (in_definition) {
             if (current == "finish") in_definition = false;
-            executable << '\\n';
+            executable << '\n';
             continue;
         }
         // Check the longer directive first: "$entrysyndef" also starts
         // with "$entrysyn".
         if (current.rfind("$entrysyndef", 0) == 0) {
             in_definition = true;
-            executable << '\\n';
+            executable << '\n';
             continue;
         }
         if (current.rfind("$entrysyn", 0) == 0) {
-            executable << '\\n';
+            executable << '\n';
             continue;
         }
-        executable << line << '\\n';
+        executable << line << '\n';
     }
     return executable.str();
 }
