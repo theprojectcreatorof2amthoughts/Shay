@@ -22,7 +22,7 @@ expected=$(printf '%s\n%s' "Packaged entry body executed" "User entry loaded")
 [ "$out" = "$expected" ]
 HOME="$TMP/home" "$GSHAI" -o "$TMP/app" "$TMP/main.shay"
 out=$("$TMP/app")
-[ "$out" = "User entry loaded" ]
+[ "$out" = "$expected" ]
 printf '%s\n' 'PASS: insent installs nested .shpak entries and executes packaged Shay source for gshai and shaii'
 
 # $entrysyndef blocks compile into binary package records.
