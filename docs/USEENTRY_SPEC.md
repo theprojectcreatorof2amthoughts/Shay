@@ -26,49 +26,29 @@ $entrysyn raydeclr declr
 $entrysyn sayhello instxt
 ```
 
-Use `$entrysyndef` to declare a function-style entry syntax definition. Its signature is written as `$name()`, and the definition body contains one or more syntax-pattern lines. The block ends with `finish`:
+Use `$entrysyndef` to declare a zero-argument function-style entry syntax. The name decorations are optional: `dobase`, `$dobase`, `dobase()`, and `$dobase()` all declare the same syntax name. The definition body contains one or more syntax-pattern lines and ends with `finish`:
 
 ```shay
-$entrysyndef $dobase()
+$entrysyndef dobase
     ::0xF014::
     ::0xFFFF::
 finish
 
-$entrysyndef $binnum()
+$entrysyndef binnum()
     ::0b0000::
     ::0b1111::
 finish
 ```
 
-The compiler stores the function name (without the leading `# Shay entry system
-
-The `$useentry` directive activates an optional syntax extension by its lowercase filename stem.
+When the entry is active with `$useentry`, its defined name is callable as a zero-argument shorthand for a same-named function declared in an imported `.shaii` library. Both call spellings are accepted:
 
 ```shay
-$useentry rayinit
-$useentry bininit
+$useentry baseinit
+$dobase
+dobase
 ```
 
-Names contain lowercase English letters only. Missing extensions remain optional; an entry is activated only when a matching package is found.
-
-## Binary extension packages
-
-Both `gshai` and `shaii` discover `.shpak` packages recursively under `srchfile/siil/entryinit/` and `~/.shay/entries/`. Repository-local entries take precedence over user-installed entries with the same name.
-
-A `.shpak` is a binary package, not a text file with a header. It begins with the `SHPAK` magic and a format version, followed by bytecode records. Alias records map a new lowercase keyword to an existing Shay grammar keyword. Definition records store a named syntax definition and its pattern lines. Payload strings are byte-encoded, so opening the package in a text editor does not show the original extension source.
-
-The byte encoding is not encryption. Anyone who implements the format can decode it; it is a binary package format, not a security boundary.
-
-## Creating syntax extensions
-
-Use `$entrysyn` for aliases to existing grammar keywords:
-
-```shay
-$entrysyn raydeclr declr
-$entrysyn sayhello instxt
-```
-
- and trailing `()`) with its pattern lines in the binary definition record. The earlier bare-name form is still accepted for compatibility.
+These calls are equivalent to `dofunc dobase`. The imported function must exist and must not declare parameters. The entry package does not synthesize the function body: it supplies the syntax name, while the implementation remains in the imported library. Pattern lines are preserved in the package as syntax metadata.
 
 Compile declarations with the dedicated entry compiler:
 

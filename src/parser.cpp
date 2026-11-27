@@ -41,10 +41,19 @@ std::string collect_expression(const std::vector<Token>&tokens,std::size_t&at,co
 }
 Program Parser::parse(){
  Program program;
+ const auto is_active_entry_definition = [&](const std::string& name) {
+  for (const auto& entry : active_entries_)
+   if (entry_syntax_pattern(entry, name)) return true;
+  return false;
+ };
  while(!atEnd()){
   if(match(TokenKind::Newline))continue;
   const auto line=peek().line;Statement statement;statement.line=line;bool valid=true;bool skipCurrentLine=true;
-  if(match(TokenKind::Symbol,"!#")){
+  if(peek().kind==TokenKind::Identifier && is_active_entry_definition(peek().text)){
+   statement.kind=StatementKind::DoFunction;
+   statement.name=peek().text;
+   ++current_;
+  }else if(match(TokenKind::Symbol,"!#")){
    statement.kind=StatementKind::MarkFailure;
    valid=consume(TokenKind::Identifier,"",program.errors,"expected a function name after '!#'");
    if(valid)statement.name=previous().text;
@@ -154,7 +163,11 @@ Program Parser::parse(){
     for(const auto&e:elseProgram.errors)program.errors.push_back(e);
    }
   }else if(match(TokenKind::Symbol,"$")){
-   if(match(TokenKind::Identifier,"useentry")){
+   if(peek().kind==TokenKind::Identifier && is_active_entry_definition(peek().text)){
+    statement.kind=StatementKind::DoFunction;
+    statement.name=peek().text;
+    ++current_;
+   }else if(match(TokenKind::Identifier,"useentry")){
     statement.kind=StatementKind::UseEntry;
     if(!consume(TokenKind::Identifier,"",program.errors,"expected a lowercase useentry name after '$useentry'")){valid=false;}
     else {
