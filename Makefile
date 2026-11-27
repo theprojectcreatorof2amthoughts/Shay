@@ -116,8 +116,8 @@ clean:
 help:
 	@printf '%s\n' \
 	  'Shay toolchain' \
-	  '  make                 Build gshai, shaii, and shentrypak' \\
-  '  shentrypak source.shay -o entry.shpak  # compile an entry package' \\
+	  '  make                 Build gshai, shaii, and shentrypak' \
+	  '  shentrypak source.shay -o entry.shpak  # compile an entry package' \
 	  '  make test            Run compiler/interpreter regression tests' \
 	  '  make check PROGRAM=examples/hello.shay' \
 	  '  make run PROGRAM=examples/hello.shay' \
