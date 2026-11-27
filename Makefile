@@ -76,7 +76,6 @@ executable: $(COMPILER)
 
 install: build
 	$(INSTALL) -d "$(DESTDIR)$(BINDIR)"
-	$(INSTALL) -m 0755 "$(ENTRY_PACKER)" "$(DESTDIR)$(BINDIR)/shentrypak"
 	$(INSTALL) -m 0755 "$(COMPILER)" "$(DESTDIR)$(BINDIR)/gshai"
 	$(INSTALL) -m 0755 "$(INTERPRETER)" "$(DESTDIR)$(BINDIR)/shaii"
 	$(INSTALL) -m 0755 "$(ENTRY_PACKER)" "$(DESTDIR)$(BINDIR)/shentrypak"
@@ -94,7 +93,7 @@ insent:
 	if [ ! -d "$$src" ]; then printf 'insent: folder not found: %s\n' "$$src" >&2; exit 2; fi; \
 	src=$$(CDPATH= cd -- "$$src" && pwd); dest="$(ENTRY_HOME)"; \
 	mkdir -p "$$dest"; \
-	find "$$src" -type f \\( -name '*.shpak' -o -name '*.shaye' \\) -exec sh -c 'src=$$1; dest=$$2; shift 2; for file do rel=$${file#"$$src"/}; target="$$dest/$$rel"; mkdir -p "$$(dirname "$$target")" || exit 1; cp -f "$$file" "$$target" || exit 1; done' sh "$$src" "$$dest" {} +; \
+	find "$src" -type f \( -name '*.shpak' -o -name '*.shaye' \) -exec sh -c 'src=$$1; dest=$$2; shift 2; for file do rel=$${file#"$$src"/}; target="$$dest/$$rel"; mkdir -p "$$(dirname "$$target")" || exit 1; cp -f "$$file" "$$target" || exit 1; done' sh "$$src" "$$dest" {} +; \
 	printf 'Installed .shpak entries into %s\n' "$$dest"
 
 # A positional source folder follows the insent goal; this pattern consumes it.
