@@ -59,8 +59,13 @@ printf '%s\n' 'PASS: $entrysyndef accepts bare, prefixed, suffixed, and combined
 # A code-bodied $entrysyndef creates a zero-argument function that can call
 # a differently named implementation from its bundled .shaii library.
 mkdir -p "$TMP/baseinit-source" "$TMP/home/.shay/entries"
+cat > "$TMP/bininit-source.shay" <<'EOF'
+$entrysyn declrmthd declr
+EOF
+HOME="$TMP/home" "$SHENTRYPACK" "$TMP/bininit-source.shay" -o "$TMP/home/.shay/entries/bininit.shpak"
 cat > "$TMP/baseinit-source/main.shaii" <<'EOF'
-$declr baseExec()
+$useentry bininit
+$declrmthd baseExec
 instxt/>"Base function executed"
 finish
 EOF
@@ -70,7 +75,7 @@ $entrysyndef $dobase()
     dofunc baseExec
 finish
 EOF
-"$SHENTRYPACK" "$TMP/baseinit-source/baseinit-source.shay" -o "$TMP/home/.shay/entries/baseinit.shpak"
+HOME="$TMP/home" "$SHENTRYPACK" "$TMP/baseinit-source/baseinit-source.shay" -o "$TMP/home/.shay/entries/baseinit.shpak"
 test "$(wc -c < "$TMP/home/.shay/entries/baseinit.shpak")" -gt 69
 rm -rf "$TMP/baseinit-source"
 cat > "$TMP/baseinit-main.shay" <<'EOF'
