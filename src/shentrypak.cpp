@@ -231,6 +231,9 @@ bool bundle_imported_libraries(const fs::path& file, const std::string& source,
         const std::string key = (ec ? resolved : canonical).string();
         if (!bundled_paths.insert(key).second) continue;
         const std::string library_source((std::istreambuf_iterator<char>(library_input)), {});
+        // Libraries may activate entry packages themselves (for example,
+        // bininit can provide the declrmthd -> declr alias).
+        shay::discover_shaye_entries(resolved);
         shay::Lexer library_lexer(library_source);
         const auto library_tokens = library_lexer.scan();
         shay::Parser library_parser(library_tokens);
@@ -344,6 +347,9 @@ int main(int argc, char** argv) {
             return 1;
         }
         const std::string source((std::istreambuf_iterator<char>(input)), {});
+        // Make installed/project-local entry names and aliases visible while
+        // validating both the entry source and its imported libraries.
+        shay::discover_shaye_entries(source_path);
         validate_source(source_path, source, diagnostics, aliases, definitions);
         validate_shay_syntax(source_path, source, diagnostics);
         std::string packaged_source;
