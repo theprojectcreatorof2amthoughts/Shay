@@ -239,12 +239,12 @@ void load_file(const fs::path&input,BuildContext&ctx){
    if(extension==".shaz"){diagnose(ctx,input,s.line,"Zeccurs files are variable-free; 'fileread' is not allowed");continue;}
    if(ctx.variables.insert(s.name).second)ctx.variable_declarations.emplace_back(input,s);
   }else if(s.kind==shay::StatementKind::DeclareFunction){
-   if(extension!=".shaii"&&!s.entry_syntax_declaration){diagnose(ctx,input,s.line,"'$declr' is only allowed in .shaii files; entry-defined function syntax requires its $useentry");continue;}
+   if(extension!=".shaii"&&file_extension!=".shpak"&&!s.entry_syntax_declaration){diagnose(ctx,input,s.line,"'$declr' is only allowed in .shaii files; entry-defined function syntax requires its $useentry");continue;}
    if(ctx.functions.count(s.name)){diagnose(ctx,input,s.line,"function '"+s.name+"' is already declared");continue;}
    ctx.functions.emplace(s.name,s);
    ctx.pending_function_validation.emplace_back(input,s);
   }else if(s.kind==shay::StatementKind::DeclareClass){
-   if(extension!=".shaii"&&extension!=".shui"){diagnose(ctx,input,s.line,"class declarations are only allowed in .shaii or .shui files");continue;}
+   if(extension!=".shaii"&&extension!=".shui"&&file_extension!=".shpak"){diagnose(ctx,input,s.line,"class declarations are only allowed in .shaii or .shui files");continue;}
    if(ctx.classes.count(s.name)){diagnose(ctx,input,s.line,"class '"+s.name+"' is already declared");continue;}
    std::vector<std::string> methods;bool valid=true;
    for(const auto&method:s.body)

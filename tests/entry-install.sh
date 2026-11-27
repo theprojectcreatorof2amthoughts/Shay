@@ -16,7 +16,8 @@ EOF
 "$SHENTRYPACK" "$TMP/source/nested/userinstalled-source.shay" -o "$TMP/source/nested/userinstalled.shpak"
 HOME="$TMP/home" make -C "$ROOT" insent "$TMP/source"
 test -f "$TMP/home/.shay/entries/nested/userinstalled.shpak"
-test -f "$TMP/home/.shay/entries/nested/main.shaii"
+rm -f "$TMP/home/.shay/entries/nested/main.shaii"
+test ! -e "$TMP/home/.shay/entries/nested/main.shaii"
 printf '%s\n' '$useentry userinstalled' 'sayuser/>"User entry loaded"' > "$TMP/main.shay"
 out=$(HOME="$TMP/home" "$SHAII" "$TMP/main.shay")
 expected=$(printf '%s\n%s' "Packaged entry body executed" "User entry loaded")
@@ -71,7 +72,7 @@ $entrysyndef dobase
 finish
 EOF
 "$SHENTRYPACK" "$TMP/baseinit-source/baseinit-source.shay" -o "$TMP/home/.shay/entries/baseinit.shpak"
-cp "$TMP/baseinit-source/basefuncs.shaii" "$TMP/home/.shay/entries/basefuncs.shaii"
+rm -rf "$TMP/baseinit-source"
 cat > "$TMP/baseinit-main.shay" <<'EOF'
 $useentry baseinit
 $dobase
@@ -83,7 +84,7 @@ expected=$(printf '%s\n%s' "Base function executed" "Base function executed")
 HOME="$TMP/home" "$GSHAI" -o "$TMP/baseinit-app" "$TMP/baseinit-main.shay"
 out=$("$TMP/baseinit-app")
 [ "$out" = "$expected" ]
-printf '%s\n' 'PASS: $entrysyndef calls imported zero-argument functions with optional $ prefix'
+printf '%s\n' 'PASS: .shpak bundles imported .shaii functions and $entrysyndef calls them without sidecar libraries'
 
 # shentrypak validates ordinary Shay syntax instead of blindly packaging bad source.
 printf '%s\n' '$notashay' > "$TMP/invalid-shay.shay"

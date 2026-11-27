@@ -13,7 +13,7 @@ Names contain lowercase English letters only. Missing extensions remain optional
 
 Both `gshai` and `shaii` discover `.shpak` packages recursively under `srchfile/siil/entryinit/` and `~/.shay/entries/`. Repository-local entries take precedence over user-installed entries with the same name.
 
-A `.shpak` is a binary package, not a text file with a header. It begins with the `SHPAK` magic and a format version, followed by bytecode records. Alias records map a new lowercase keyword to an existing Shay grammar keyword. Definition records store a named syntax definition and its pattern lines. Payload strings are byte-encoded, so opening the package in a text editor does not show the original extension source.
+A `.shpak` is a binary package, not a text file with a header. It begins with the `SHPAK` magic and a format version, followed by bytecode records. Alias records map a new lowercase keyword to an existing Shay grammar keyword. Definition records store a named syntax definition and its pattern lines. The source payload contains the entry source plus the contents of every directly imported `.shaii` library. `$shaiiport` lines are resolved at package-build time and removed from the packaged entry source; library source is embedded into the package, so runtime use does not require the original `.shaii` files.
 
 The byte encoding is not encryption. Anyone who implements the format can decode it; it is a binary package format, not a security boundary.
 
@@ -56,7 +56,7 @@ Compile declarations with the dedicated entry compiler:
 shentrypak bininit-source.shay -o bininit.shpak
 ```
 
-`shentrypak` validates entry declarations before writing the package. Errors include the source filename, line, column, source line, and caret. A package is not emitted when validation fails. `gshai` no longer compiles entry packages; use it only for ordinary Shay applications.
+`shentrypak` validates entry declarations and ordinary Shay syntax, resolves and validates imported `.shaii` libraries, then embeds those libraries before writing the package. Errors include the source filename, line, column, source line, and caret. A package is not emitted when validation fails. `gshai` no longer compiles entry packages; use it only for ordinary Shay applications.
 
 Each definition is stored as a separate binary record, and the loader registers it under the active entry name. Pattern lines are preserved as authored as the body of the function-style syntax definition. Declaring and packaging the function signature does not, by itself, add a new lexer token, parser production, or runtime operation; those execution semantics still need their corresponding compiler/interpreter implementation.
 
@@ -76,7 +76,7 @@ The package filename remains its entry identity. For example, `tools/rayinit.shp
 
 The loader rejects unknown opcodes, truncated records, invalid names, empty definition blocks, missing end markers, and trailing bytes. Invalid packages are ignored during discovery and reported if directly loaded.
 
-The standard `.shaii` libraries remain under `srchfile/siil/`; this extension format does not change library imports.
+The standard `.shaii` libraries remain under `srchfile/siil/` for ordinary builds. When `shentrypak` builds an entry package, it resolves each imported `.shaii` using the normal Shay import search rules and embeds it. Missing or invalid imports stop package creation. `.shaii` libraries retain their own declaration permissions inside the package, and duplicate imports are embedded only once. As in ordinary Shay builds, `.shaii` libraries cannot import other `.shaii` libraries.
 
 ## Dedicated package compiler
 
