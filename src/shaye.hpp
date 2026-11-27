@@ -226,13 +226,13 @@ inline bool write_shaye(const std::filesystem::path& path, const std::string& so
         }
         std::istringstream words(current);
         std::string directive, first, second, extra;
-        if (!(words >> directive >> first)) return false;
+        if (!(words >> directive)) continue;
         if (directive == "$entrysyn") {
-            if (!(words >> second) || (words >> extra) ||
+            if (!(words >> first >> second) || (words >> extra) ||
                 !is_lowercase_useentry_name(first) || !is_lowercase_useentry_name(second)) return false;
             records.aliases.emplace_back(std::move(first), std::move(second));
         } else if (directive == "$entrysyndef") {
-            if ((words >> extra) || !is_lowercase_useentry_name(first)) return false;
+            if (!(words >> first) || (words >> extra) || !is_lowercase_useentry_name(first)) return false;
             in_definition = true;
             definition_name = std::move(first);
         } else {
