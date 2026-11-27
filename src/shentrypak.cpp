@@ -9,7 +9,6 @@
 #include <sstream>
 #include <string>
 #include <unordered_set>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -271,7 +270,7 @@ void usage() {
         << "Usage: shentrypak source.shay -o output.shpak\n"
         << "       shentrypak -o output.shpak source.shay [more-source.shay ...]\n"
         << "       shentrypak --version\n\n"
-        << "Packages complete Shay source and $entrysyn/$entrysyndef metadata into .shpak.\n";
+        << "Packages Shay entry source, syntax metadata, and imported .shaii libraries into .shpak.\n";
 }
 }
 
