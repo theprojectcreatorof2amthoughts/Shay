@@ -53,8 +53,8 @@ $(INTERPRETER): $(INTERPRETER_OBJECT) $(FRONTEND_OBJECTS) $(RUNTIME_OBJECT)
 $(COMPILER): $(COMPILER_OBJECT) $(FRONTEND_OBJECTS)
 	$(CXX) $(LDFLAGS) $^ $(LDLIBS) -o "$@"
 
-$(ENTRY_PACKER): src/shentrypak.cpp src/shaye.hpp src/useentry.hpp | $(BUILD_DIR)/.dir
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -Isrc "$<" $(LDFLAGS) $(LDLIBS) -o "$@"
+$(ENTRY_PACKER): src/shentrypak.cpp src/shaye.hpp src/useentry.hpp src/lexer.hpp src/parser.hpp $(FRONTEND_OBJECTS) | $(BUILD_DIR)/.dir
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -Isrc src/shentrypak.cpp $(FRONTEND_OBJECTS) $(LDFLAGS) $(LDLIBS) -o "$@"
 
 -include $(DEPFILES)
 
@@ -93,8 +93,8 @@ insent:
 	if [ ! -d "$$src" ]; then printf 'insent: folder not found: %s\n' "$$src" >&2; exit 2; fi; \
 	src=$$(CDPATH= cd -- "$$src" && pwd); dest="$(ENTRY_HOME)"; \
 	mkdir -p "$$dest"; \
-	find "$$src" -type f \( -name '*.shpak' -o -name '*.shaye' \) -exec sh -c 'src=$$1; dest=$$2; shift 2; for file do rel=$${file#"$$src"/}; target="$$dest/$$rel"; mkdir -p "$$(dirname "$$target")" || exit 1; cp -f "$$file" "$$target" || exit 1; done' sh "$$src" "$$dest" {} +; \
-	printf 'Installed .shpak entries into %s\n' "$$dest"
+	find "$$src" -type f \( -name '*.shpak' -o -name '*.shaye' -o -name '*.shaii' \) -exec sh -c 'src=$$1; dest=$$2; shift 2; for file do rel=$${file#"$$src"/}; target="$$dest/$$rel"; mkdir -p "$$(dirname "$$target")" || exit 1; cp -f "$$file" "$$target" || exit 1; done' sh "$$src" "$$dest" {} +; \
+	printf 'Installed entry packages and their .shaii dependencies into %s\n' "$$dest"
 
 # A positional source folder follows the insent goal; this pattern consumes it.
 %:

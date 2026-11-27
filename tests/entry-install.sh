@@ -7,28 +7,43 @@ SHENTRYPACK=${3:-"$ROOT/build/shentrypak"}
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT HUP INT TERM
 mkdir -p "$TMP/source/nested"
-printf '%s\n' '$entrysyn sayuser instxt' > "$TMP/source/userinstalled-source.shay"
-"$SHENTRYPACK" "$TMP/source/userinstalled-source.shay" -o "$TMP/source/nested/userinstalled.shpak"
+ : > "$TMP/source/nested/main.shaii"
+cat > "$TMP/source/nested/userinstalled-source.shay" <<'EOF'
+$shaiiport "main.shaii"
+$entrysyn sayuser instxt
+instxt/>"Packaged entry body executed"
+EOF
+"$SHENTRYPACK" "$TMP/source/nested/userinstalled-source.shay" -o "$TMP/source/nested/userinstalled.shpak"
 HOME="$TMP/home" make -C "$ROOT" insent "$TMP/source"
 test -f "$TMP/home/.shay/entries/nested/userinstalled.shpak"
+test -f "$TMP/home/.shay/entries/nested/main.shaii"
 printf '%s\n' '$useentry userinstalled' 'sayuser/>"User entry loaded"' > "$TMP/main.shay"
 out=$(HOME="$TMP/home" "$SHAII" "$TMP/main.shay")
-[ "$out" = "User entry loaded" ]
+expected=$(printf '%s\n%s' "Packaged entry body executed" "User entry loaded")
+[ "$out" = "$expected" ]
 HOME="$TMP/home" "$GSHAI" -o "$TMP/app" "$TMP/main.shay"
 out=$("$TMP/app")
-[ "$out" = "User entry loaded" ]
-printf '%s\n' 'PASS: insent installs nested .shpak entries for gshai and shaii'
+[ "$out" = "$expected" ]
+printf '%s\n' 'PASS: insent installs nested .shpak entries and executes packaged Shay source for gshai and shaii'
 
-# $entrysyndef blocks compile into binary package records.
+# Optional decorations on $entrysyndef syntax names compile into binary package records.
 cat > "$TMP/pattern-source.shay" <<'EOF'
 $entrysyn saypattern instxt
-$entrysyndef hexnum
+$entrysyndef dobase
     ::0x0000::
     ::0xFFFF::
 finish
-$entrysyndef binnum
+$entrysyndef $binnum
     ::0b0000::
     ::0b1111::
+finish
+$entrysyndef octnum()
+    ::0o0000::
+    ::0o7777::
+finish
+$entrysyndef $hexnum()
+    ::0x0000::
+    ::0xFFFF::
 finish
 EOF
 "$SHENTRYPACK" "$TMP/pattern-source.shay" -o "$TMP/home/.shay/entries/patternentry.shpak"
@@ -38,7 +53,16 @@ saypattern/>"Pattern entry package loaded"
 EOF
 out=$(HOME="$TMP/home" "$SHAII" "$TMP/pattern-entry-main.shay")
 [ "$out" = "Pattern entry package loaded" ]
-printf '%s\n' 'PASS: $entrysyndef blocks compile into and load from binary .shpak packages'
+printf '%s\n' 'PASS: $entrysyndef accepts bare, prefixed, suffixed, and combined zero-argument names'
+
+# shentrypak validates ordinary Shay syntax instead of blindly packaging bad source.
+printf '%s\n' '$notashay' > "$TMP/invalid-shay.shay"
+if "$SHENTRYPACK" "$TMP/invalid-shay.shay" -o "$TMP/invalid-shay.shpak" 2>"$TMP/invalid-shay-diagnostics"; then
+    echo "expected shentrypak to reject invalid Shay syntax" >&2
+    exit 1
+fi
+test ! -e "$TMP/invalid-shay.shpak"
+printf '%s\n' 'PASS: shentrypak validates Shay syntax before writing packages'
 
 # The dedicated compiler reports exact source locations and does not emit a bad package.
 cat > "$TMP/broken-entry.shay" <<'EOF'
@@ -54,7 +78,7 @@ test ! -e "$TMP/broken.shpak"
 printf '%s\n' 'PASS: shentrypak reports source diagnostics and rejects invalid packages'
 
 # gshai no longer owns entry package compilation.
-if "$GSHAI" -et "$TMP/old.shpak" "$TMP/source/userinstalled-source.shay" >/dev/null 2>&1; then
+if "$GSHAI" -et "$TMP/old.shpak" "$TMP/source/nested/userinstalled-source.shay" >/dev/null 2>&1; then
     echo "expected gshai -et to be removed" >&2
     exit 1
 fi

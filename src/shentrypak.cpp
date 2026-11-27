@@ -1,4 +1,6 @@
 #include "shaye.hpp"
+#include "lexer.hpp"
+#include "parser.hpp"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -52,7 +54,6 @@ bool validate_source(const fs::path& file, const std::string& source,
     std::string definition_name;
     std::size_t definition_line = 0;
     std::size_t pattern_count = 0;
-    bool found_declaration = false;
     bool valid = true;
 
     auto report = [&](std::size_t number, const std::string& raw,
@@ -118,39 +119,62 @@ bool validate_source(const fs::path& file, const std::string& source,
                 report(line_number, line, "alias record exceeds the 65535-byte package limit", first);
             if (!aliases.insert(first).second)
                 report(line_number, line, "duplicate entry syntax alias '" + first + "'", first);
-            found_declaration = true;
         } else if (directive == "$entrysyndef") {
             if (!(words >> first)) {
-                report(line_number, line, "expected a syntax definition name after '$entrysyndef'", "$entrysyndef");
+                report(line_number, line, "expected a syntax name after '$entrysyndef' (for example, 'dobase')", "$entrysyndef");
                 continue;
             }
             if (words >> extra) {
                 report(line_number, line, "unexpected extra token '" + extra + "' after '$entrysyndef'", extra);
                 continue;
             }
-            if (!shay::is_lowercase_useentry_name(first))
-                report(line_number, line, "syntax definition name '" + first + "' must contain lowercase English letters only", first);
+            if (!shay::shaye_parse_definition_signature(first, definition_name)) {
+                report(line_number, line, "syntax definition name must contain lowercase English letters only; dollar sign and parentheses are optional", first);
+                continue;
+            }
             if (first.size() > 65535)
-                report(line_number, line, "syntax definition name exceeds the 65535-byte package limit", first);
-            if (!definitions.insert(first).second)
-                report(line_number, line, "duplicate syntax definition '" + first + "'", first);
+                report(line_number, line, "syntax definition signature exceeds the 65535-byte package limit", first);
+            if (!definitions.insert(definition_name).second)
+                report(line_number, line, "duplicate syntax definition '" + definition_name + "'", first);
             in_definition = true;
-            definition_name = first;
             definition_line = line_number;
             pattern_count = 0;
-            found_declaration = true;
         } else {
-            report(line_number, line, "unexpected content in an entry source; expected '$entrysyn' or '$entrysyndef'", directive);
+            // Entry packages may contain ordinary Shay code, imports, and
+            // declarations. The package preserves this source verbatim.
+            continue;
         }
     }
 
     if (in_definition)
         report(definition_line, "$entrysyndef " + definition_name,
                "syntax definition '" + definition_name + "' is missing its closing 'finish'", "$entrysyndef");
-    if (!found_declaration)
-        report(1, source.substr(0, source.find('\n')),
-               "entry source contains no $entrysyn or $entrysyndef declarations");
     return valid;
+}
+
+void validate_shay_syntax(const fs::path& file, const std::string& source,
+                          std::vector<Diagnostic>& diagnostics) {
+    const std::string executable_source = shay::shaye_executable_source(source);
+    shay::Lexer lexer(executable_source);
+    const auto tokens = lexer.scan();
+    shay::Parser parser(tokens);
+    const shay::Program program = parser.parse();
+    auto append = [&](std::size_t line, std::size_t column, const std::string& message) {
+        Diagnostic diagnostic;
+        diagnostic.file = file;
+        diagnostic.line = line;
+        diagnostic.column = column ? column : 1;
+        diagnostic.message = message;
+        std::istringstream lines(executable_source);
+        std::string text;
+        for (std::size_t current = 1; current <= line && std::getline(lines, text); ++current)
+            if (current == line) diagnostic.source = text;
+        diagnostics.push_back(std::move(diagnostic));
+    };
+    for (const auto& error : lexer.errors())
+        append(error.line, error.column, error.message);
+    for (const auto& error : program.errors)
+        append(error.line, error.column, error.message);
 }
 
 void print_diagnostics(const std::vector<Diagnostic>& diagnostics) {
@@ -170,7 +194,7 @@ void usage() {
         << "Usage: shentrypak source.shay -o output.shpak\n"
         << "       shentrypak -o output.shpak source.shay [more-source.shay ...]\n"
         << "       shentrypak --version\n\n"
-        << "Compiles $entrysyn and $entrysyndef declarations into a binary .shpak entry package.\n";
+        << "Packages complete Shay source and $entrysyn/$entrysyndef metadata into .shpak.\n";
 }
 }
 
@@ -231,6 +255,7 @@ int main(int argc, char** argv) {
         }
         const std::string source((std::istreambuf_iterator<char>(input)), {});
         validate_source(source_path, source, diagnostics, aliases, definitions);
+        validate_shay_syntax(source_path, source, diagnostics);
         combined_source += source;
         if (combined_source.empty() || combined_source.back() != '\n') combined_source.push_back('\n');
     }
