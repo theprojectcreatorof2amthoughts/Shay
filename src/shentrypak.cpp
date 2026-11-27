@@ -19,6 +19,20 @@ struct Diagnostic {
     std::string source;
 };
 
+bool is_existing_syntax_target(const std::string& target) {
+    static const std::unordered_set<std::string> keywords = {
+        "brew", "classfunc", "declr", "declrmthd", "dircreate", "direxists",
+        "doclass", "dofunc", "elseit", "exec", "false", "fileappend",
+        "filedelete", "fileexists", "fileread", "filewrite", "finish",
+        "forw", "ifit", "inpvarforw", "instxt", "instxtexit", "insval",
+        "listadd", "listremove", "listset", "logindxfl", "logindxnm",
+        "logit", "mapremove", "mapset", "runproc", "set", "setadd",
+        "setcontains", "setremove", "shaiiport", "shazport", "throwit",
+        "true", "tryit", "useentry"
+    };
+    return keywords.count(target) != 0;
+}
+
 std::string trim(const std::string& value) {
     const auto first = value.find_first_not_of(" \t\r");
     if (first == std::string::npos) return {};
@@ -97,6 +111,10 @@ bool validate_source(const fs::path& file, const std::string& source,
                 report(line_number, line, "alias name '" + first + "' must contain lowercase English letters only", first);
             if (!shay::is_lowercase_useentry_name(second))
                 report(line_number, line, "syntax target '" + second + "' must contain lowercase English letters only", second);
+            else if (!is_existing_syntax_target(second))
+                report(line_number, line, "syntax target '" + second + "' is not an existing Shay keyword", second);
+            if (first.size() > 65535 || second.size() > 65535)
+                report(line_number, line, "alias record exceeds the 65535-byte package limit", first);
             if (!aliases.insert(first).second)
                 report(line_number, line, "duplicate entry syntax alias '" + first + "'", first);
             found_declaration = true;
@@ -111,6 +129,8 @@ bool validate_source(const fs::path& file, const std::string& source,
             }
             if (!shay::is_lowercase_useentry_name(first))
                 report(line_number, line, "syntax definition name '" + first + "' must contain lowercase English letters only", first);
+            if (first.size() > 65535)
+                report(line_number, line, "syntax definition name exceeds the 65535-byte package limit", first);
             if (!definitions.insert(first).second)
                 report(line_number, line, "duplicate syntax definition '" + first + "'", first);
             in_definition = true;
