@@ -65,7 +65,7 @@ EOF
 HOME="$TMP/home" "$SHENTRYPACK" "$TMP/bininit-source.shay" -o "$TMP/home/.shay/entries/bininit.shpak"
 cat > "$TMP/baseinit-source/main.shaii" <<'EOF'
 $useentry bininit
-$declrmthd baseExec
+$declrmthd baseExec()
 instxt/>"Base function executed"
 finish
 EOF
