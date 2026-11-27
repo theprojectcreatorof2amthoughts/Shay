@@ -121,7 +121,7 @@ bool validate_source(const fs::path& file, const std::string& source,
                 report(line_number, line, "duplicate entry syntax alias '" + first + "'", first);
         } else if (directive == "$entrysyndef") {
             if (!(words >> first)) {
-                report(line_number, line, "expected a function-style syntax name after '$entrysyndef' (for example, '$dobase()')", "$entrysyndef");
+                report(line_number, line, "expected a syntax name after '$entrysyndef' (for example, 'dobase')", "$entrysyndef");
                 continue;
             }
             if (words >> extra) {
@@ -129,7 +129,158 @@ bool validate_source(const fs::path& file, const std::string& source,
                 continue;
             }
             if (!shay::shaye_parse_definition_signature(first, definition_name)) {
-                report(line_number, line, "syntax definition must use '$name()' with a lowercase English function name", first);
+                report(line_number, line, "syntax definition name must contain lowercase English letters only; '
+                continue;
+            }
+            if (first.size() > 65535)
+                report(line_number, line, "syntax definition signature exceeds the 65535-byte package limit", first);
+            if (!definitions.insert(definition_name).second)
+                report(line_number, line, "duplicate syntax definition '" + definition_name + "'", first);
+            in_definition = true;
+            definition_line = line_number;
+            pattern_count = 0;
+        } else {
+            // Entry packages may contain ordinary Shay code, imports, and
+            // declarations. The package preserves this source verbatim.
+            continue;
+        }
+    }
+
+    if (in_definition)
+        report(definition_line, "$entrysyndef " + definition_name,
+               "syntax definition '" + definition_name + "' is missing its closing 'finish'", "$entrysyndef");
+    return valid;
+}
+
+void validate_shay_syntax(const fs::path& file, const std::string& source,
+                          std::vector<Diagnostic>& diagnostics) {
+    const std::string executable_source = shay::shaye_executable_source(source);
+    shay::Lexer lexer(executable_source);
+    const auto tokens = lexer.scan();
+    shay::Parser parser(tokens);
+    const shay::Program program = parser.parse();
+    auto append = [&](std::size_t line, std::size_t column, const std::string& message) {
+        Diagnostic diagnostic;
+        diagnostic.file = file;
+        diagnostic.line = line;
+        diagnostic.column = column ? column : 1;
+        diagnostic.message = message;
+        std::istringstream lines(executable_source);
+        std::string text;
+        for (std::size_t current = 1; current <= line && std::getline(lines, text); ++current)
+            if (current == line) diagnostic.source = text;
+        diagnostics.push_back(std::move(diagnostic));
+    };
+    for (const auto& error : lexer.errors())
+        append(error.line, error.column, error.message);
+    for (const auto& error : program.errors)
+        append(error.line, error.column, error.message);
+}
+
+void print_diagnostics(const std::vector<Diagnostic>& diagnostics) {
+    for (const auto& diagnostic : diagnostics) {
+        std::cerr << diagnostic.file.string() << ':' << diagnostic.line << ':' << diagnostic.column
+                  << ": error: " << diagnostic.message << '\n';
+        if (!diagnostic.source.empty()) {
+            std::cerr << "  " << diagnostic.source << '\n' << "  ";
+            for (std::size_t i = 1; i < diagnostic.column; ++i) std::cerr << ' ';
+            std::cerr << "^\n";
+        }
+    }
+}
+
+void usage() {
+    std::cout
+        << "Usage: shentrypak source.shay -o output.shpak\n"
+        << "       shentrypak -o output.shpak source.shay [more-source.shay ...]\n"
+        << "       shentrypak --version\n\n"
+        << "Packages complete Shay source and $entrysyn/$entrysyndef metadata into .shpak.\n";
+}
+}
+
+int main(int argc, char** argv) {
+    if (argc == 2 && std::string(argv[1]) == "--version") {
+        std::cout << "shentrypak 0.1.0 (Shay entry package compiler)\n";
+        return 0;
+    }
+    if (argc == 2 && (std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h")) {
+        usage();
+        return 0;
+    }
+
+    fs::path output;
+    std::vector<fs::path> sources;
+    for (int i = 1; i < argc; ++i) {
+        const std::string arg = argv[i];
+        if (arg == "-o") {
+            if (++i >= argc || !output.empty()) {
+                std::cerr << "shentrypak: -o requires exactly one output path\n";
+                return 2;
+            }
+            output = argv[i];
+        } else if (!arg.empty() && arg[0] == '-') {
+            std::cerr << "shentrypak: unknown option '" << arg << "'\n";
+            return 2;
+        } else {
+            sources.emplace_back(arg);
+        }
+    }
+    if (sources.empty() || output.empty()) {
+        usage();
+        std::cerr << "shentrypak: provide at least one source file and an output path\n";
+        return 2;
+    }
+    if (output.extension() != ".shpak") {
+        std::cerr << "shentrypak: output file must use the .shpak extension\n";
+        return 2;
+    }
+    if (!shay::is_lowercase_useentry_name(output.stem().string())) {
+        std::cerr << "shentrypak: output filename stem must contain lowercase English letters only\n";
+        return 2;
+    }
+
+    std::string combined_source;
+    std::vector<Diagnostic> diagnostics;
+    std::unordered_set<std::string> aliases;
+    std::unordered_set<std::string> definitions;
+    for (const auto& source_path : sources) {
+        if (source_path.extension() != ".shay") {
+            std::cerr << "shentrypak: input '" << source_path.string() << "' must use the .shay extension\n";
+            return 2;
+        }
+        std::ifstream input(source_path, std::ios::binary);
+        if (!input) {
+            std::cerr << "shentrypak: cannot open source file '" << source_path.string() << "'\n";
+            return 1;
+        }
+        const std::string source((std::istreambuf_iterator<char>(input)), {});
+        validate_source(source_path, source, diagnostics, aliases, definitions);
+        validate_shay_syntax(source_path, source, diagnostics);
+        combined_source += source;
+        if (combined_source.empty() || combined_source.back() != '\n') combined_source.push_back('\n');
+    }
+    if (!diagnostics.empty()) {
+        print_diagnostics(diagnostics);
+        std::cerr << "shentrypak: package was not written because the entry source contains errors\n";
+        return 1;
+    }
+
+    std::error_code ec;
+    if (!output.parent_path().empty()) fs::create_directories(output.parent_path(), ec);
+    if (ec) {
+        std::cerr << "shentrypak: cannot create output directory '" << output.parent_path().string()
+                  << "': " << ec.message() << '\n';
+        return 1;
+    }
+    if (!shay::write_shaye(output, combined_source)) {
+        std::cerr << "shentrypak: cannot write package '" << output.string() << "'\n";
+        return 1;
+    }
+    std::cout << "shentrypak: created " << output.string() << " from "
+              << sources.size() << " source file(s)\n";
+    return 0;
+}
+ and '()' are optional", first);
                 continue;
             }
             if (first.size() > 65535)
