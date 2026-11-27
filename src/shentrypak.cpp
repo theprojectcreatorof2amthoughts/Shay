@@ -55,6 +55,7 @@ bool validate_source(const fs::path& file, const std::string& source,
     std::string definition_name;
     std::size_t definition_line = 0;
     std::size_t pattern_count = 0;
+    std::size_t body_line_count = 0;
     bool valid = true;
 
     auto report = [&](std::size_t number, const std::string& raw,
@@ -77,19 +78,28 @@ bool validate_source(const fs::path& file, const std::string& source,
 
         if (in_definition) {
             if (current == "finish") {
-                if (pattern_count == 0)
-                    report(line_number, line, "syntax definition '" + definition_name + "' has no pattern lines", "finish");
+                if (pattern_count == 0 && body_line_count == 0)
+                    report(line_number, line, "syntax definition '" + definition_name + "' has no body", "finish");
+                if (pattern_count != 0 && body_line_count != 0)
+                    report(line_number, line, "a $entrysyndef block cannot mix syntax-pattern lines with executable function-body lines", "finish");
                 in_definition = false;
                 definition_name.clear();
                 pattern_count = 0;
+                body_line_count = 0;
             } else {
                 if (current.rfind("$entrysyndef", 0) == 0 || current.rfind("$entrysyn", 0) == 0)
                     report(line_number, line, "entry declarations cannot be nested inside a $entrysyndef block", current);
                 if (current.size() > 65535)
                     report(line_number, line, "syntax pattern exceeds the 65535-byte package limit", current);
-                ++pattern_count;
-                if (pattern_count > 65535)
-                    report(line_number, line, "syntax definition exceeds the 65535-pattern package limit", current);
+                if (shay::shaye_is_syntax_pattern(current)) {
+                    ++pattern_count;
+                    if (pattern_count > 65535)
+                        report(line_number, line, "syntax definition exceeds the 65535-pattern package limit", current);
+                } else {
+                    ++body_line_count;
+                    if (body_line_count > 65535)
+                        report(line_number, line, "syntax function body exceeds the 65535-line package limit", current);
+                }
             }
             continue;
         }
@@ -221,6 +231,9 @@ bool bundle_imported_libraries(const fs::path& file, const std::string& source,
         const std::string key = (ec ? resolved : canonical).string();
         if (!bundled_paths.insert(key).second) continue;
         const std::string library_source((std::istreambuf_iterator<char>(library_input)), {});
+        // Libraries may activate entry packages themselves (for example,
+        // bininit can provide the declrmthd -> declr alias).
+        shay::discover_shaye_entries(resolved);
         shay::Lexer library_lexer(library_source);
         const auto library_tokens = library_lexer.scan();
         shay::Parser library_parser(library_tokens);
@@ -334,6 +347,9 @@ int main(int argc, char** argv) {
             return 1;
         }
         const std::string source((std::istreambuf_iterator<char>(input)), {});
+        // Make installed/project-local entry names and aliases visible while
+        // validating both the entry source and its imported libraries.
+        shay::discover_shaye_entries(source_path);
         validate_source(source_path, source, diagnostics, aliases, definitions);
         validate_shay_syntax(source_path, source, diagnostics);
         std::string packaged_source;

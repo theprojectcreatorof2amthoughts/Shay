@@ -218,23 +218,54 @@ inline bool shaye_parse_definition_signature(const std::string& signature, std::
     name = signature.substr(begin, end - begin);
     return is_lowercase_useentry_name(name);
 }
+inline bool shaye_is_syntax_pattern(const std::string& value) {
+    const std::string current = shaye_trim(value);
+    return current.size() >= 4 && current.rfind("::", 0) == 0 &&
+           current.compare(current.size() - 2, 2, "::") == 0;
+}
 inline std::string shaye_executable_source(const std::string& source) {
     std::istringstream lines(source);
     std::ostringstream executable;
     std::string line;
     bool in_definition = false;
+    std::string definition_name;
+    std::vector<std::string> definition_body;
+    auto flush_definition = [&](bool closed) {
+        bool has_code = false;
+        for (const auto& item : definition_body) {
+            const std::string current = shaye_trim(item);
+            if (current.empty() || current.rfind("#%", 0) == 0 || current.rfind("##", 0) == 0)
+                continue;
+            if (!shaye_is_syntax_pattern(current)) has_code = true;
+        }
+        if (closed && has_code) {
+            executable << "$declr " << definition_name << "()\n";
+            for (const auto& item : definition_body) executable << item << '\n';
+            executable << "finish\n";
+        } else {
+            executable << '\n';
+            for (std::size_t i = 0; i < definition_body.size(); ++i) executable << '\n';
+            if (closed) executable << '\n';
+        }
+        definition_body.clear();
+        definition_name.clear();
+        in_definition = false;
+    };
     while (std::getline(lines, line)) {
         const std::string current = shaye_trim(line);
         if (in_definition) {
-            if (current == "finish") in_definition = false;
-            executable << '\n';
+            if (current == "finish") flush_definition(true);
+            else definition_body.push_back(line);
             continue;
         }
-        // Check the longer directive first: "$entrysyndef" also starts
-        // with "$entrysyn".
         if (current.rfind("$entrysyndef", 0) == 0) {
-            in_definition = true;
-            executable << '\n';
+            std::istringstream words(current);
+            std::string directive, signature;
+            words >> directive >> signature;
+            if (shaye_parse_definition_signature(signature, definition_name)) {
+                in_definition = true;
+                definition_body.clear();
+            } else executable << '\n';
             continue;
         }
         if (current.rfind("$entrysyn", 0) == 0) {
@@ -243,6 +274,7 @@ inline std::string shaye_executable_source(const std::string& source) {
         }
         executable << line << '\n';
     }
+    if (in_definition) flush_definition(false);
     return executable.str();
 }
 inline bool write_shaye(const std::filesystem::path& path, const std::string& source) {
@@ -251,28 +283,46 @@ inline bool write_shaye(const std::filesystem::path& path, const std::string& so
     ShayeRecords records;
     bool in_definition = false;
     std::string definition_name;
-    std::vector<std::string> definition_patterns;
+    std::vector<std::string> definition_body;
+    auto finish_definition = [&]() {
+        bool has_code = false;
+        bool has_pattern = false;
+        std::vector<std::string> patterns;
+        for (const auto& item : definition_body) {
+            const std::string current = shaye_trim(item);
+            if (current.empty() || current.rfind("#%", 0) == 0 || current.rfind("##", 0) == 0)
+                continue;
+            if (shaye_is_syntax_pattern(current)) {
+                has_pattern = true;
+                patterns.push_back(current);
+            } else has_code = true;
+        }
+        if (has_code && has_pattern) return false;
+        if (has_code) patterns = {"@function"};
+        if (patterns.empty()) return false;
+        records.definitions.emplace_back(definition_name, std::move(patterns));
+        definition_body.clear();
+        definition_name.clear();
+        in_definition = false;
+        return true;
+    };
     while (std::getline(lines, line)) {
         const std::string current = shaye_trim(line);
-        if (current.empty() || current.rfind("#%", 0) == 0 || current.rfind("##", 0) == 0) continue;
         if (in_definition) {
             if (current == "finish") {
-                if (definition_patterns.empty()) return false;
-                records.definitions.emplace_back(definition_name, definition_patterns);
-                in_definition = false;
-                definition_name.clear();
-                definition_patterns.clear();
+                if (!finish_definition()) return false;
             } else {
-                if (current.size() > 65535) return false;
-                definition_patterns.push_back(current);
-                if (definition_patterns.size() > 65535) return false;
+                if (current.size() > 65535 || definition_body.size() >= 65535) return false;
+                definition_body.push_back(line);
             }
             continue;
         }
+        if (current.empty() || current.rfind("#%", 0) == 0 || current.rfind("##", 0) == 0) continue;
         std::istringstream words(current);
-        std::string directive, first, second, extra;
+        std::string directive, first, extra;
         if (!(words >> directive)) continue;
         if (directive == "$entrysyn") {
+            std::string second;
             if (!(words >> first >> second) || (words >> extra) ||
                 !is_lowercase_useentry_name(first) || !is_lowercase_useentry_name(second)) return false;
             records.aliases.emplace_back(std::move(first), std::move(second));
@@ -280,10 +330,7 @@ inline bool write_shaye(const std::filesystem::path& path, const std::string& so
             if (!(words >> first) || (words >> extra) ||
                 !shaye_parse_definition_signature(first, definition_name)) return false;
             in_definition = true;
-        } else {
-            // A .shpak is a complete Shay entry source. Ordinary Shay statements
-            // are retained in the payload; only entry metadata is extracted here.
-            continue;
+            definition_body.clear();
         }
     }
     if (in_definition) return false;

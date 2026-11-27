@@ -26,7 +26,7 @@ $entrysyn raydeclr declr
 $entrysyn sayhello instxt
 ```
 
-Use `$entrysyndef` to declare a zero-argument function-style entry syntax. The name decorations are optional: `dobase`, `$dobase`, `dobase()`, and `$dobase()` all declare the same syntax name. The definition body contains one or more syntax-pattern lines and ends with `finish`:
+Use `$entrysyndef` to declare a zero-argument function-style entry syntax. The name decorations are optional: `dobase`, `$dobase`, `dobase()`, and `$dobase()` all declare the same syntax name. Its block can contain either syntax-pattern lines or executable Shay statements, but not both. A code body is compiled into a zero-argument function with the declared syntax name:
 
 ```shay
 $entrysyndef dobase
@@ -34,13 +34,12 @@ $entrysyndef dobase
     ::0xFFFF::
 finish
 
-$entrysyndef binnum()
-    ::0b0000::
-    ::0b1111::
+$entrysyndef $dobase()
+    dofunc baseExec
 finish
 ```
 
-When the entry is active with `$useentry`, its defined name is callable as a zero-argument shorthand for a same-named function declared in an imported `.shaii` library. Both call spellings are accepted:
+When the entry is active with `$useentry`, its defined name is callable as a zero-argument function. In a code-bodied definition, the package compiler creates that function from the block; the body can call a differently named implementation imported from a `.shaii` library. Pattern-bodied definitions retain the older same-named-library-function shorthand. Both call spellings are accepted:
 
 ```shay
 $useentry baseinit
@@ -48,7 +47,7 @@ $dobase
 dobase
 ```
 
-These calls are equivalent to `dofunc dobase`. The imported function must exist and must not declare parameters. The entry package does not synthesize the function body: it supplies the syntax name, while the implementation remains in the imported library. Pattern lines are preserved in the package as syntax metadata.
+These calls invoke the package-defined `dobase()` function. In the example above, that function delegates to `baseExec` from the bundled library. Existing pattern-only definitions remain compatible and continue to resolve to a same-named zero-argument function in an imported library. Pattern lines are preserved as syntax metadata; executable blocks are compiled into ordinary function declarations in the package payload.
 
 Compile declarations with the dedicated entry compiler:
 
