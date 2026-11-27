@@ -209,11 +209,16 @@ inline std::string shaye_executable_source(const std::string& source) {
         const std::string current = shaye_trim(line);
         if (in_definition) {
             if (current == "finish") in_definition = false;
+            executable << '\n';
             continue;
         }
-        if (current.rfind("$entrysyn", 0) == 0) continue;
+        if (current.rfind("$entrysyn", 0) == 0) {
+            executable << '\n';
+            continue;
+        }
         if (current.rfind("$entrysyndef", 0) == 0) {
             in_definition = true;
+            executable << '\n';
             continue;
         }
         executable << line << '\n';
