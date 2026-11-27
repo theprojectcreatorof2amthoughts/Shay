@@ -192,7 +192,7 @@ void usage() {
         << "Usage: shentrypak source.shay -o output.shpak\n"
         << "       shentrypak -o output.shpak source.shay [more-source.shay ...]\n"
         << "       shentrypak --version\n\n"
-        << "Compiles $entrysyn and $entrysyndef declarations into a binary .shpak entry package.\n";
+        << "Packages complete Shay source and $entrysyn/$entrysyndef metadata into .shpak.\n";
 }
 }
 
