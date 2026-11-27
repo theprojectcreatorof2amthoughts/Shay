@@ -55,6 +55,36 @@ out=$(HOME="$TMP/home" "$SHAII" "$TMP/pattern-entry-main.shay")
 [ "$out" = "Pattern entry package loaded" ]
 printf '%s\n' 'PASS: $entrysyndef accepts bare, prefixed, suffixed, and combined zero-argument names'
 
+# A registered $entrysyndef name is a zero-argument shorthand for a same-named
+# function imported by the entry package. Both decorated and bare call forms work.
+mkdir -p "$TMP/baseinit-source" "$TMP/home/.shay/entries"
+cat > "$TMP/baseinit-source/basefuncs.shaii" <<'EOF'
+$declr dobase()
+instxt/>"Base function executed"
+finish
+EOF
+cat > "$TMP/baseinit-source/baseinit-source.shay" <<'EOF'
+$shaiiport "basefuncs.shaii"
+$entrysyndef dobase
+    ::0x0000::
+    ::0xFFFF::
+finish
+EOF
+"$SHENTRYPACK" "$TMP/baseinit-source/baseinit-source.shay" -o "$TMP/home/.shay/entries/baseinit.shpak"
+cp "$TMP/baseinit-source/basefuncs.shaii" "$TMP/home/.shay/entries/basefuncs.shaii"
+cat > "$TMP/baseinit-main.shay" <<'EOF'
+$useentry baseinit
+$dobase
+dobase
+EOF
+out=$(HOME="$TMP/home" "$SHAII" "$TMP/baseinit-main.shay")
+expected=$(printf '%s\n%s' "Base function executed" "Base function executed")
+[ "$out" = "$expected" ]
+HOME="$TMP/home" "$GSHAI" -o "$TMP/baseinit-app" "$TMP/baseinit-main.shay"
+out=$("$TMP/baseinit-app")
+[ "$out" = "$expected" ]
+printf '%s\n' 'PASS: $entrysyndef calls imported zero-argument functions with optional $ prefix'
+
 # shentrypak validates ordinary Shay syntax instead of blindly packaging bad source.
 printf '%s\n' '$notashay' > "$TMP/invalid-shay.shay"
 if "$SHENTRYPACK" "$TMP/invalid-shay.shay" -o "$TMP/invalid-shay.shpak" 2>"$TMP/invalid-shay-diagnostics"; then
