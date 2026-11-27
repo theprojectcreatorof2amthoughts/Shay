@@ -65,7 +65,7 @@ if "$SHENTRYPACK" "$TMP/broken-entry.shay" -o "$TMP/broken.shpak" 2>"$TMP/diagno
     echo "expected shentrypak to reject an unterminated syntax definition" >&2
     exit 1
 fi
-grep -F "$TMP/broken-entry.shay:1:1: error: syntax definition 'broken' is missing its closing 'finish'" "$TMP/diagnostics" >/dev/null
+grep -F "$TMP/broken-entry.shay:1:1: error: syntax definition '$broken()' is missing its closing 'finish'" "$TMP/diagnostics" >/dev/null
 test ! -e "$TMP/broken.shpak"
 printf '%s\n' 'PASS: shentrypak reports source diagnostics and rejects invalid packages'
 
