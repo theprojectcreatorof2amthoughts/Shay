@@ -4,6 +4,7 @@ Shay is an independent hybrid programming language with a C11 runtime and a C++2
 
 - **`gshai`** — the Shay compiler. It creates native executables or relocatable `.sho` object files.
 - **`shaii`** — the Shay interpreter. It runs Shay source files and provides syntax-check mode.
+- **`shentrypak`** — the entry-package compiler. It validates `.shay` entry declarations and writes binary `.shpak` packages.
 
 Shay has its own original grammar and vocabulary, including `brew` for variable declarations and `instxt/>"..."` for text output.
 
@@ -17,6 +18,7 @@ Shay has its own original grammar and vocabulary, including `brew` for variable 
 | `.shui` | Shay UI application source, processed by `gshai` or `shaii`; composes language entries |
 | `.shuil` | Shay UI adapter, loaded by `.shui`; configures the platform translator and its language backbone |
 | `.sho` | Compiled Shay object file (native relocatable object) |
+| `.shpak` | Compiled binary Shay language-entry package |
 
 ## Vocabulary
 | Vocabulary | Meaning |
@@ -42,7 +44,7 @@ Bracketed `$shaiiport [name.shaii]` imports an implemented library, searched bes
 
 ## Language entries
 
-Shay source files can configure their language backbone with multiple lowercase $useentry directives. The system applies to .shay, .shui, and .shuil files. Entry names contain lowercase letters only and may be supplied by an optional `.shaye` package in `srchfile/siil/entryinit/`; a missing optional entry is skipped.
+Shay source files can configure their language backbone with multiple lowercase $useentry directives. The system applies to .shay, .shui, and .shuil files. Entry names contain lowercase letters only and may be supplied by an optional `.shpak` package in `srchfile/siil/entryinit/`; a missing optional entry is skipped.
 
 ```shay
 $useentry reginit
@@ -51,6 +53,8 @@ $useentry exprinit
 $useentry varinit
 $useentry funcinit
 ```
+
+Compile entry-source files with `shentrypak source.shay -o entryname.shpak`; it reports source locations and caret diagnostics for malformed declarations. Install packages recursively with `make insent ~/your_shpak_folder`. `gshai` compiles applications, while `shentrypak` compiles entry packages. Legacy `.shaye` packages remain readable during migration.
 
 For UI applications, add $useentry uiinit. The .shuil adapter—not $useentry—selects Browser or Windows and its translation backend. See [the useentry specification](docs/USEENTRY_SPEC.md) for the full catalog and [the SHAY UI specification](docs/SHUI_SPEC.md) for UI source structure.
 
@@ -197,7 +201,7 @@ These flags configure the native C++ compiler used by `gshai`; they do not chang
 
 ## Make targets
 
-- `make` — build compiler `gshai` and interpreter `shaii`.
+- `make` — build `gshai`, `shaii`, and `shentrypak`.
 - `make run PROGRAM=examples/hello.shay` — interpret a source file.
 - `make check PROGRAM=examples/hello.shay` — syntax-check a source file.
 - `make compile PROGRAM=examples/hello.shay` — emit a `.sho` object.
