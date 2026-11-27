@@ -55,6 +55,7 @@ bool validate_source(const fs::path& file, const std::string& source,
     std::string definition_name;
     std::size_t definition_line = 0;
     std::size_t pattern_count = 0;
+    std::size_t body_line_count = 0;
     bool valid = true;
 
     auto report = [&](std::size_t number, const std::string& raw,
@@ -77,19 +78,28 @@ bool validate_source(const fs::path& file, const std::string& source,
 
         if (in_definition) {
             if (current == "finish") {
-                if (pattern_count == 0)
-                    report(line_number, line, "syntax definition '" + definition_name + "' has no pattern lines", "finish");
+                if (pattern_count == 0 && body_line_count == 0)
+                    report(line_number, line, "syntax definition '" + definition_name + "' has no body", "finish");
+                if (pattern_count != 0 && body_line_count != 0)
+                    report(line_number, line, "a $entrysyndef block cannot mix syntax-pattern lines with executable function-body lines", "finish");
                 in_definition = false;
                 definition_name.clear();
                 pattern_count = 0;
+                body_line_count = 0;
             } else {
                 if (current.rfind("$entrysyndef", 0) == 0 || current.rfind("$entrysyn", 0) == 0)
                     report(line_number, line, "entry declarations cannot be nested inside a $entrysyndef block", current);
                 if (current.size() > 65535)
                     report(line_number, line, "syntax pattern exceeds the 65535-byte package limit", current);
-                ++pattern_count;
-                if (pattern_count > 65535)
-                    report(line_number, line, "syntax definition exceeds the 65535-pattern package limit", current);
+                if (shay::shaye_is_syntax_pattern(current)) {
+                    ++pattern_count;
+                    if (pattern_count > 65535)
+                        report(line_number, line, "syntax definition exceeds the 65535-pattern package limit", current);
+                } else {
+                    ++body_line_count;
+                    if (body_line_count > 65535)
+                        report(line_number, line, "syntax function body exceeds the 65535-line package limit", current);
+                }
             }
             continue;
         }
