@@ -49,7 +49,7 @@ cat > "$TMP/entry-source.shay" <<'EOF'
 $entrysyn sayhello instxt
 EOF
 "$SHENTRYPACK" "$TMP/entry-source.shay" -o "$TMP/srchfile/siil/entryinit/extensionhello.shpak" >"$TMP/out" 2>"$TMP/err" || { cat "$TMP/out" "$TMP/err" >&2; fail "create binary .shpak package"; }
-[ "$(od -An -tx1 -N5 "$TMP/srchfile/siil/entryinit/extensionhello.shpak" | tr -d ' \n')" = "534850414B" ] || fail ".shpak binary magic"
+[ "$(od -An -tx1 -N5 "$TMP/srchfile/siil/entryinit/extensionhello.shpak" | tr -d ' \n' | tr 'a-f' 'A-F')" = "534850414B" ] || fail ".shpak binary magic"
 if grep -a -q 'sayhello' "$TMP/srchfile/siil/entryinit/extensionhello.shpak"; then fail ".shpak exposed readable syntax source"; fi
 cat > "$TMP/entry-use.shay" <<'EOF'
 $useentry extensionhello
