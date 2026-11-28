@@ -4,10 +4,11 @@ import traceback
 from contextlib import redirect_stdout, redirect_stderr
 
 namespace = {"__name__": "__main__"}
+protocol_output = sys.stdout
 
 def shay_input(prompt=""):
-    sys.stdout.write("I" + str(prompt).encode("utf-8").hex() + "\\n")
-    sys.stdout.flush()
+    protocol_output.write("I" + str(prompt).encode("utf-8").hex() + "\n")
+    protocol_output.flush()
     response = sys.stdin.readline()
     if not response:
         raise EOFError("input stream closed")
