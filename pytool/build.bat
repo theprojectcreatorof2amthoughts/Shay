@@ -11,9 +11,13 @@ if not exist "runtime\python.exe" (
   echo Downloading CPython %PYVER% Windows x64 embeddable runtime...
   curl -fL "%URL%" -o "%ZIP%"
   if errorlevel 1 exit /b 1
-  powershell -NoProfile -Command "Expand-Archive -LiteralPath '%ZIP%' -DestinationPath 'runtime' -Force"
+  powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory((Resolve-Path '%ZIP%').Path, (Resolve-Path 'runtime').Path)"
   if errorlevel 1 exit /b 1
   del "%ZIP%"
+)
+if not exist "runtime\\python.exe" (
+  echo CPython extraction failed: runtime\\python.exe was not created.
+  exit /b 1
 )
 
 copy /y "host.py" "runtime\pyhost.py" >nul
