@@ -21,11 +21,13 @@ inline constexpr unsigned char shaye_alias_opcode = 0x01;
 inline constexpr unsigned char shaye_definition_opcode = 0x02;
 inline constexpr unsigned char shaye_end_opcode = 0x00;
 inline constexpr unsigned char shaye_source_opcode = 0x03;
+inline constexpr unsigned char shaye_resource_opcode = 0x04;
 
 struct ShayeRecords {
     std::string source;
     std::vector<std::pair<std::string, std::string>> aliases;
     std::vector<std::pair<std::string, std::vector<std::string>>> definitions;
+    std::vector<std::pair<std::string, std::string>> resources;
 };
 
 inline std::filesystem::path user_entry_directory() {
@@ -108,6 +110,14 @@ inline void shaye_write_string(std::ostream& out, const std::string& value) {
     const auto encoded = shaye_transform(value);
     out.write(encoded.data(), static_cast<std::streamsize>(encoded.size()));
 }
+inline bool shaye_safe_resource_name(const std::string& name) {
+    if (name.empty() || name.size() > 65535) return false;
+    const std::filesystem::path path(name);
+    if (path.is_absolute() || path.has_root_name() || path.has_root_directory()) return false;
+    for (const auto& part : path)
+        if (part == ".." || part == "." || part.empty()) return false;
+    return true;
+}
 inline bool read_shaye_records(const std::filesystem::path& path, ShayeRecords& records) {
     std::ifstream input(path, std::ios::binary);
     if (!input) return false;
@@ -147,6 +157,13 @@ inline bool read_shaye_records(const std::filesystem::path& path, ShayeRecords& 
             std::uint32_t size = 0;
             if (!shaye_read_u32(bytes, at, size) || at + size > bytes.size()) return false;
             parsed.source = shaye_transform(bytes.substr(at, size));
+            at += size;
+        } else if (opcode == shaye_resource_opcode) {
+            std::string name;
+            std::uint32_t size = 0;
+            if (!shaye_read_string(bytes, at, name) || !shaye_safe_resource_name(name) ||
+                !shaye_read_u32(bytes, at, size) || at + size > bytes.size()) return false;
+            parsed.resources.emplace_back(std::move(name), bytes.substr(at, size));
             at += size;
         } else return false;
     }
@@ -277,7 +294,7 @@ inline std::string shaye_executable_source(const std::string& source) {
     if (in_definition) flush_definition(false);
     return executable.str();
 }
-inline bool write_shaye(const std::filesystem::path& path, const std::string& source) {
+inline bool write_shaye(const std::filesystem::path& path, const std::string& source, const std::vector<std::pair<std::string, std::string>>& resources = {}) {
     std::istringstream lines(source);
     std::string line;
     ShayeRecords records;
@@ -354,6 +371,13 @@ inline bool write_shaye(const std::filesystem::path& path, const std::string& so
     shaye_write_u32(output, static_cast<std::uint32_t>(records.source.size()));
     const auto encoded_source = shaye_transform(records.source);
     output.write(encoded_source.data(), static_cast<std::streamsize>(encoded_source.size()));
+    for (const auto& resource : resources) {
+        if (!shaye_safe_resource_name(resource.first) || resource.second.size() > UINT32_MAX) return false;
+        output.put(static_cast<char>(shaye_resource_opcode));
+        shaye_write_string(output, resource.first);
+        shaye_write_u32(output, static_cast<std::uint32_t>(resource.second.size()));
+        output.write(resource.second.data(), static_cast<std::streamsize>(resource.second.size()));
+    }
     output.put(static_cast<char>(shaye_end_opcode));
     return static_cast<bool>(output);
 }
