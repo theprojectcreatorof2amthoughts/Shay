@@ -1,0 +1,8 @@
+#% PyInit entry package.
+#% Its runtime is embedded by build.bat.
+#% Activate it in a Shay program with:
+#%     $useentry pyinit
+#% Then use:
+#%     $initpy
+#%     print("Hello from Python")
+#%     $endpy
