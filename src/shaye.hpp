@@ -114,7 +114,7 @@ inline void shaye_write_string(std::ostream& out, const std::string& value) {
 }
 inline bool shaye_safe_resource_name(const std::string& name) {
     if (name.empty() || name.size() > 65535 ||
-        name.find('\\0') != std::string::npos || name.find('\\\\') != std::string::npos ||
+        name.find('\0') != std::string::npos || name.find('\\') != std::string::npos ||
         name.find(':') != std::string::npos) return false;
     for (unsigned char ch : name)
         if (ch < 0x20 || ch == 0x7f) return false;
