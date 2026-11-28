@@ -32,10 +32,10 @@ jobs:
       - name: Build and exercise the self-contained PyInit package
         shell: pwsh
         run: |
-          Copy-Item build-windows\\Release\\shentrypak.exe pytool\\shentrypak.exe -Force
-          cmd /c pytool\\build.bat
+          Copy-Item build-windows\Release\shentrypak.exe pytool\shentrypak.exe -Force
+          cmd /c pytool\build.bat
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $output = "Yamen" | & .\\build-windows\\Release\\shaii.exe .\\pytool\\test.shay
+          $output = "Yamen" | & .\build-windows\Release\shaii.exe .\pytool\test.shay
           if ($LASTEXITCODE -ne 0) { throw "shaii failed while running PyInit test" }
           $actual = ($output -join "`n").TrimEnd()
           $expected = @("Before Shay", "42", "Name: Hello Yamen", "Back in Shay", "43") -join "`n"
