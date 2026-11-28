@@ -7,7 +7,7 @@ namespace = {"__name__": "__main__"}
 class ProtocolWriter:
     def write(self, value):
         if value:
-            protocol_output.write("P" + str(value).encode("utf-8").hex() + "\\n")
+            protocol_output.write("P" + str(value).encode("utf-8").hex() + "\n")
             protocol_output.flush()
         return len(value)
 
@@ -17,7 +17,7 @@ class ProtocolWriter:
 protocol_stream = ProtocolWriter()
 
 def shay_input(prompt=""):
-    protocol_output.write("I" + str(prompt).encode("utf-8").hex() + "\\n")
+    protocol_output.write("I" + str(prompt).encode("utf-8").hex() + "\n")
     protocol_output.flush()
     response = sys.stdin.readline()
     if not response:
@@ -42,5 +42,5 @@ for request in sys.stdin:
         failed = True
         traceback.print_exc(file=protocol_stream)
 
-    sys.stdout.write("E\\n" if failed else "O\\n")
+    sys.stdout.write("E\n" if failed else "O\n")
     sys.stdout.flush()
