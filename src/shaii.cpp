@@ -260,12 +260,6 @@ auto set=ctx.sets.find(name);
     }
     break;
    }
-   case shay::StatementKind::PythonBlock:{
-    std::string pythonFailure;
-    if (!execute_python_block(s, ctx, pythonFailure))
-     diagnose(ctx, input, s.line, "Python: " + pythonFailure);
-    break;
-   }
    case shay::StatementKind::FileRead:{
     std::ifstream input(s.path,std::ios::binary);
     if(!input){ctx.error_category="io";ctx.error_message="cannot read file '"+s.path+"'";ctx.error_line=s.line;failure=ctx.error_category+": "+ctx.error_message;success=false;break;}
@@ -667,6 +661,12 @@ auto set=ctx.sets.find(name);
    case shay::StatementKind::ProcessRun:
     if(!ctx.check_only){const int exit_code=run_process(s.path,s.arguments);shay_runtime_write((std::to_string(exit_code)+"\n").c_str());}
     break;
+   case shay::StatementKind::PythonBlock:{
+    std::string pythonFailure;
+    if (!execute_python_block(s, ctx, pythonFailure))
+     diagnose(ctx, input, s.line, "Python: " + pythonFailure);
+    break;
+   }
    case shay::StatementKind::FileRead:{
     std::ifstream fileInput(s.path,std::ios::binary);
     if(!fileInput){diagnose(ctx,input,s.line,"io: cannot read file '"+s.path+"'");break;}
