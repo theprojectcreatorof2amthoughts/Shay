@@ -9,8 +9,8 @@ Build:
   2. Run build.bat. It downloads CPython 3.13.7 x64, embeds the runtime files,
      creates pyinit.shpak with shentrypak --resource-dir, and installs it.
 
-main.shay is the package manifest. The actual executable runtime is bundled
-from runtime/ and host.py; the package is not just a text library.
+main.shay defines the pyinitinfo package function. build.bat embeds the actual
+CPython runtime files from runtime/ and the host.py executor into the .shpak.
 
 Use in a Shay program:
   $useentry pyinit
