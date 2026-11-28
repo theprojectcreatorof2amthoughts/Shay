@@ -36,8 +36,8 @@ if defined HOME (
   for /f "delims=" %%P in ('cygpath -w "%HOME%" 2^>nul') do set "ENTRY_HOME=%%P"
 )
 if not defined ENTRY_HOME set "ENTRY_HOME=%USERPROFILE%"
-if not exist "%ENTRY_HOME%\\.shay\\entries" mkdir "%ENTRY_HOME%\\.shay\\entries"
-copy /y "pyinit.shpak" "%ENTRY_HOME%\\.shay\\entries\\pyinit.shpak" >nul
+if not exist "%ENTRY_HOME%\.shay\entries" mkdir "%ENTRY_HOME%\.shay\entries"
+copy /y "pyinit.shpak" "%ENTRY_HOME%\.shay\entries\pyinit.shpak" >nul
 if errorlevel 1 exit /b 1
 
 echo.
