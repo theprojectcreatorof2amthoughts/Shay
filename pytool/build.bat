@@ -13,7 +13,7 @@ if not exist "runtime\python.exe" (
   echo Downloading CPython %PYVER% Windows x64 embeddable runtime...
   curl -fL "%URL%" -o "%ZIP%"
   if errorlevel 1 exit /b 1
-  powershell -NoProfile -Command "Add-Type -AssemblyName System.IO.Compression.ZipFile; [System.IO.Compression.ZipFile]::ExtractToDirectory((Resolve-Path '%ZIP%').Path, (Resolve-Path 'runtime').Path)"
+  "%SystemRoot%\System32\tar.exe" -xf "%ZIP%" -C "runtime"
   if errorlevel 1 exit /b 1
   del "%ZIP%"
 )
