@@ -118,3 +118,23 @@ if "$GSHAI" -et "$TMP/old.shpak" "$TMP/source/nested/userinstalled-source.shay" 
     exit 1
 fi
 printf '%s\n' 'PASS: entry package compilation is separated from gshai'
+
+# Resource-bearing SHPAK v2 packages round-trip through the entry loader.
+mkdir -p "$TMP/pyinit-resources/sub"
+printf '%s' 'embedded-runtime-data' > "$TMP/pyinit-resources/sub/data.bin"
+cat > "$TMP/pyinit-source.shay" <<'EOF'
+#% PyInit package metadata; runtime files are embedded separately.
+EOF
+"$SHENTRYPACK" "$TMP/pyinit-source.shay" -o "$TMP/home/.shay/entries/pyinit.shpak" --resource-dir "$TMP/pyinit-resources"
+cat > "$TMP/pyinit-check.shay" <<'EOF'
+$useentry pyinit
+$initpy
+shared_value = 40 + 2
+print(shared_value)
+$endpy
+$initpy
+print(shared_value + 1)
+$endpy
+EOF
+HOME="$TMP/home" "$SHAII" --check "$TMP/pyinit-check.shay"
+printf '%s\\n' 'PASS: shentrypak embeds resource directories and shaii parses multiple persistent Python blocks in --check mode'
