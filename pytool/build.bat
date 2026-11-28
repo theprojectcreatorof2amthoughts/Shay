@@ -15,8 +15,8 @@ if not exist "runtime\python.exe" (
   if errorlevel 1 exit /b 1
   del "%ZIP%"
 )
-if not exist "runtime\\python.exe" (
-  echo CPython extraction failed: runtime\\python.exe was not created.
+if not exist "runtime\python.exe" (
+  echo CPython extraction failed: runtime\python.exe was not created.
   exit /b 1
 )
 
