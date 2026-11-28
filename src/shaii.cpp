@@ -5,6 +5,7 @@
 #include "parser.hpp"
 #include "shui_source.hpp"
 #include "shaye.hpp"
+#include "pyinit_runtime.hpp"
 #include "runtime.h"
 #include <algorithm>
 #include <cerrno>
@@ -21,6 +22,7 @@
 #include <iomanip>
 #include <iostream>
 #include <iterator>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -39,6 +41,8 @@ struct Context{
  std::unordered_map<std::string,shay::Statement> functions;
  std::unordered_map<std::string,std::vector<std::string>> classes;
  std::unordered_set<std::string> loaded,active;
+ fs::path py_runtime_dir;
+ std::unique_ptr<shay::PythonSession> python_session;
  std::vector<Diagnostic> diagnostics;
  bool check_only=false;
  std::unordered_map<std::string,std::string> failures;
@@ -51,6 +55,13 @@ struct Context{
  std::string log_file_extension=".log";
  bool log_file_name_set=false;
  bool log_file_extension_set=false;
+ ~Context() {
+  python_session.reset();
+  if (!py_runtime_dir.empty()) {
+   std::error_code ec;
+   fs::remove_all(py_runtime_dir, ec);
+  }
+ }
 };
 using NumberScope=std::unordered_map<std::string,double>;
 int run_process(const std::string&program,const std::vector<std::string>&arguments){
@@ -74,6 +85,7 @@ int run_process(const std::string&program,const std::vector<std::string>&argumen
 #endif
 }
 struct ReturnFlow{bool returned=false;double value=0;};
+bool execute_python_block(const shay::Statement& statement, Context& ctx, std::string& failure);
 void diagnose(Context&ctx,const fs::path&file,std::size_t line,const std::string&message){ctx.diagnostics.push_back({file,line,message});}
 bool evaluate(const std::string&source,const NumberScope&values,double&result,std::string&error){
  shay::NumericExpression expression(source,values);return expression.evaluate(result,error);
@@ -248,6 +260,14 @@ auto set=ctx.sets.find(name);
     if(!ctx.check_only){const int exit_code=run_process(s.path,s.arguments);shay_runtime_write((std::to_string(exit_code)+"\n").c_str());}
     break;
    }
+   case shay::StatementKind::PythonBlock:{
+    std::string pythonFailure;
+    if (!execute_python_block(s, ctx, pythonFailure)) {
+     failure = pythonFailure;
+     success = false;
+    }
+    break;
+   }
    case shay::StatementKind::FileRead:{
     std::ifstream input(s.path,std::ios::binary);
     if(!input){ctx.error_category="io";ctx.error_message="cannot read file '"+s.path+"'";ctx.error_line=s.line;failure=ctx.error_category+": "+ctx.error_message;success=false;break;}
@@ -323,6 +343,127 @@ auto set=ctx.sets.find(name);
  }
  return success&&!ctx.exit_requested;
 }
+std::string pyinit_hex_encode(const std::string& value) {
+ static constexpr char digits[] = "0123456789abcdef";
+ std::string encoded;
+ encoded.reserve(value.size() * 2);
+ for (unsigned char byte : value) {
+  encoded.push_back(digits[byte >> 4]);
+  encoded.push_back(digits[byte & 0x0f]);
+ }
+ return encoded;
+}
+bool pyinit_hex_decode(const std::string& value, std::string& decoded) {
+ if (value.size() % 2) return false;
+ auto digit = [](char ch) -> int {
+  if (ch >= '0' && ch <= '9') return ch - '0';
+  if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
+  if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
+  return -1;
+ };
+ decoded.clear();
+ decoded.reserve(value.size() / 2);
+ for (std::size_t i = 0; i < value.size(); i += 2) {
+  const int high = digit(value[i]), low = digit(value[i + 1]);
+  if (high < 0 || low < 0) return false;
+  decoded.push_back(static_cast<char>((high << 4) | low));
+ }
+ return true;
+}
+bool execute_python_block(const shay::Statement& statement, Context& ctx,
+                          std::string& failure) {
+ if (ctx.check_only) return true;
+ if (ctx.py_runtime_dir.empty()) {
+  failure = "Python runtime is not available; install the pyinit.shpak entry package";
+  return false;
+ }
+ std::string code;
+ if (!pyinit_hex_decode(statement.python_code, code)) {
+  failure = "invalid encoded Python block";
+  return false;
+ }
+ if (!ctx.python_session) ctx.python_session = std::make_unique<shay::PythonSession>();
+ std::string error;
+ if (!ctx.python_session->start(ctx.py_runtime_dir, error)) {
+  failure = error;
+  return false;
+ }
+ if (!ctx.python_session->execute(code, error,
+  [](const std::string& prompt) {
+   if (!prompt.empty()) shay_runtime_write(prompt.c_str());
+   std::string entered;
+   std::getline(std::cin, entered);
+   return entered;
+  },
+  [](const std::string& output) {
+   if (!output.empty()) shay_runtime_write(output.c_str());
+  })) {
+  failure = error.empty() ? "Python block failed" : error;
+  return false;
+ }
+ return true;
+}
+bool prepare_python_blocks(const std::string& source, std::string& prepared,
+                           const fs::path& file, Context& ctx) {
+ std::istringstream input(source);
+ std::ostringstream output;
+ std::string line;
+ std::size_t line_number = 0;
+ bool pyinit_enabled = false;
+ bool valid = true;
+ while (std::getline(input, line)) {
+  ++line_number;
+  std::string current = line;
+  const auto first = current.find_first_not_of(" \t\r");
+  if (first == std::string::npos) current.clear();
+  else {
+   const auto last = current.find_last_not_of(" \t\r");
+   current = current.substr(first, last - first + 1);
+  }
+  if (current == "$useentry pyinit") {
+   pyinit_enabled = true;
+   output << line << '\n';
+   continue;
+  }
+  if (current != "$initpy") {
+   output << line << '\n';
+   continue;
+  }
+  if (!pyinit_enabled) {
+   diagnose(ctx, file, line_number, "'$initpy' requires '$useentry pyinit' before the block");
+   valid = false;
+   output << line << '\n';
+   continue;
+  }
+  std::string code;
+  std::vector<std::string> consumed;
+  bool closed = false;
+  while (std::getline(input, line)) {
+   ++line_number;
+   consumed.push_back(line);
+   std::string ending = line;
+   const auto begin = ending.find_first_not_of(" \t\r");
+   if (begin == std::string::npos) ending.clear();
+   else {
+    const auto end = ending.find_last_not_of(" \t\r");
+    ending = ending.substr(begin, end - begin + 1);
+   }
+   if (ending == "$endpy") { closed = true; break; }
+   code += line;
+   code.push_back('\n');
+  }
+  if (!closed) {
+   diagnose(ctx, file, line_number, "expected '$endpy' to close the Python block");
+   valid = false;
+   output << line << '\n';
+   break;
+  }
+  output << "pyblock/> \"" << pyinit_hex_encode(code) << "\"\n";
+  for (std::size_t i = 0; i < consumed.size(); ++i) output << '\n';
+ }
+ prepared = output.str();
+ return valid;
+}
 void execute_file(const fs::path&input,Context&ctx){
  std::error_code ec;const fs::path canonical=fs::weakly_canonical(input,ec);const std::string key=(ec?input:canonical).string();
  if(ctx.active.count(key)){diagnose(ctx,input,1,"circular import detected");return;}
@@ -333,13 +474,23 @@ void execute_file(const fs::path&input,Context&ctx){
  if(extension!=".shay"&&extension!=".shaz"&&extension!=".shaii"&&extension!=".shui"){diagnose(ctx,input,1,"unsupported file extension (expected .shay, .shaz, .shaii, .shui, or .shpak)");return;}
  std::string raw_source;
  if(file_extension==".shaye"||file_extension==".shpak"){
-  if(!shay::read_shaye(input,raw_source)){diagnose(ctx,input,1,"invalid binary entry package (bad magic, version, or bytecode)");return;}
+  shay::ShayeRecords package_records;
+  if(!shay::read_shaye_records(input,package_records)){diagnose(ctx,input,1,"invalid binary entry package (bad magic, version, or bytecode)");return;}
+  raw_source=std::move(package_records.source);
+  if(file_extension==".shpak"&&!package_records.resources.empty()){
+   fs::path extracted;
+   if(!shay::extract_shaye_resources(input,package_records.resources,extracted)){
+    diagnose(ctx,input,1,"cannot safely extract embedded package resources");return;
+   }
+   if(input.stem()=="pyinit")ctx.py_runtime_dir=std::move(extracted);
+  }
  }else{
   std::ifstream stream(input,std::ios::binary);if(!stream){diagnose(ctx,input,1,"cannot open source file");return;}
   raw_source.assign(std::istreambuf_iterator<char>(stream),{});
  }
  std::string source=raw_source;
  shay::discover_shaye_entries(input);
+ if (!prepare_python_blocks(raw_source, source, input, ctx)) return;
  if(extension==".shui"){
   std::vector<shay::ui::language::SourceDiagnostic> ui_diagnostics;
   if(!shay::ui::language::prepare_shui_source(input,raw_source,source,ui_diagnostics)){
@@ -524,6 +675,12 @@ auto set=ctx.sets.find(name);
    case shay::StatementKind::ProcessRun:
     if(!ctx.check_only){const int exit_code=run_process(s.path,s.arguments);shay_runtime_write((std::to_string(exit_code)+"\n").c_str());}
     break;
+   case shay::StatementKind::PythonBlock:{
+    std::string pythonFailure;
+    if (!execute_python_block(s, ctx, pythonFailure))
+     diagnose(ctx, input, s.line, "Python: " + pythonFailure);
+    break;
+   }
    case shay::StatementKind::FileRead:{
     std::ifstream fileInput(s.path,std::ios::binary);
     if(!fileInput){diagnose(ctx,input,s.line,"io: cannot read file '"+s.path+"'");break;}

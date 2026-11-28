@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <algorithm>
 #include <iterator>
 #include <sstream>
 #include <string>
@@ -283,10 +284,11 @@ void print_diagnostics(const std::vector<Diagnostic>& diagnostics) {
 
 void usage() {
     std::cout
-        << "Usage: shentrypak source.shay -o output.shpak\n"
-        << "       shentrypak -o output.shpak source.shay [more-source.shay ...]\n"
+        << "Usage: shentrypak source.shay -o output.shpak [--resource-dir folder]\n"
+        << "       shentrypak -o output.shpak source.shay [more-source.shay ...] [--resource-dir folder]\n"
         << "       shentrypak --version\n\n"
-        << "Packages Shay entry source, syntax metadata, and imported .shaii libraries into .shpak.\n";
+        << "Packages Shay entry source, syntax metadata, imported .shaii libraries, and optional binary resources into .shpak.\n"
+        << "  --resource-dir folder  Recursively embed every file under folder, preserving relative paths.\n";
 }
 }
 
@@ -302,9 +304,16 @@ int main(int argc, char** argv) {
 
     fs::path output;
     std::vector<fs::path> sources;
+    std::vector<fs::path> resource_directories;
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
-        if (arg == "-o") {
+        if (arg == "--resource-dir") {
+            if (++i >= argc) {
+                std::cerr << "shentrypak: --resource-dir requires a folder path\n";
+                return 2;
+            }
+            resource_directories.emplace_back(argv[i]);
+        } else if (arg == "-o") {
             if (++i >= argc || !output.empty()) {
                 std::cerr << "shentrypak: -o requires exactly one output path\n";
                 return 2;
@@ -363,6 +372,51 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    std::vector<std::pair<std::string, std::string>> resources;
+    std::unordered_set<std::string> resource_names;
+    for (const auto& directory : resource_directories) {
+        std::error_code resource_ec;
+        if (!fs::is_directory(directory, resource_ec) || resource_ec) {
+            std::cerr << "shentrypak: resource directory not found: '" << directory.string() << "'\n";
+            return 1;
+        }
+        std::vector<fs::path> files;
+        for (fs::recursive_directory_iterator it(directory, resource_ec), end;
+             !resource_ec && it != end; it.increment(resource_ec)) {
+            if (it->is_symlink(resource_ec)) {
+                std::cerr << "shentrypak: symbolic links are not allowed in resource directories: '"
+                          << it->path().string() << "'\n";
+                return 1;
+            }
+            if (it->is_regular_file(resource_ec)) files.push_back(it->path());
+            if (resource_ec) break;
+        }
+        if (resource_ec) {
+            std::cerr << "shentrypak: cannot scan resource directory '" << directory.string()
+                      << "': " << resource_ec.message() << '\n';
+            return 1;
+        }
+        std::sort(files.begin(), files.end());
+        for (const auto& file : files) {
+            const std::string name = fs::relative(file, directory, resource_ec).generic_string();
+            if (resource_ec || !shay::shaye_safe_resource_name(name) || !resource_names.insert(name).second) {
+                std::cerr << "shentrypak: invalid or duplicate embedded resource path '" << name << "'\n";
+                return 1;
+            }
+            std::ifstream resource_input(file, std::ios::binary);
+            if (!resource_input) {
+                std::cerr << "shentrypak: cannot read resource '" << file.string() << "'\n";
+                return 1;
+            }
+            std::string bytes((std::istreambuf_iterator<char>(resource_input)), {});
+            if (bytes.size() > UINT32_MAX) {
+                std::cerr << "shentrypak: resource exceeds the 4 GiB package limit: '" << name << "'\n";
+                return 1;
+            }
+            resources.emplace_back(name, std::move(bytes));
+        }
+    }
+
     std::error_code ec;
     if (!output.parent_path().empty()) fs::create_directories(output.parent_path(), ec);
     if (ec) {
@@ -370,11 +424,12 @@ int main(int argc, char** argv) {
                   << "': " << ec.message() << '\n';
         return 1;
     }
-    if (!shay::write_shaye(output, combined_source)) {
+    if (!shay::write_shaye(output, combined_source, resources)) {
         std::cerr << "shentrypak: cannot write package '" << output.string() << "'\n";
         return 1;
     }
     std::cout << "shentrypak: created " << output.string() << " from "
-              << sources.size() << " source file(s)\n";
+              << sources.size() << " source file(s) and " << resources.size()
+              << " embedded resource file(s)\n";
     return 0;
 }

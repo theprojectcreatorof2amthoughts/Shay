@@ -1,0 +1,7 @@
+#% PyInit entry package.
+#% The runtime binaries and host bridge are embedded from runtime/ by build.bat.
+#% Activate with $useentry pyinit, then use $initpy ... $endpy blocks.
+
+$entrysyndef pyinitinfo
+    instxt/>"PyInit: bundled CPython 3.13.7 x64"
+finish

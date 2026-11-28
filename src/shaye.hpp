@@ -3,8 +3,10 @@
 
 #include "useentry.hpp"
 #include <algorithm>
+#include <chrono>
 #include <cstdint>
 #include <cstdlib>
+#include <functional>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -17,15 +19,18 @@
 namespace shay {
 inline constexpr unsigned char shaye_magic[] = {'S','H','A','Y','E',0x00,0x01}; // Legacy .shaye package magic.
 inline constexpr unsigned char shpak_magic[] = {'S','H','P','A','K',0x00,0x01};
+inline constexpr unsigned char shpak_magic_v2[] = {'S','H','P','A','K',0x00,0x02};
 inline constexpr unsigned char shaye_alias_opcode = 0x01;
 inline constexpr unsigned char shaye_definition_opcode = 0x02;
 inline constexpr unsigned char shaye_end_opcode = 0x00;
 inline constexpr unsigned char shaye_source_opcode = 0x03;
+inline constexpr unsigned char shaye_resource_opcode = 0x04;
 
 struct ShayeRecords {
     std::string source;
     std::vector<std::pair<std::string, std::string>> aliases;
     std::vector<std::pair<std::string, std::vector<std::string>>> definitions;
+    std::vector<std::pair<std::string, std::string>> resources;
 };
 
 inline std::filesystem::path user_entry_directory() {
@@ -108,18 +113,72 @@ inline void shaye_write_string(std::ostream& out, const std::string& value) {
     const auto encoded = shaye_transform(value);
     out.write(encoded.data(), static_cast<std::streamsize>(encoded.size()));
 }
+inline bool shaye_safe_resource_name(const std::string& name) {
+    if (name.empty() || name.size() > 65535 ||
+        name.find('\0') != std::string::npos || name.find('\\') != std::string::npos ||
+        name.find(':') != std::string::npos) return false;
+    for (unsigned char ch : name)
+        if (ch < 0x20 || ch == 0x7f) return false;
+    const std::filesystem::path path(name);
+    if (path.is_absolute() || path.has_root_name() || path.has_root_directory()) return false;
+    for (const auto& part : path)
+        if (part == ".." || part == "." || part.empty()) return false;
+    return true;
+}
+inline bool extract_shaye_resources(const std::filesystem::path& package,
+                                    const std::vector<std::pair<std::string, std::string>>& resources,
+                                    std::filesystem::path& extracted_directory) {
+    if (resources.empty()) {
+        extracted_directory.clear();
+        return true;
+    }
+    std::error_code ec;
+    const auto absolute = std::filesystem::weakly_canonical(package, ec);
+    const auto package_size = static_cast<unsigned long long>(std::filesystem::file_size(package, ec));
+    const auto package_timestamp = static_cast<long long>(
+        std::filesystem::last_write_time(package, ec).time_since_epoch().count());
+    const auto identity = (ec ? package : absolute).string() + ":" +
+        std::to_string(package_size) + ":" + std::to_string(package_timestamp);
+    const auto unique_identity = identity + ":" +
+        std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    const auto key = std::to_string(std::hash<std::string>{}(unique_identity));
+    const auto root = std::filesystem::temp_directory_path(ec) / "shay" / "shpak" / key;
+    if (ec) return false;
+    std::filesystem::create_directories(root, ec);
+    if (ec) return false;
+    for (const auto& resource : resources) {
+        if (!shaye_safe_resource_name(resource.first)) return false;
+        const auto destination = (root / std::filesystem::path(resource.first)).lexically_normal();
+        const auto relative = destination.lexically_relative(root);
+        if (relative.empty() || relative.is_absolute()) return false;
+        for (const auto& part : relative)
+            if (part == "..") return false;
+        std::filesystem::create_directories(destination.parent_path(), ec);
+        if (ec) return false;
+        std::ofstream output(destination, std::ios::binary | std::ios::trunc);
+        if (!output) return false;
+        output.write(resource.second.data(), static_cast<std::streamsize>(resource.second.size()));
+        if (!output) return false;
+    }
+    extracted_directory = root;
+    return true;
+}
 inline bool read_shaye_records(const std::filesystem::path& path, ShayeRecords& records) {
     std::ifstream input(path, std::ios::binary);
     if (!input) return false;
     const std::string bytes((std::istreambuf_iterator<char>(input)), {});
-    const bool is_shpak = bytes.size() >= sizeof(shpak_magic) &&
+    const bool is_shpak_v1 = bytes.size() >= sizeof(shpak_magic) &&
         std::equal(std::begin(shpak_magic), std::end(shpak_magic), bytes.begin(),
                    [](unsigned char a, char b) { return a == static_cast<unsigned char>(b); });
+    const bool is_shpak_v2 = bytes.size() >= sizeof(shpak_magic_v2) &&
+        std::equal(std::begin(shpak_magic_v2), std::end(shpak_magic_v2), bytes.begin(),
+                   [](unsigned char a, char b) { return a == static_cast<unsigned char>(b); });
+    const bool is_shpak = is_shpak_v1 || is_shpak_v2;
     const bool is_legacy_shaye = bytes.size() >= sizeof(shaye_magic) &&
         std::equal(std::begin(shaye_magic), std::end(shaye_magic), bytes.begin(),
                    [](unsigned char a, char b) { return a == static_cast<unsigned char>(b); });
     if (!is_shpak && !is_legacy_shaye) return false;
-    std::size_t at = is_shpak ? sizeof(shpak_magic) : sizeof(shaye_magic);
+    std::size_t at = is_shpak ? (is_shpak_v2 ? sizeof(shpak_magic_v2) : sizeof(shpak_magic)) : sizeof(shaye_magic);
     ShayeRecords parsed;
     bool ended = false;
     while (at < bytes.size()) {
@@ -147,6 +206,15 @@ inline bool read_shaye_records(const std::filesystem::path& path, ShayeRecords& 
             std::uint32_t size = 0;
             if (!shaye_read_u32(bytes, at, size) || at + size > bytes.size()) return false;
             parsed.source = shaye_transform(bytes.substr(at, size));
+            at += size;
+        } else if (opcode == shaye_resource_opcode) {
+            std::string name;
+            std::uint32_t size = 0;
+            if (!shaye_read_string(bytes, at, name) || !shaye_safe_resource_name(name) ||
+                std::any_of(parsed.resources.begin(), parsed.resources.end(),
+                    [&](const auto& resource) { return resource.first == name; }) ||
+                !shaye_read_u32(bytes, at, size) || at + size > bytes.size()) return false;
+            parsed.resources.emplace_back(std::move(name), bytes.substr(at, size));
             at += size;
         } else return false;
     }
@@ -277,7 +345,7 @@ inline std::string shaye_executable_source(const std::string& source) {
     if (in_definition) flush_definition(false);
     return executable.str();
 }
-inline bool write_shaye(const std::filesystem::path& path, const std::string& source) {
+inline bool write_shaye(const std::filesystem::path& path, const std::string& source, const std::vector<std::pair<std::string, std::string>>& resources = {}) {
     std::istringstream lines(source);
     std::string line;
     ShayeRecords records;
@@ -338,7 +406,9 @@ inline bool write_shaye(const std::filesystem::path& path, const std::string& so
     if (records.source.size() > UINT32_MAX) return false;
     std::ofstream output(path, std::ios::binary | std::ios::trunc);
     if (!output) return false;
-    output.write(reinterpret_cast<const char*>(shpak_magic), sizeof(shpak_magic));
+    const auto* package_magic = resources.empty() ? shpak_magic : shpak_magic_v2;
+    const auto package_magic_size = resources.empty() ? sizeof(shpak_magic) : sizeof(shpak_magic_v2);
+    output.write(reinterpret_cast<const char*>(package_magic), static_cast<std::streamsize>(package_magic_size));
     for (const auto& alias : records.aliases) {
         output.put(static_cast<char>(shaye_alias_opcode));
         shaye_write_string(output, alias.first);
@@ -354,6 +424,13 @@ inline bool write_shaye(const std::filesystem::path& path, const std::string& so
     shaye_write_u32(output, static_cast<std::uint32_t>(records.source.size()));
     const auto encoded_source = shaye_transform(records.source);
     output.write(encoded_source.data(), static_cast<std::streamsize>(encoded_source.size()));
+    for (const auto& resource : resources) {
+        if (!shaye_safe_resource_name(resource.first) || resource.second.size() > UINT32_MAX) return false;
+        output.put(static_cast<char>(shaye_resource_opcode));
+        shaye_write_string(output, resource.first);
+        shaye_write_u32(output, static_cast<std::uint32_t>(resource.second.size()));
+        output.write(resource.second.data(), static_cast<std::streamsize>(resource.second.size()));
+    }
     output.put(static_cast<char>(shaye_end_opcode));
     return static_cast<bool>(output);
 }

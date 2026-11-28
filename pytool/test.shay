@@ -1,0 +1,16 @@
+$useentry pyinit
+pyinitinfo
+instxt/>"Before Shay"
+
+$initpy
+shared = 40 + 2
+print(shared)
+name = input("Name: ")
+print("Hello " + name)
+$endpy
+
+instxt/>"Back in Shay"
+
+$initpy
+print(shared + 1)
+$endpy

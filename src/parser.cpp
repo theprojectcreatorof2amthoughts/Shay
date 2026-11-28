@@ -57,6 +57,11 @@ Program Parser::parse(){
    statement.kind=StatementKind::MarkFailure;
    valid=consume(TokenKind::Identifier,"",program.errors,"expected a function name after '!#'");
    if(valid)statement.name=previous().text;
+  }else if(match(TokenKind::Identifier,"pyblock")){
+   statement.kind=StatementKind::PythonBlock;
+   valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after internal Python block marker");
+   if(valid)valid=consume(TokenKind::String,"",program.errors,"expected encoded Python source");
+   if(valid)statement.python_code=previous().text;
   }else if(match(TokenKind::Identifier,"runproc")){
    statement.kind=StatementKind::ProcessRun;
    valid=consume(TokenKind::Symbol,"/>",program.errors,"expected '/>' after 'runproc'");

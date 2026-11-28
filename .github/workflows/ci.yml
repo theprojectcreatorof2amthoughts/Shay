@@ -29,6 +29,18 @@ jobs:
         run: cmake -S . -B build-windows -A x64
       - name: Build Windows compiler and interpreter targets
         run: cmake --build build-windows --config Release --parallel
+      - name: Build and exercise the self-contained PyInit package
+        shell: pwsh
+        run: |
+          Copy-Item build-windows\Release\shentrypak.exe pytool\shentrypak.exe -Force
+          cmd /c pytool\build.bat
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:HOME = $env:USERPROFILE
+          $output = "Yamen" | & .\build-windows\Release\shaii.exe .\pytool\test.shay
+          if ($LASTEXITCODE -ne 0) { throw "shaii failed while running PyInit test" }
+          $actual = ($output -join "`n").TrimEnd()
+          $expected = @("PyInit: bundled CPython 3.13.7 x64", "Before Shay", "42", "Name: Hello Yamen", "Back in Shay", "43") -join "`n"
+          if ($actual -ne $expected) { throw "Unexpected PyInit output: `n$actual" }
       - uses: ilammy/msvc-dev-cmd@v1
       - uses: actions/setup-dotnet@v4
         with:
