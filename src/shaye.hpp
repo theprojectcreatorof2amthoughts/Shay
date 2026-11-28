@@ -134,9 +134,11 @@ inline bool extract_shaye_resources(const std::filesystem::path& package,
     }
     std::error_code ec;
     const auto absolute = std::filesystem::weakly_canonical(package, ec);
+    const auto package_size = static_cast<unsigned long long>(std::filesystem::file_size(package, ec));
+    const auto package_timestamp = static_cast<long long>(
+        std::filesystem::last_write_time(package, ec).time_since_epoch().count());
     const auto identity = (ec ? package : absolute).string() + ":" +
-        std::to_string(std::filesystem::file_size(package, ec)) + ":" +
-        std::to_string(std::filesystem::last_write_time(package, ec).time_since_epoch().count());
+        std::to_string(package_size) + ":" + std::to_string(package_timestamp);
     const auto unique_identity = identity + ":" +
         std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
     const auto key = std::to_string(std::hash<std::string>{}(unique_identity));
