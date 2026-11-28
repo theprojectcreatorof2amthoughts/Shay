@@ -323,6 +323,77 @@ auto set=ctx.sets.find(name);
  }
  return success&&!ctx.exit_requested;
 }
+std::string pyinit_hex_encode(const std::string& value) {
+ static constexpr char digits[] = "0123456789abcdef";
+ std::string encoded;
+ encoded.reserve(value.size() * 2);
+ for (unsigned char byte : value) {
+  encoded.push_back(digits[byte >> 4]);
+  encoded.push_back(digits[byte & 0x0f]);
+ }
+ return encoded;
+}
+bool prepare_python_blocks(const std::string& source, std::string& prepared,
+                           const fs::path& file, Context& ctx) {
+ std::istringstream input(source);
+ std::ostringstream output;
+ std::string line;
+ std::size_t line_number = 0;
+ bool pyinit_enabled = false;
+ bool valid = true;
+ while (std::getline(input, line)) {
+  ++line_number;
+  std::string current = line;
+  const auto first = current.find_first_not_of(" \\t\\r");
+  if (first == std::string::npos) current.clear();
+  else {
+   const auto last = current.find_last_not_of(" \\t\\r");
+   current = current.substr(first, last - first + 1);
+  }
+  if (current == "$useentry pyinit") {
+   pyinit_enabled = true;
+   output << line << '\\n';
+   continue;
+  }
+  if (current != "$initpy") {
+   output << line << '\\n';
+   continue;
+  }
+  if (!pyinit_enabled) {
+   diagnose(ctx, file, line_number, "'$initpy' requires '$useentry pyinit' before the block");
+   valid = false;
+   output << line << '\\n';
+   continue;
+  }
+  std::string code;
+  std::vector<std::string> consumed;
+  bool closed = false;
+  while (std::getline(input, line)) {
+   ++line_number;
+   consumed.push_back(line);
+   std::string ending = line;
+   const auto begin = ending.find_first_not_of(" \\t\\r");
+   if (begin == std::string::npos) ending.clear();
+   else {
+    const auto end = ending.find_last_not_of(" \\t\\r");
+    ending = ending.substr(begin, end - begin + 1);
+   }
+   if (ending == "$endpy") { closed = true; break; }
+   code += line;
+   code.push_back('\\n');
+  }
+  if (!closed) {
+   diagnose(ctx, file, line_number, "expected '$endpy' to close the Python block");
+   valid = false;
+   output << line << '\\n';
+   break;
+  }
+  output << "pyblock/> \"" << pyinit_hex_encode(code) << "\"\\n";
+  for (std::size_t i = 0; i < consumed.size(); ++i) output << '\\n';
+ }
+ prepared = output.str();
+ return valid;
+}
 void execute_file(const fs::path&input,Context&ctx){
  std::error_code ec;const fs::path canonical=fs::weakly_canonical(input,ec);const std::string key=(ec?input:canonical).string();
  if(ctx.active.count(key)){diagnose(ctx,input,1,"circular import detected");return;}
@@ -340,6 +411,7 @@ void execute_file(const fs::path&input,Context&ctx){
  }
  std::string source=raw_source;
  shay::discover_shaye_entries(input);
+ if (!prepare_python_blocks(raw_source, source, input, ctx)) return;
  if(extension==".shui"){
   std::vector<shay::ui::language::SourceDiagnostic> ui_diagnostics;
   if(!shay::ui::language::prepare_shui_source(input,raw_source,source,ui_diagnostics)){
