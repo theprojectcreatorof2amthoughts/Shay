@@ -388,7 +388,7 @@ bool execute_python_block(const shay::Statement& statement, Context& ctx,
   return entered;
  })) {
   if (!output.empty()) shay_runtime_write(output.c_str());
-  failure = error.empty() ? "Python block failed" : error;
+  failure = "Python block raised an exception (see traceback above)";
   return false;
  }
  if (!output.empty()) shay_runtime_write(output.c_str());
