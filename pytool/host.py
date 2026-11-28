@@ -5,10 +5,18 @@ from contextlib import redirect_stdout, redirect_stderr
 
 namespace = {"__name__": "__main__"}
 
+def shay_input(prompt=""):
+    sys.stdout.write("I" + str(prompt).encode("utf-8").hex() + "\\n")
+    sys.stdout.flush()
+    response = sys.stdin.readline()
+    if not response:
+        raise EOFError("input stream closed")
+    return bytes.fromhex(response.strip()).decode("utf-8")
+
+namespace["input"] = shay_input
+
 for request in sys.stdin:
     request = request.strip()
-    if not request:
-        continue
     output = io.StringIO()
     failed = False
     try:
