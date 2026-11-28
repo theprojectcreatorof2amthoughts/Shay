@@ -5,7 +5,7 @@ PyInit embeds a Windows x64 CPython runtime inside pyinit.shpak.
 It provides persistent Python globals across multiple $initpy blocks.
 
 Build:
-  1. Put the updated shentrypak.exe beside build.bat (or build it at ..\\build\\shentrypak.exe).
+  1. Put the updated shentrypak.exe beside build.bat (or build it at ..\build\shentrypak.exe).
   2. Run build.bat. It downloads CPython 3.13.7 x64, embeds the runtime files,
      creates pyinit.shpak with shentrypak --resource-dir, and installs it.
 
