@@ -309,7 +309,7 @@ int main(int argc, char** argv) {
         const std::string arg = argv[i];
         if (arg == "--resource-dir") {
             if (++i >= argc) {
-                std::cerr << "shentrypak: --resource-dir requires a folder path\\n";
+                std::cerr << "shentrypak: --resource-dir requires a folder path\n";
                 return 2;
             }
             resource_directories.emplace_back(argv[i]);
@@ -377,7 +377,7 @@ int main(int argc, char** argv) {
     for (const auto& directory : resource_directories) {
         std::error_code resource_ec;
         if (!fs::is_directory(directory, resource_ec) || resource_ec) {
-            std::cerr << "shentrypak: resource directory not found: '" << directory.string() << "'\\n";
+            std::cerr << "shentrypak: resource directory not found: '" << directory.string() << "'\n";
             return 1;
         }
         std::vector<fs::path> files;
@@ -385,7 +385,7 @@ int main(int argc, char** argv) {
              !resource_ec && it != end; it.increment(resource_ec)) {
             if (it->is_symlink(resource_ec)) {
                 std::cerr << "shentrypak: symbolic links are not allowed in resource directories: '"
-                          << it->path().string() << "'\\n";
+                          << it->path().string() << "'\n";
                 return 1;
             }
             if (it->is_regular_file(resource_ec)) files.push_back(it->path());
@@ -393,24 +393,24 @@ int main(int argc, char** argv) {
         }
         if (resource_ec) {
             std::cerr << "shentrypak: cannot scan resource directory '" << directory.string()
-                      << "': " << resource_ec.message() << '\\n';
+                      << "': " << resource_ec.message() << '\n';
             return 1;
         }
         std::sort(files.begin(), files.end());
         for (const auto& file : files) {
             const std::string name = fs::relative(file, directory, resource_ec).generic_string();
             if (resource_ec || !shay::shaye_safe_resource_name(name) || !resource_names.insert(name).second) {
-                std::cerr << "shentrypak: invalid or duplicate embedded resource path '" << name << "'\\n";
+                std::cerr << "shentrypak: invalid or duplicate embedded resource path '" << name << "'\n";
                 return 1;
             }
             std::ifstream resource_input(file, std::ios::binary);
             if (!resource_input) {
-                std::cerr << "shentrypak: cannot read resource '" << file.string() << "'\\n";
+                std::cerr << "shentrypak: cannot read resource '" << file.string() << "'\n";
                 return 1;
             }
             std::string bytes((std::istreambuf_iterator<char>(resource_input)), {});
             if (bytes.size() > UINT32_MAX) {
-                std::cerr << "shentrypak: resource exceeds the 4 GiB package limit: '" << name << "'\\n";
+                std::cerr << "shentrypak: resource exceeds the 4 GiB package limit: '" << name << "'\n";
                 return 1;
             }
             resources.emplace_back(name, std::move(bytes));
@@ -429,6 +429,7 @@ int main(int argc, char** argv) {
         return 1;
     }
     std::cout << "shentrypak: created " << output.string() << " from "
-              << sources.size() << " source file(s)\n";
+              << sources.size() << " source file(s) and " << resources.size()
+              << " embedded resource file(s)\n";
     return 0;
 }
