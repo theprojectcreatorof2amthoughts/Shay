@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstdlib>
+#include <functional>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -117,6 +118,40 @@ inline bool shaye_safe_resource_name(const std::string& name) {
     if (path.is_absolute() || path.has_root_name() || path.has_root_directory()) return false;
     for (const auto& part : path)
         if (part == ".." || part == "." || part.empty()) return false;
+    return true;
+}
+inline bool extract_shaye_resources(const std::filesystem::path& package,
+                                    const std::vector<std::pair<std::string, std::string>>& resources,
+                                    std::filesystem::path& extracted_directory) {
+    if (resources.empty()) {
+        extracted_directory.clear();
+        return true;
+    }
+    std::error_code ec;
+    const auto absolute = std::filesystem::weakly_canonical(package, ec);
+    const auto identity = (ec ? package : absolute).string() + ":" +
+        std::to_string(std::filesystem::file_size(package, ec)) + ":" +
+        std::to_string(std::filesystem::last_write_time(package, ec).time_since_epoch().count());
+    const auto key = std::to_string(std::hash<std::string>{}(identity));
+    const auto root = std::filesystem::temp_directory_path(ec) / "shay" / "shpak" / key;
+    if (ec) return false;
+    std::filesystem::create_directories(root, ec);
+    if (ec) return false;
+    for (const auto& resource : resources) {
+        if (!shaye_safe_resource_name(resource.first)) return false;
+        const auto destination = (root / std::filesystem::path(resource.first)).lexically_normal();
+        const auto relative = destination.lexically_relative(root);
+        if (relative.empty() || relative.is_absolute()) return false;
+        for (const auto& part : relative)
+            if (part == "..") return false;
+        std::filesystem::create_directories(destination.parent_path(), ec);
+        if (ec) return false;
+        std::ofstream output(destination, std::ios::binary | std::ios::trunc);
+        if (!output) return false;
+        output.write(resource.second.data(), static_cast<std::streamsize>(resource.second.size()));
+        if (!output) return false;
+    }
+    extracted_directory = root;
     return true;
 }
 inline bool read_shaye_records(const std::filesystem::path& path, ShayeRecords& records) {
