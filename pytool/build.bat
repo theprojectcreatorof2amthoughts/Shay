@@ -22,7 +22,11 @@ if not exist "runtime\python.exe" (
 
 copy /y "host.py" "runtime\pyhost.py" >nul
 if errorlevel 1 exit /b 1
+if not exist "runtime\python313.dll" exit /b 1
+if not exist "runtime\python313.zip" exit /b 1
+if not exist "runtime\python313._pth" exit /b 1
 
+if not exist "shentrypak.exe" if exist "..\build\shentrypak.exe" copy /y "..\build\shentrypak.exe" "shentrypak.exe" >nul
 if not exist "shentrypak.exe" (
   echo Copy the updated shentrypak.exe into this folder first.
   exit /b 1
