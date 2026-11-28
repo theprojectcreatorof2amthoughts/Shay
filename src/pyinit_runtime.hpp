@@ -95,7 +95,7 @@ public:
             dup2(output_pipe[1], STDOUT_FILENO);
             close(input_pipe[0]); close(input_pipe[1]);
             close(output_pipe[0]); close(output_pipe[1]);
-            chdir(runtime.c_str());
+            if (chdir(runtime.c_str()) != 0) _exit(126);
             execl(executable.c_str(), executable.c_str(), host.c_str(), static_cast<char*>(nullptr));
             _exit(127);
         }
