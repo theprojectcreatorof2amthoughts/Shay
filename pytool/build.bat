@@ -1,0 +1,36 @@
+@echo off
+setlocal
+cd /d "%~dp0"
+
+set "PYVER=3.13.7"
+set "ZIP=python-%PYVER%-embed-amd64.zip"
+set "URL=https://www.python.org/ftp/python/%PYVER%/%ZIP%"
+
+if not exist "runtime" mkdir "runtime"
+if not exist "runtime\python.exe" (
+  echo Downloading CPython %PYVER% Windows x64 embeddable runtime...
+  curl -fL "%URL%" -o "%ZIP%"
+  if errorlevel 1 exit /b 1
+  powershell -NoProfile -Command "Expand-Archive -LiteralPath '%ZIP%' -DestinationPath 'runtime' -Force"
+  if errorlevel 1 exit /b 1
+  del "%ZIP%"
+)
+
+copy /y "host.py" "runtime\pyhost.py" >nul
+if errorlevel 1 exit /b 1
+
+if not exist "shentrypak.exe" (
+  echo Copy the updated shentrypak.exe into this folder first.
+  exit /b 1
+)
+
+shentrypak.exe "main.shay" -o "pyinit.shpak" --resource-dir "runtime"
+if errorlevel 1 exit /b 1
+
+if not exist "%USERPROFILE%\.shay\entries" mkdir "%USERPROFILE%\.shay\entries"
+copy /y "pyinit.shpak" "%USERPROFILE%\.shay\entries\pyinit.shpak" >nul
+if errorlevel 1 exit /b 1
+
+echo.
+echo Built and installed pyinit.shpak.
+echo You can now run Shay programs that use $useentry pyinit.
