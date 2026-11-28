@@ -5,6 +5,7 @@
 #include "parser.hpp"
 #include "shui_source.hpp"
 #include "shaye.hpp"
+#include "pyinit_runtime.hpp"
 #include "runtime.h"
 #include <algorithm>
 #include <cerrno>
@@ -21,6 +22,7 @@
 #include <iomanip>
 #include <iostream>
 #include <iterator>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -39,6 +41,8 @@ struct Context{
  std::unordered_map<std::string,shay::Statement> functions;
  std::unordered_map<std::string,std::vector<std::string>> classes;
  std::unordered_set<std::string> loaded,active;
+ fs::path py_runtime_dir;
+ std::unique_ptr<shay::PythonSession> python_session;
  std::vector<Diagnostic> diagnostics;
  bool check_only=false;
  std::unordered_map<std::string,std::string> failures;
@@ -248,6 +252,20 @@ auto set=ctx.sets.find(name);
     if(!ctx.check_only){const int exit_code=run_process(s.path,s.arguments);shay_runtime_write((std::to_string(exit_code)+"\n").c_str());}
     break;
    }
+   case shay::StatementKind::PythonBlock:{
+    std::string pythonFailure;
+    if (!execute_python_block(s, ctx, pythonFailure)) {
+     failure = pythonFailure;
+     success = false;
+    }
+    break;
+   }
+   case shay::StatementKind::PythonBlock:{
+    std::string pythonFailure;
+    if (!execute_python_block(s, ctx, pythonFailure))
+     diagnose(ctx, input, s.line, "Python: " + pythonFailure);
+    break;
+   }
    case shay::StatementKind::FileRead:{
     std::ifstream input(s.path,std::ios::binary);
     if(!input){ctx.error_category="io";ctx.error_message="cannot read file '"+s.path+"'";ctx.error_line=s.line;failure=ctx.error_category+": "+ctx.error_message;success=false;break;}
@@ -333,6 +351,50 @@ std::string pyinit_hex_encode(const std::string& value) {
  }
  return encoded;
 }
+bool pyinit_hex_decode(const std::string& value, std::string& decoded) {
+ if (value.size() % 2) return false;
+ auto digit = [](char ch) -> int {
+  if (ch >= '0' && ch <= '9') return ch - '0';
+  if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
+  if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
+  return -1;
+ };
+ decoded.clear();
+ decoded.reserve(value.size() / 2);
+ for (std::size_t i = 0; i < value.size(); i += 2) {
+  const int high = digit(value[i]), low = digit(value[i + 1]);
+  if (high < 0 || low < 0) return false;
+  decoded.push_back(static_cast<char>((high << 4) | low));
+ }
+ return true;
+}
+bool execute_python_block(const shay::Statement& statement, Context& ctx,
+                          std::string& failure) {
+ if (ctx.check_only) return true;
+ if (ctx.py_runtime_dir.empty()) {
+  failure = "Python runtime is not available; install the pyinit.shpak entry package";
+  return false;
+ }
+ std::string code;
+ if (!pyinit_hex_decode(statement.python_code, code)) {
+  failure = "invalid encoded Python block";
+  return false;
+ }
+ if (!ctx.python_session) ctx.python_session = std::make_unique<shay::PythonSession>();
+ std::string error;
+ if (!ctx.python_session->start(ctx.py_runtime_dir, error)) {
+  failure = error;
+  return false;
+ }
+ std::string output;
+ if (!ctx.python_session->execute(code, output, error)) {
+  if (!output.empty()) shay_runtime_write(output.c_str());
+  failure = error.empty() ? "Python block failed" : error;
+  return false;
+ }
+ if (!output.empty()) shay_runtime_write(output.c_str());
+ return true;
+}
 bool prepare_python_blocks(const std::string& source, std::string& prepared,
                            const fs::path& file, Context& ctx) {
  std::istringstream input(source);
@@ -404,7 +466,16 @@ void execute_file(const fs::path&input,Context&ctx){
  if(extension!=".shay"&&extension!=".shaz"&&extension!=".shaii"&&extension!=".shui"){diagnose(ctx,input,1,"unsupported file extension (expected .shay, .shaz, .shaii, .shui, or .shpak)");return;}
  std::string raw_source;
  if(file_extension==".shaye"||file_extension==".shpak"){
-  if(!shay::read_shaye(input,raw_source)){diagnose(ctx,input,1,"invalid binary entry package (bad magic, version, or bytecode)");return;}
+  shay::ShayeRecords package_records;
+  if(!shay::read_shaye_records(input,package_records)){diagnose(ctx,input,1,"invalid binary entry package (bad magic, version, or bytecode)");return;}
+  raw_source=std::move(package_records.source);
+  if(file_extension==".shpak"&&!package_records.resources.empty()){
+   fs::path extracted;
+   if(!shay::extract_shaye_resources(input,package_records.resources,extracted)){
+    diagnose(ctx,input,1,"cannot safely extract embedded package resources");return;
+   }
+   if(input.stem()=="pyinit")ctx.py_runtime_dir=std::move(extracted);
+  }
  }else{
   std::ifstream stream(input,std::ios::binary);if(!stream){diagnose(ctx,input,1,"cannot open source file");return;}
   raw_source.assign(std::istreambuf_iterator<char>(stream),{});
