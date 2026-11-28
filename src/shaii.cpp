@@ -381,7 +381,12 @@ bool execute_python_block(const shay::Statement& statement, Context& ctx,
   return false;
  }
  std::string output;
- if (!ctx.python_session->execute(code, output, error)) {
+ if (!ctx.python_session->execute(code, output, error, [](const std::string& prompt) {
+  if (!prompt.empty()) shay_runtime_write(prompt.c_str());
+  std::string entered;
+  std::getline(std::cin, entered);
+  return entered;
+ })) {
   if (!output.empty()) shay_runtime_write(output.c_str());
   failure = error.empty() ? "Python block failed" : error;
   return false;
