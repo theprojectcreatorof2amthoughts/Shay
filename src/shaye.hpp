@@ -3,6 +3,7 @@
 
 #include "useentry.hpp"
 #include <algorithm>
+#include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
@@ -136,10 +137,10 @@ inline bool extract_shaye_resources(const std::filesystem::path& package,
     const auto identity = (ec ? package : absolute).string() + ":" +
         std::to_string(std::filesystem::file_size(package, ec)) + ":" +
         std::to_string(std::filesystem::last_write_time(package, ec).time_since_epoch().count());
-    const auto key = std::to_string(std::hash<std::string>{}(identity));
+    const auto unique_identity = identity + ":" +
+        std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    const auto key = std::to_string(std::hash<std::string>{}(unique_identity));
     const auto root = std::filesystem::temp_directory_path(ec) / "shay" / "shpak" / key;
-    if (ec) return false;
-    std::filesystem::remove_all(root, ec);
     if (ec) return false;
     std::filesystem::create_directories(root, ec);
     if (ec) return false;
