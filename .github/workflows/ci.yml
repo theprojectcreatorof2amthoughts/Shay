@@ -39,7 +39,7 @@ jobs:
           $output = "Yamen" | & .\build-windows\Release\shaii.exe .\pytool\test.shay
           if ($LASTEXITCODE -ne 0) { throw "shaii failed while running PyInit test" }
           $actual = ($output -join "`n").TrimEnd()
-          $expected = @("Before Shay", "42", "Name: Hello Yamen", "Back in Shay", "43") -join "`n"
+          $expected = @("PyInit: bundled CPython 3.13.7 x64", "Before Shay", "42", "Name: Hello Yamen", "Back in Shay", "43") -join "`n"
           if ($actual -ne $expected) { throw "Unexpected PyInit output: `n$actual" }
       - uses: ilammy/msvc-dev-cmd@v1
       - uses: actions/setup-dotnet@v4
