@@ -14,6 +14,7 @@ from runtime/ and host.py; the package is not just a text library.
 
 Use in a Shay program:
   $useentry pyinit
+  pyinitinfo
 
   instxt/>"Hello from Shay"
 
