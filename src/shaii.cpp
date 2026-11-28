@@ -55,6 +55,13 @@ struct Context{
  std::string log_file_extension=".log";
  bool log_file_name_set=false;
  bool log_file_extension_set=false;
+ ~Context() {
+  python_session.reset();
+  if (!py_runtime_dir.empty()) {
+   std::error_code ec;
+   fs::remove_all(py_runtime_dir, ec);
+  }
+ }
 };
 using NumberScope=std::unordered_map<std::string,double>;
 int run_process(const std::string&program,const std::vector<std::string>&arguments){
