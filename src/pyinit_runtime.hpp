@@ -10,6 +10,7 @@
 #include <windows.h>
 #else
 #include <cerrno>
+#include <csignal>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
