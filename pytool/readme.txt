@@ -27,6 +27,9 @@ Use in a Shay program:
   print(message + " again")
   $endpy
 
+Run Python-containing programs with the updated shaii.exe interpreter, not gshai.
+The gshai CLI and compiler remain unchanged.
+
 Requirements:
   - Windows x64
   - Updated shentrypak.exe and shaii.exe from the same Shay build
