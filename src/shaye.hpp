@@ -113,7 +113,11 @@ inline void shaye_write_string(std::ostream& out, const std::string& value) {
     out.write(encoded.data(), static_cast<std::streamsize>(encoded.size()));
 }
 inline bool shaye_safe_resource_name(const std::string& name) {
-    if (name.empty() || name.size() > 65535) return false;
+    if (name.empty() || name.size() > 65535 ||
+        name.find('\\0') != std::string::npos || name.find('\\\\') != std::string::npos ||
+        name.find(':') != std::string::npos) return false;
+    for (unsigned char ch : name)
+        if (ch < 0x20 || ch == 0x7f) return false;
     const std::filesystem::path path(name);
     if (path.is_absolute() || path.has_root_name() || path.has_root_directory()) return false;
     for (const auto& part : path)
@@ -134,6 +138,8 @@ inline bool extract_shaye_resources(const std::filesystem::path& package,
         std::to_string(std::filesystem::last_write_time(package, ec).time_since_epoch().count());
     const auto key = std::to_string(std::hash<std::string>{}(identity));
     const auto root = std::filesystem::temp_directory_path(ec) / "shay" / "shpak" / key;
+    if (ec) return false;
+    std::filesystem::remove_all(root, ec);
     if (ec) return false;
     std::filesystem::create_directories(root, ec);
     if (ec) return false;
@@ -202,6 +208,8 @@ inline bool read_shaye_records(const std::filesystem::path& path, ShayeRecords& 
             std::string name;
             std::uint32_t size = 0;
             if (!shaye_read_string(bytes, at, name) || !shaye_safe_resource_name(name) ||
+                std::any_of(parsed.resources.begin(), parsed.resources.end(),
+                    [&](const auto& resource) { return resource.first == name; }) ||
                 !shaye_read_u32(bytes, at, size) || at + size > bytes.size()) return false;
             parsed.resources.emplace_back(std::move(name), bytes.substr(at, size));
             at += size;
