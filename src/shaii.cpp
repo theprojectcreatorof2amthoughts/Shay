@@ -78,6 +78,7 @@ int run_process(const std::string&program,const std::vector<std::string>&argumen
 #endif
 }
 struct ReturnFlow{bool returned=false;double value=0;};
+bool execute_python_block(const shay::Statement& statement, Context& ctx, std::string& failure);
 void diagnose(Context&ctx,const fs::path&file,std::size_t line,const std::string&message){ctx.diagnostics.push_back({file,line,message});}
 bool evaluate(const std::string&source,const NumberScope&values,double&result,std::string&error){
  shay::NumericExpression expression(source,values);return expression.evaluate(result,error);
