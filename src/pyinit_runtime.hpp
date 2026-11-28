@@ -249,7 +249,10 @@ private:
             if (count < 0 && errno == EINTR) continue;
             if (count <= 0) return false;
 #endif
-            if (ch == '\n') return true;
+            if (ch == '\n') {
+                if (!value.empty() && value.back() == '\r') value.pop_back();
+                return true;
+            }
             value.push_back(ch);
         }
     }
