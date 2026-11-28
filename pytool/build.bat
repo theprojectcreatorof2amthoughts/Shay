@@ -8,6 +8,8 @@ set "URL=https://www.python.org/ftp/python/%PYVER%/%ZIP%"
 
 if not exist "runtime" mkdir "runtime"
 if not exist "runtime\python.exe" (
+  if exist "runtime" rmdir /s /q "runtime"
+  mkdir "runtime"
   echo Downloading CPython %PYVER% Windows x64 embeddable runtime...
   curl -fL "%URL%" -o "%ZIP%"
   if errorlevel 1 exit /b 1
