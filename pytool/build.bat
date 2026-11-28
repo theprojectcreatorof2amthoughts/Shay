@@ -31,8 +31,13 @@ if not exist "shentrypak.exe" (
 shentrypak.exe "main.shay" -o "pyinit.shpak" --resource-dir "runtime"
 if errorlevel 1 exit /b 1
 
-if not exist "%USERPROFILE%\.shay\entries" mkdir "%USERPROFILE%\.shay\entries"
-copy /y "pyinit.shpak" "%USERPROFILE%\.shay\entries\pyinit.shpak" >nul
+set "ENTRY_HOME=%USERPROFILE%"
+if defined HOME (
+  for /f "delims=" %%P in ('cygpath -w "%HOME%" 2^>nul') do set "ENTRY_HOME=%%P"
+)
+if not defined ENTRY_HOME set "ENTRY_HOME=%USERPROFILE%"
+if not exist "%ENTRY_HOME%\\.shay\\entries" mkdir "%ENTRY_HOME%\\.shay\\entries"
+copy /y "pyinit.shpak" "%ENTRY_HOME%\\.shay\\entries\\pyinit.shpak" >nul
 if errorlevel 1 exit /b 1
 
 echo.
