@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#include <functional>
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -107,22 +108,36 @@ public:
         return true;
     }
 
-    bool execute(const std::string& code, std::string& output, std::string& error) {
+    bool execute(const std::string& code, std::string& output, std::string& error,
+                 const std::function<std::string(const std::string&)>& input_handler) {
         if (!running_) { error = "Python runtime has not been started"; return false; }
         const std::string request = encode_hex(code) + "\n";
         if (!write_all(request)) { error = "cannot send code to embedded Python runtime"; stop(); return false; }
-        std::string response;
-        if (!read_line(response)) { error = "embedded Python runtime stopped unexpectedly"; stop(); return false; }
-        if (response.empty() || (response[0] != 'O' && response[0] != 'E')) {
-            error = "embedded Python runtime returned an invalid response"; stop(); return false;
+        for (;;) {
+            std::string response;
+            if (!read_line(response)) { error = "embedded Python runtime stopped unexpectedly"; stop(); return false; }
+            if (!response.empty() && response[0] == 'I') {
+                std::string prompt;
+                if (!decode_hex(response.substr(1), prompt)) {
+                    error = "embedded Python runtime sent a malformed input prompt"; stop(); return false;
+                }
+                const std::string entered = input_handler ? input_handler(prompt) : std::string();
+                if (!write_all(encode_hex(entered) + "\n")) {
+                    error = "cannot send input to embedded Python runtime"; stop(); return false;
+                }
+                continue;
+            }
+            if (response.empty() || (response[0] != 'O' && response[0] != 'E')) {
+                error = "embedded Python runtime returned an invalid response"; stop(); return false;
+            }
+            std::string decoded;
+            if (!decode_hex(response.substr(1), decoded)) {
+                error = "embedded Python runtime returned malformed output"; stop(); return false;
+            }
+            output = std::move(decoded);
+            if (response[0] == 'E') { error = output; return false; }
+            return true;
         }
-        std::string decoded;
-        if (!decode_hex(response.substr(1), decoded)) {
-            error = "embedded Python runtime returned malformed output"; stop(); return false;
-        }
-        output = std::move(decoded);
-        if (response[0] == 'E') { error = output; return false; }
-        return true;
     }
 
     void stop() {
