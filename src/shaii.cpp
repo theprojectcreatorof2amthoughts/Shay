@@ -381,18 +381,19 @@ bool execute_python_block(const shay::Statement& statement, Context& ctx,
   failure = error;
   return false;
  }
- std::string output;
- if (!ctx.python_session->execute(code, output, error, [](const std::string& prompt) {
-  if (!prompt.empty()) shay_runtime_write(prompt.c_str());
-  std::string entered;
-  std::getline(std::cin, entered);
-  return entered;
- })) {
-  if (!output.empty()) shay_runtime_write(output.c_str());
-  failure = "Python block raised an exception (see traceback above)";
+ if (!ctx.python_session->execute(code, error,
+  [](const std::string& prompt) {
+   if (!prompt.empty()) shay_runtime_write(prompt.c_str());
+   std::string entered;
+   std::getline(std::cin, entered);
+   return entered;
+  },
+  [](const std::string& output) {
+   if (!output.empty()) shay_runtime_write(output.c_str());
+  })) {
+  failure = error.empty() ? "Python block failed" : error;
   return false;
  }
- if (!output.empty()) shay_runtime_write(output.c_str());
  return true;
 }
 bool prepare_python_blocks(const std::string& source, std::string& prepared,
